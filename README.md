@@ -1,0 +1,72 @@
+# SENTRY ATM
+
+SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를 예측하고, 미래 충돌과 비상 우선순위를 평가해 관제사에게 설명 가능한 대응 후보를 제공하는 Human-in-the-loop 항공교통 의사결정 지원 PoC다.
+
+> 이 프로젝트는 실제 관제 시스템이 아니며, 실제 공역 책임·공식 분리기준·군 운용절차를 대체하지 않는다.
+
+## 현재 상태
+
+- Phase 0-A: Golden Demo Scenario Contract 작성 완료
+- Phase 0-B: Python 프로젝트 및 테스트 기반 구성 중
+- 알고리즘, 시뮬레이터, UI: 아직 구현하지 않음
+
+## 핵심 문서
+
+- [Golden Demo Scenario Contract](docs/scenarios.md)
+- [PoC Assumption Register](docs/assumptions.md)
+
+## 요구 환경
+
+- Python 3.12 이상
+- Git
+- Windows PowerShell 또는 호환 셸
+
+## 개발환경 구성
+
+프로젝트 루트에서 다음 명령을 실행한다.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+## 테스트 및 정적 검사
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
+## 현재 프로젝트 구조
+
+```text
+.
+├─ docs/
+│  ├─ assumptions.md
+│  └─ scenarios.md
+├─ src/
+│  └─ sentry_atm/
+│     └─ __init__.py
+├─ tests/
+│  └─ unit/
+│     └─ test_package.py
+├─ .gitattributes
+├─ .gitignore
+├─ AGENTS.md
+├─ pyproject.toml
+└─ README.md
+```
+
+디렉터리는 Phase별 최소 구현에 맞춰 필요한 시점에 추가한다. 빈 모듈을 미리 대량 생성하지 않는다.
+
+## 개발 원칙
+
+1. 요구사항 확인, 설계, 최소 구현, 실행, 테스트, 결과 확인 순서로 진행한다.
+2. Planned, Actual, Predicted Trajectory를 구분한다.
+3. Prediction, Conflict, Risk, Rule, Resolution 책임을 분리한다.
+4. 내부 시간은 timezone-aware UTC를 사용한다.
+5. 내부 계산 단위는 NM, ft, kt, ft/min, degree를 사용한다.
+6. 모든 비공식 값은 Assumption 또는 Config로 명시한다.
+7. AI 추천은 관제사의 승인 전까지 Aircraft Runtime을 변경하지 않는다.
+8. 실제 군 레이더 항적, 민감 성능, 실제 군 Callsign을 저장소에 포함하지 않는다.
