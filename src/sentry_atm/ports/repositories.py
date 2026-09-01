@@ -1,7 +1,7 @@
 """Synchronous persistence contracts for domain aggregates.
 
-The contracts intentionally contain no SQLAlchemy, PostgreSQL, or PostGIS types.
-Infrastructure adapters translate between these domain objects and database rows.
+The contracts intentionally contain no SQLAlchemy or database-specific types.
+Infrastructure adapters translate between these domain objects and persistence rows.
 """
 
 from collections.abc import Iterable

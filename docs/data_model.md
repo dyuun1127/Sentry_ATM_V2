@@ -226,7 +226,7 @@ trajectory = Trajectory(
 
 ## 9. Persistence 준비 Domain
 
-PostgreSQL/PostGIS 연결 전에 다음 DB 독립 객체를 추가했다.
+SQLite를 포함한 영속성 구현과 독립적으로 다음 Domain 객체를 추가했다.
 
 - `AircraftType`: 공개 기종 코드와 비민감 Category
 - `AircraftPerformanceProfile`: 속도·상승/강하·선회·고도 Envelope와 출처

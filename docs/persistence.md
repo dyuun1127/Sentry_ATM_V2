@@ -1,109 +1,122 @@
-# PostgreSQL + PostGIS Persistence Contract
+# SQLite Persistence Contract
 
-## 1. 목적과 현재 범위
+## 1. 목적과 범위
 
-SENTRY의 영속성 계층은 Domain과 PostgreSQL/PostGIS를 직접 결합하지 않는다. 핵심 계산은
-`sentry_atm.domain` 객체만 사용하고, `sentry_atm.ports.repositories`의 Protocol을 통해
-저장소를 호출한다. SQLAlchemy 모델, SQL 문법, PostGIS Geometry는 후속 Infrastructure
-Adapter 내부에만 둔다.
+SENTRY의 해커톤 PoC는 별도 DB Server 없이 하나의 SQLite 파일을 사용한다. 핵심 계산은
+`sentry_atm.domain` 객체만 사용하고, Application은 `sentry_atm.ports.repositories`의
+Protocol을 통해 데이터를 저장하고 조회한다.
 
-현재 단계는 다음 항목까지 구현한다.
+Phase 3-C 구현 범위:
 
-- DB 독립 Domain 객체
-- 동기식 Repository Interface
-- PostgreSQL/PostGIS 논리 스키마 및 공간 데이터 정책
+- SQLAlchemy 2 기반 SQLite Table Mapping
+- `data/sentry_atm.db` 기본 파일 경로
+- 반복 실행 가능한 Schema 초기화
+- `AircraftRepository`, `AircraftStateRepository` Adapter
+- RKTU Local x/y NM과 파생 WGS84 위경도 저장
+- 실제 임시 SQLite 파일을 사용하는 Integration Test
 
-아직 구현하지 않는 항목은 DB 연결, ORM Mapping, Migration, 운영용 인증정보다.
+Docker, PostgreSQL Server, 계정, 비밀번호, PostGIS, GeoAlchemy 및 Psycopg는 사용하지 않는다.
 
-## 2. 한 DB, 영역별 Schema
+## 2. DB 파일과 초기화
 
-9개의 물리 DB를 만들지 않고 하나의 PostgreSQL Database 안에서 책임별 Schema를 나눈다.
+기본 경로:
 
-| Schema | 초기 책임 | 후속 확장 |
+```text
+data/sentry_atm.db
+```
+
+초기화 명령:
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence init
+```
+
+경로 변경:
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence init --path tmp/demo.db
+```
+
+Application에서는 `SENTRY_DB_PATH` 환경변수로 같은 값을 지정할 수 있다. `.db`, `.db-shm`,
+`.db-wal` 파일은 Git에서 제외한다.
+
+## 3. 초기 Table
+
+SQLite는 PostgreSQL Schema를 지원하지 않으므로 물리 Schema 분리 대신 Table과 Repository의
+책임을 유지한다.
+
+| 영역 | Table | 현재 상태 |
 |---|---|---|
-| `reference` | `aircraft_type`, `aircraft_performance_profile`, `aircraft` | 공역, 제한구역, 절차, 규칙 |
-| `intent` | `flight`, `trajectory`, `trajectory_point` | SID/STAR/Approach Intent |
-| `traffic` | `aircraft_state` | 수집 배치와 원본 추적 |
-| `analytics` | `prediction_run`, 예측 Trajectory 연결 | Conflict, Risk |
-| `decision` | 현재 없음 | Recommendation, Controller Action Audit |
+| Reference | `aircraft_type` | 구현 |
+| Reference | `aircraft_performance_profile` | Table 구현, Repository 후속 |
+| Reference | `aircraft` | Table과 Repository 구현 |
+| Traffic | `aircraft_state` | Table과 Repository 구현 |
+| Intent | `flight` | Domain만 구현, Table 후속 |
+| Intent | `trajectory`, `trajectory_point` | Domain만 구현, Table 후속 |
+| Analytics | `prediction_run` | Domain만 구현, Table 후속 |
 
-Schema 분리는 접근권한과 이름 충돌을 줄이기 위한 논리 경계다. 분산 DB나 Microservice 경계를
-뜻하지 않는다.
+`AircraftMetadata.performance_class`는 DB의 `performance_profile_id`로 명시적으로 Mapping한다.
 
-## 3. Domain과 초기 Table Mapping
+## 4. 시간 저장 정책
 
-| Domain | Table | 저장 정책 |
-|---|---|---|
-| `AircraftType` | `reference.aircraft_type` | 공개 기종 분류, `type_code` unique |
-| `AircraftPerformanceProfile` | `reference.aircraft_performance_profile` | 출처 필수, 원자료 원문은 저장하지 않음 |
-| `AircraftMetadata` | `reference.aircraft` | 시스템 내부 `aircraft_id` PK |
-| `AircraftState` | `traffic.aircraft_state` | append-only |
-| `Flight` | `intent.flight` | 비행 수명주기 |
-| `Trajectory` | `intent.trajectory`, `intent.trajectory_point` | Planned/Actual/Predicted 구분 |
-| `PredictionRun` | `analytics.prediction_run` | 모델명·버전·입력시각·설정 ID 보존 |
+SQLite는 PostgreSQL `TIMESTAMPTZ`와 같은 형식을 제공하지 않으므로 `UTCDateTime` Adapter를
+사용한다.
 
-`AircraftMetadata.performance_class`는 초기에는 Performance Profile의 논리 연결 키로 사용한다.
-실제 DB Adapter에서는 명시적인 Foreign Key 컬럼명 `performance_profile_id`로 Mapping한다.
+- Domain 입력은 timezone-aware datetime만 허용한다.
+- KST 등 다른 timezone은 저장 전에 UTC로 변환한다.
+- DB에는 `2026-09-01T03:00:00.000000Z` 형태의 고정 길이 ISO-8601 문자열로 저장한다.
+- 조회 시 timezone-aware UTC datetime으로 복원한다.
+- 고정 길이 UTC 문자열이므로 시간 정렬과 범위 검색 순서가 유지된다.
 
-## 4. 시간과 공간 저장 정책
+## 5. 좌표 저장 정책
 
-### 4.1 시간
+- Predictor와 Simulation의 기준값은 RKTU ARP Local `x_nm`, `y_nm`다.
+- SQLite에는 `x_nm`, `y_nm`, `latitude_deg`, `longitude_deg`를 숫자 컬럼으로 저장한다.
+- 위경도는 기존 RKTU Geo Adapter가 Local 좌표에서 계산한다.
+- 거리, CPA/TCPA 및 공역 계산은 DB SQL이 아니라 검증된 Python Domain/Geo 코드가 담당한다.
+- `latitude_deg`, `longitude_deg`에는 유효 범위 Check Constraint를 적용한다.
 
-- 모든 시각 컬럼은 `TIMESTAMPTZ`를 사용한다.
-- Application과 Domain은 timezone-aware UTC만 전달한다.
-- DB Session timezone도 UTC로 고정한다.
-- 화면에서만 KST로 변환한다.
+향후 대규모 공간검색이 실제 병목으로 측정되면 Repository 구현체만 PostgreSQL/PostGIS로
+교체할 수 있다.
 
-### 4.2 좌표
+## 6. 제약조건과 Index
 
-- 시뮬레이션과 Predictor의 기준값은 기존 Domain 정책대로 RKTU ARP Local `x_nm`, `y_nm`다.
-- 항공기 상태에는 `x_nm`, `y_nm`, `altitude_ft`를 수치 컬럼으로 보존한다.
-- 지도 표시와 공간 검색이 필요할 때 Adapter가 위경도로 변환해
-  `geometry(Point, 4326)` 컬럼에도 기록한다.
-- 정적 공역, 제한구역, 절차 선은 WGS84 `geometry(..., 4326)`로 저장하고 GiST Index를 둔다.
-- Local 좌표와 Geometry의 변환 책임은 Domain이 아니라 기존 Geo Adapter에 둔다.
+- `aircraft.aircraft_id`: Primary Key
+- `aircraft.icao24`: Unique
+- `aircraft_state`: unique `(aircraft_id, timestamp_utc, source)`
+- `aircraft_state`: index `(aircraft_id, timestamp_utc)`
+- Aircraft Type과 Aircraft State Foreign Key 활성화
+- Heading, Ground Speed, Emergency 조합, 위경도 범위 Check Constraint
+- `aircraft_state`는 append-only
 
-같은 위치를 두 표현으로 저장하므로 PostgreSQL Adapter 통합 테스트에서 왕복 오차와 동기화를
-검증해야 한다. 원본 좌표, 변환 방법 및 좌표계 식별자를 함께 기록한다.
+SQLite는 Foreign Key 적용이 기본적으로 꺼질 수 있으므로 Engine 연결마다
+`PRAGMA foreign_keys=ON`을 실행한다.
 
-## 5. 핵심 제약조건과 Index
+## 7. Transaction 책임
 
-- `traffic.aircraft_state`: unique `(aircraft_id, timestamp_utc, source)`
-- `traffic.aircraft_state`: index `(aircraft_id, timestamp_utc DESC)`
-- `intent.trajectory_point`: unique `(trajectory_id, sequence_no)`
-- `intent.trajectory_point`: unique `(trajectory_id, timestamp_utc)`
-- `analytics.prediction_run`: index `(input_timestamp_utc DESC)`
-- 공간 컬럼: GiST Index
-- Aircraft State, Prediction 결과, Controller Action은 원칙적으로 append-only
+Repository는 `flush()`까지만 수행한다. `commit()`과 `rollback()`은 Use Case 또는 호출자가
+결정한다. 여러 Aircraft State나 향후 Prediction Aggregate를 한 Transaction으로 묶을 수 있도록
+Repository 내부에서 임의 Commit을 수행하지 않는다.
 
-Repository의 `list_between`은 양 끝 시각을 포함하고 UTC 오름차순으로 반환하도록 Adapter에서
-고정한다. 여러 행을 저장하는 `PredictionRun.save`와 Trajectory 저장은 하나의 Transaction으로
-처리한다.
+## 8. 구현된 Repository
 
-## 6. Repository Interface
+- `SqlAlchemyAircraftRepository`
+  - `get`
+  - `list_all`
+  - `upsert`
+- `SqlAlchemyAircraftStateRepository`
+  - `append`
+  - `append_many`
+  - `latest_at_or_before`
+  - `list_between`
 
-구현 위치는 `src/sentry_atm/ports/repositories.py`다.
+`list_between`은 시작과 종료시각을 모두 포함하고 UTC 오름차순으로 반환한다.
 
-- `AircraftRepository`
-- `AircraftTypeRepository`
-- `AircraftPerformanceProfileRepository`
-- `AircraftStateRepository`
-- `FlightRepository`
-- `TrajectoryRepository`
-- `PredictionRunRepository`
+## 9. 현재 제한사항과 다음 순서
 
-현재 PoC는 호출 흐름과 테스트를 단순하게 유지하기 위해 동기식 Interface를 사용한다. 실제
-PostgreSQL Adapter도 먼저 동기식 SQLAlchemy Session으로 구현하고, 비동기 API가 필요하다는
-측정 근거가 생길 때 별도 Async Port를 추가한다.
-
-## 7. 다음 구현 순서
-
-1. 개발용 PostgreSQL/PostGIS Docker Compose와 환경변수 예시를 추가한다.
-2. SQLAlchemy 및 Alembic 의존성을 고정한다.
-3. 위 Schema와 Table을 첫 Migration으로 생성한다.
-4. Domain↔ORM Mapper와 Repository Adapter를 하나씩 구현한다.
-5. 실제 PostGIS Container를 사용하는 Integration Test를 작성한다.
-6. Golden Scenario Fixture만 적재하고 Raw BADA/OpenSky 원본은 계속 Git에서 제외한다.
-
-비밀번호와 접속 문자열은 `.env`에 두고 `.env.example`에는 이름만 제공한다. Migration에는
-민감 자료나 대용량 원본 데이터를 포함하지 않는다.
+- 동시 다중 Process Write 부하는 목표 범위가 아니다.
+- DB 내부 공간 Polygon 연산은 지원하지 않는다.
+- 자동 Migration 도구는 아직 도입하지 않는다. 현재 초기 Table은 `create_all()`로 생성한다.
+- 다음 Persistence 작업은 실제 사용 시점에 Aircraft Type과 Performance Profile Adapter를
+  추가하는 것이다.
+- Flight, Trajectory, PredictionRun은 각 기능 Phase에서 Table과 Adapter를 함께 추가한다.
