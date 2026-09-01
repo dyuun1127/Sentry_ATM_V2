@@ -15,6 +15,7 @@ def test_clock_starts_ready_at_explicit_utc_time() -> None:
     assert clock.current_time_utc == START_UTC
     assert clock.tick_seconds == 1.0
     assert clock.tick_count == 0
+    assert clock.reset_count == 0
     assert clock.elapsed_seconds == 0.0
     assert clock.state is ClockState.READY
     assert not clock.is_running
@@ -112,8 +113,12 @@ def test_reset_restores_start_time_and_ready_state() -> None:
 
     assert clock.current_time_utc == START_UTC
     assert clock.tick_count == 0
+    assert clock.reset_count == 1
     assert clock.elapsed_seconds == 0.0
     assert clock.state is ClockState.READY
+
+    clock.reset()
+    assert clock.reset_count == 2
 
 
 @pytest.mark.parametrize("invalid", [0, -1, 1.5, True])

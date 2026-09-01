@@ -21,6 +21,7 @@ class SimulationClock:
 
     __slots__ = (
         "_start_time_utc",
+        "_reset_count",
         "_state",
         "_tick_count",
         "_tick_seconds",
@@ -36,6 +37,7 @@ class SimulationClock:
             raise ValueError("tick_seconds must be greater than zero")
         self._tick_seconds = validated_tick_seconds
         self._tick_count = 0
+        self._reset_count = 0
         self._state = ClockState.READY
 
     @property
@@ -61,6 +63,12 @@ class SimulationClock:
         """Return the number of ticks completed while running."""
 
         return self._tick_count
+
+    @property
+    def reset_count(self) -> int:
+        """Return how many explicit resets have started a new deterministic run."""
+
+        return self._reset_count
 
     @property
     def elapsed_seconds(self) -> float:
@@ -95,6 +103,7 @@ class SimulationClock:
         """Restore the start time and READY state."""
 
         self._tick_count = 0
+        self._reset_count += 1
         self._state = ClockState.READY
 
     def tick(self, steps: int = 1) -> datetime:

@@ -154,7 +154,9 @@
 - 상태: `PROVISIONAL`
 - 내용: Simulation Tick은 1초, Prediction 갱신은 5초를 기본값으로 사용한다.
 - Phase 2-A 결정: Simulation Clock의 기본 Tick을 1초로 적용하고 명시적인 Tick 방식의 재현성을 테스트한다.
-- 남은 검증: Prediction 5초 갱신 주기는 Phase 4 Predictor 성능 테스트 후 확정한다.
+- Phase 4-C 결정: 5초 Simulation Time 구간당 최대 1회 실행하며 Pause·Reset·큰 Tick 이동의
+  결정론적 동작을 테스트한다.
+- 남은 검증: Golden Demo 통합 성능을 측정한 뒤 5초 주기의 최종 유지 여부를 확정한다.
 
 ### ASM-018 - PoC Alert Threshold Profile
 
