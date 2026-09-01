@@ -2,12 +2,13 @@
 
 ## 1. 목적
 
-SENTRY의 Playback Aircraft, Synthetic Aircraft 및 후속 Rolling Prediction이 같은 재현 가능한 UTC Simulation Time을 사용하도록 한다. Phase 2-A는 공통 Clock을, Phase 2-B는 OPENSKY Playback Runtime을, Phase 2-C는 기초 Synthetic Runtime을 제공한다.
+SENTRY의 Playback Aircraft, Synthetic Aircraft 및 후속 Rolling Prediction이 같은 재현 가능한 UTC Simulation Time을 사용하도록 한다. Phase 2-A는 공통 Clock을, Phase 2-B는 OPENSKY Playback Runtime을, Phase 2-C는 기초 Synthetic Runtime을, Phase 3-A는 다중 항공기 Traffic Engine을 제공한다.
 
 구현 위치:
 
 ```text
 src/sentry_atm/simulation/clock.py
+src/sentry_atm/simulation/engine.py
 src/sentry_atm/simulation/playback.py
 src/sentry_atm/simulation/synthetic.py
 ```
@@ -96,7 +97,26 @@ Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. Runtime은
 
 이 Runtime은 현재 Clock 시각의 단일 Actual State만 계산한다. 미래 시점 목록이나 `PREDICTED` Trajectory를 생성하지 않으므로 Phase 4 Predictor 책임과 분리된다.
 
-## 8. 현재 제한사항
+## 8. Traffic Simulation Engine
+
+`TrafficSimulationEngine`은 동일한 `SimulationClock`을 공유하는 Playback/Synthetic Runtime을 등록 순서대로 관리한다. 중복 Aircraft ID와 다른 Clock을 사용하는 Runtime은 거부한다.
+
+```python
+from sentry_atm.simulation import TrafficSimulationEngine
+
+engine = TrafficSimulationEngine(
+    clock=clock,
+    runtimes=(civil_playback, military_synthetic),
+)
+clock.play()
+snapshot = engine.tick()
+```
+
+`TrafficSnapshot`은 조회한 Simulation UTC 시각과 그 시각에 활성화된 Aircraft State들을 불변 tuple로 보존한다. 아직 시작하지 않은 Runtime은 제외된다. Playback은 Zero-order Hold를 사용하므로 개별 상태의 기록 시각이 Snapshot 시각보다 과거일 수 있으며, 두 시각을 동일한 의미로 취급하지 않는다.
+
+Engine의 `tick()`은 Clock을 진행한 뒤 Snapshot을 반환한다. Clock이 `READY` 또는 `PAUSED`라면 시간이 증가하지 않은 Snapshot을 반환한다.
+
+## 9. 현재 제한사항
 
 - 종료 시각과 `FINISHED` 상태는 아직 없다.
 - 재생 배속과 실제 화면 Frame Rate를 연결하지 않는다.
@@ -106,3 +126,6 @@ Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. Runtime은
 - Synthetic 운동은 Constant Speed, Constant Heading, Constant Vertical Rate만 지원한다.
 - 선회율, 가감속, 목표 고도 Capture 및 Aircraft Performance 제한은 아직 없다.
 - 관제 명령 적용과 운동 상태 변경은 후속 Phase에서 구현한다.
+- Runtime 동적 추가·제거는 아직 지원하지 않는다.
+- Scenario 파일에서 Runtime을 구성하는 Builder는 아직 없다.
+- Engine은 Predictor, Conflict Detector 또는 Rule Engine을 직접 호출하지 않는다.

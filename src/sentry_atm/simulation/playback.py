@@ -61,6 +61,12 @@ class PlaybackAircraftRuntime:
         return self._states[0].aircraft_id
 
     @property
+    def clock(self) -> SimulationClock:
+        """Return the shared simulation clock consumed by this runtime."""
+
+        return self._clock
+
+    @property
     def states(self) -> tuple[AircraftState, ...]:
         """Return the immutable recorded state sequence."""
 

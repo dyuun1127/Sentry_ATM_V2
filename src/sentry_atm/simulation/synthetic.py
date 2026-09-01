@@ -36,6 +36,12 @@ class SyntheticAircraftRuntime:
         return self._initial_state.aircraft_id
 
     @property
+    def clock(self) -> SimulationClock:
+        """Return the shared simulation clock consumed by this runtime."""
+
+        return self._clock
+
+    @property
     def initial_state(self) -> AircraftState:
         """Return the immutable state used as the motion origin."""
 
