@@ -11,7 +11,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 0-C: UTC·단위·Enum·최소 Aircraft/Trajectory Domain 구현 완료
 - Phase 1-A: RKTU ARP 기반 위경도↔Local x/y NM 변환 구현 완료
 - Phase 1-B: Local 수평거리·고도 수직분리·위경도 대권거리 구현 완료
-- 알고리즘, 시뮬레이터, UI: 아직 구현하지 않음
+- Phase 2-A: UTC 기반 Deterministic Simulation Clock 구현 완료
+- 항공기 Runtime, Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -19,6 +20,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [PoC Assumption Register](docs/assumptions.md)
 - [Domain Data Model](docs/data_model.md)
 - [RKTU Local Coordinate System](docs/coordinate_system.md)
+- [Deterministic Simulation Clock](docs/simulation.md)
 
 ## 요구 환경
 
@@ -50,16 +52,19 @@ python -m venv .venv
 ├─ docs/
 │  ├─ assumptions.md
 │  ├─ data_model.md
-│  └─ scenarios.md
+│  ├─ scenarios.md
+│  └─ simulation.md
 ├─ src/
 │  └─ sentry_atm/
 │     ├─ domain/
 │     ├─ geo/
+│     ├─ simulation/
 │     └─ __init__.py
 ├─ tests/
 │  └─ unit/
 │     ├─ domain/
 │     ├─ geo/
+│     ├─ simulation/
 │     └─ test_package.py
 ├─ .gitattributes
 ├─ .gitignore
