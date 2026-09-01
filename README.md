@@ -17,6 +17,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 3-A: 공유 Clock 기반 다중 항공기 Traffic Simulation Engine 구현 완료
 - Phase 3-B: Aircraft Performance Profile 및 Persistence Contract 구현 완료
 - Phase 3-C: SQLite Persistence Foundation 구현 완료
+- Phase 3-D: Aircraft Type/Performance Profile SQLite Adapter 구현 완료
 - Scenario Builder, Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서

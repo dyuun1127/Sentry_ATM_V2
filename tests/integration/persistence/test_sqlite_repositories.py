@@ -4,12 +4,22 @@ from pathlib import Path
 import pytest
 from sqlalchemy import func, select, text
 
-from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
+from sentry_atm.domain import (
+    AircraftCategory,
+    AircraftMetadata,
+    AircraftPerformanceProfile,
+    AircraftState,
+    AircraftType,
+    DataSource,
+    PerformanceDataSource,
+)
 from sentry_atm.geo import RKTU_ARP_LATITUDE_DEG, RKTU_ARP_LONGITUDE_DEG
 from sentry_atm.infrastructure.persistence import (
     DatabaseSettings,
+    SqlAlchemyAircraftPerformanceProfileRepository,
     SqlAlchemyAircraftRepository,
     SqlAlchemyAircraftStateRepository,
+    SqlAlchemyAircraftTypeRepository,
     create_database_engine,
     create_session_factory,
     initialize_database,
@@ -25,7 +35,31 @@ def test_sqlite_repository_round_trip_uses_real_file_database(tmp_path: Path) ->
     initialize_database(engine)
     session_factory = create_session_factory(engine)
     timestamp = datetime(2026, 9, 1, 3, 0, tzinfo=UTC)
-    aircraft = AircraftMetadata(aircraft_id="CIV-A01")
+    aircraft_type = AircraftType(
+        type_code="A320",
+        category=AircraftCategory.AIRLINER,
+        manufacturer="Airbus",
+        model="A320",
+    )
+    profile = AircraftPerformanceProfile(
+        profile_id="A320-POC-V1",
+        category=AircraftCategory.AIRLINER,
+        source=PerformanceDataSource.SIMULATION_ASSUMPTION,
+        source_reference="docs/assumptions.md#airliner-profile",
+        min_speed_kt=130.0,
+        max_speed_kt=350.0,
+        max_climb_rate_fpm=2_500.0,
+        max_descent_rate_fpm=3_000.0,
+        max_turn_rate_deg_per_second=3.0,
+        ceiling_ft=39_000.0,
+        aircraft_type_code="A320",
+    )
+    aircraft = AircraftMetadata(
+        aircraft_id="CIV-A01",
+        aircraft_type="A320",
+        category=AircraftCategory.AIRLINER,
+        performance_class="A320-POC-V1",
+    )
     states = tuple(
         AircraftState(
             aircraft_id=aircraft.aircraft_id,
@@ -42,11 +76,22 @@ def test_sqlite_repository_round_trip_uses_real_file_database(tmp_path: Path) ->
     )
 
     with session_factory.begin() as session:
+        aircraft_type_repository = SqlAlchemyAircraftTypeRepository(session)
+        profile_repository = SqlAlchemyAircraftPerformanceProfileRepository(session)
         aircraft_repository = SqlAlchemyAircraftRepository(session)
         state_repository = SqlAlchemyAircraftStateRepository(session)
+        aircraft_type_repository.upsert(aircraft_type)
+        profile_repository.upsert(profile)
         aircraft_repository.upsert(aircraft)
         state_repository.append_many(states)
 
+        assert aircraft_type_repository.get("a320") == aircraft_type
+        assert aircraft_type_repository.list_all() == (
+            aircraft_type,
+            AircraftType(type_code="UNKNOWN", category=AircraftCategory.UNKNOWN),
+        )
+        assert profile_repository.get(profile.profile_id) == profile
+        assert profile_repository.list_all() == (profile,)
         assert aircraft_repository.get(aircraft.aircraft_id) == aircraft
         assert (
             state_repository.latest_at_or_before(

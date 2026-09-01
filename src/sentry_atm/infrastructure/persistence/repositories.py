@@ -6,7 +6,12 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sentry_atm.domain import AircraftMetadata, AircraftState
+from sentry_atm.domain import (
+    AircraftMetadata,
+    AircraftPerformanceProfile,
+    AircraftState,
+    AircraftType,
+)
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
 from sentry_atm.infrastructure.persistence.mappers import (
@@ -14,14 +19,92 @@ from sentry_atm.infrastructure.persistence.mappers import (
     aircraft_state_from_row,
     aircraft_state_to_row,
     aircraft_to_row,
+    aircraft_type_from_row,
+    aircraft_type_to_row,
+    performance_profile_from_row,
+    performance_profile_to_row,
 )
-from sentry_atm.infrastructure.persistence.models import AircraftRow, AircraftStateRow
+from sentry_atm.infrastructure.persistence.models import (
+    AircraftPerformanceProfileRow,
+    AircraftRow,
+    AircraftStateRow,
+    AircraftTypeRow,
+)
 
 
 def _require_session(session: Session) -> Session:
     if not isinstance(session, Session):
         raise TypeError("session must be a SQLAlchemy Session")
     return session
+
+
+class SqlAlchemyAircraftTypeRepository:
+    """Aircraft-type reference adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, type_code: str) -> AircraftType | None:
+        normalized_code = require_identifier(type_code, field_name="type_code").upper()
+        row = self._session.get(AircraftTypeRow, normalized_code)
+        return aircraft_type_from_row(row) if row is not None else None
+
+    def list_all(self) -> tuple[AircraftType, ...]:
+        rows = self._session.scalars(
+            select(AircraftTypeRow).order_by(AircraftTypeRow.type_code)
+        ).all()
+        return tuple(aircraft_type_from_row(row) for row in rows)
+
+    def upsert(self, aircraft_type: AircraftType) -> None:
+        incoming = aircraft_type_to_row(aircraft_type)
+        existing = self._session.get(AircraftTypeRow, incoming.type_code)
+        if existing is None:
+            self._session.add(incoming)
+        else:
+            existing.category = incoming.category
+            existing.manufacturer = incoming.manufacturer
+            existing.model = incoming.model
+        self._session.flush()
+
+
+class SqlAlchemyAircraftPerformanceProfileRepository:
+    """Performance-profile reference adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, profile_id: str) -> AircraftPerformanceProfile | None:
+        identifier = require_identifier(profile_id, field_name="profile_id")
+        row = self._session.get(AircraftPerformanceProfileRow, identifier)
+        return performance_profile_from_row(row) if row is not None else None
+
+    def list_all(self) -> tuple[AircraftPerformanceProfile, ...]:
+        rows = self._session.scalars(
+            select(AircraftPerformanceProfileRow).order_by(AircraftPerformanceProfileRow.profile_id)
+        ).all()
+        return tuple(performance_profile_from_row(row) for row in rows)
+
+    def upsert(self, profile: AircraftPerformanceProfile) -> None:
+        incoming = performance_profile_to_row(profile)
+        existing = self._session.get(AircraftPerformanceProfileRow, incoming.profile_id)
+        if existing is None:
+            self._session.add(incoming)
+        else:
+            existing.category = incoming.category
+            existing.source = incoming.source
+            existing.source_reference = incoming.source_reference
+            existing.min_speed_kt = incoming.min_speed_kt
+            existing.max_speed_kt = incoming.max_speed_kt
+            existing.max_climb_rate_fpm = incoming.max_climb_rate_fpm
+            existing.max_descent_rate_fpm = incoming.max_descent_rate_fpm
+            existing.max_turn_rate_deg_per_second = incoming.max_turn_rate_deg_per_second
+            existing.ceiling_ft = incoming.ceiling_ft
+            existing.aircraft_type_code = incoming.aircraft_type_code
+        self._session.flush()
 
 
 class SqlAlchemyAircraftRepository:

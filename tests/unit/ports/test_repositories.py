@@ -1,7 +1,12 @@
 from typing import Any
 
 import pytest
+from sqlalchemy.orm import Session
 
+from sentry_atm.infrastructure.persistence.repositories import (
+    SqlAlchemyAircraftPerformanceProfileRepository,
+    SqlAlchemyAircraftTypeRepository,
+)
 from sentry_atm.ports import (
     AircraftPerformanceProfileRepository,
     AircraftRepository,
@@ -60,3 +65,13 @@ def test_repository_contracts_support_structural_adapter_implementation(
     repository_contract: type,
 ) -> None:
     assert isinstance(CompleteRepositoryDouble(), repository_contract)
+
+
+def test_reference_adapters_satisfy_repository_contracts() -> None:
+    session = object.__new__(Session)
+
+    assert isinstance(SqlAlchemyAircraftTypeRepository(session), AircraftTypeRepository)
+    assert isinstance(
+        SqlAlchemyAircraftPerformanceProfileRepository(session),
+        AircraftPerformanceProfileRepository,
+    )

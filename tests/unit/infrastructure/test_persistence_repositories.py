@@ -5,11 +5,26 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 from sqlalchemy.orm import Session
 
-from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
-from sentry_atm.infrastructure.persistence.models import AircraftRow, AircraftStateRow
+from sentry_atm.domain import (
+    AircraftCategory,
+    AircraftMetadata,
+    AircraftPerformanceProfile,
+    AircraftState,
+    AircraftType,
+    DataSource,
+    PerformanceDataSource,
+)
+from sentry_atm.infrastructure.persistence.models import (
+    AircraftPerformanceProfileRow,
+    AircraftRow,
+    AircraftStateRow,
+    AircraftTypeRow,
+)
 from sentry_atm.infrastructure.persistence.repositories import (
+    SqlAlchemyAircraftPerformanceProfileRepository,
     SqlAlchemyAircraftRepository,
     SqlAlchemyAircraftStateRepository,
+    SqlAlchemyAircraftTypeRepository,
 )
 
 TIMESTAMP_UTC = datetime(2026, 9, 1, 3, 0, tzinfo=UTC)
@@ -31,6 +46,64 @@ def _aircraft_row(**overrides: object) -> AircraftRow:
     }
     values.update(overrides)
     return AircraftRow(**values)  # type: ignore[arg-type]
+
+
+def _aircraft_type(**overrides: object) -> AircraftType:
+    values: dict[str, object] = {
+        "type_code": "A320",
+        "category": AircraftCategory.AIRLINER,
+        "manufacturer": "Airbus",
+        "model": "A320",
+    }
+    values.update(overrides)
+    return AircraftType(**values)  # type: ignore[arg-type]
+
+
+def _aircraft_type_row(**overrides: object) -> AircraftTypeRow:
+    values: dict[str, object] = {
+        "type_code": "A320",
+        "category": "AIRLINER",
+        "manufacturer": "Airbus",
+        "model": "A320",
+    }
+    values.update(overrides)
+    return AircraftTypeRow(**values)  # type: ignore[arg-type]
+
+
+def _performance_profile(**overrides: object) -> AircraftPerformanceProfile:
+    values: dict[str, object] = {
+        "profile_id": "A320-POC-V1",
+        "category": AircraftCategory.AIRLINER,
+        "source": PerformanceDataSource.SIMULATION_ASSUMPTION,
+        "source_reference": "docs/assumptions.md#airliner-profile",
+        "min_speed_kt": 130.0,
+        "max_speed_kt": 350.0,
+        "max_climb_rate_fpm": 2_500.0,
+        "max_descent_rate_fpm": 3_000.0,
+        "max_turn_rate_deg_per_second": 3.0,
+        "ceiling_ft": 39_000.0,
+        "aircraft_type_code": "A320",
+    }
+    values.update(overrides)
+    return AircraftPerformanceProfile(**values)  # type: ignore[arg-type]
+
+
+def _performance_profile_row(**overrides: object) -> AircraftPerformanceProfileRow:
+    values: dict[str, object] = {
+        "profile_id": "A320-POC-V1",
+        "category": "AIRLINER",
+        "source": "SIMULATION_ASSUMPTION",
+        "source_reference": "docs/assumptions.md#airliner-profile",
+        "min_speed_kt": 130.0,
+        "max_speed_kt": 350.0,
+        "max_climb_rate_fpm": 2_500.0,
+        "max_descent_rate_fpm": 3_000.0,
+        "max_turn_rate_deg_per_second": 3.0,
+        "ceiling_ft": 39_000.0,
+        "aircraft_type_code": "A320",
+    }
+    values.update(overrides)
+    return AircraftPerformanceProfileRow(**values)  # type: ignore[arg-type]
 
 
 def _state(seconds: int = 0) -> AircraftState:
@@ -65,6 +138,89 @@ def _state_row(seconds: int = 0) -> AircraftStateRow:
         emergency_status=state.emergency_status.value,
         emergency_type=None,
     )
+
+
+def test_aircraft_type_repository_get_list_and_missing_result() -> None:
+    session, session_mock = _session()
+    first = _aircraft_type_row()
+    second = _aircraft_type_row(type_code="B738", manufacturer="Boeing", model="737-800")
+    session_mock.get.side_effect = [first, None]
+    session_mock.scalars.return_value.all.return_value = [first, second]
+    repository = SqlAlchemyAircraftTypeRepository(session)
+
+    assert repository.get("a320") == _aircraft_type()
+    assert repository.get("missing") is None
+    assert tuple(item.type_code for item in repository.list_all()) == ("A320", "B738")
+    assert session_mock.get.call_args_list[0].args == (AircraftTypeRow, "A320")
+
+
+def test_aircraft_type_repository_inserts_and_updates_rows() -> None:
+    session, session_mock = _session()
+    existing = _aircraft_type_row(manufacturer=None, model=None)
+    session_mock.get.side_effect = [None, existing]
+    repository = SqlAlchemyAircraftTypeRepository(session)
+
+    repository.upsert(_aircraft_type())
+    inserted = session_mock.add.call_args.args[0]
+    assert isinstance(inserted, AircraftTypeRow)
+    assert inserted.type_code == "A320"
+
+    repository.upsert(_aircraft_type(manufacturer="Updated", model="Updated model"))
+    assert existing.manufacturer == "Updated"
+    assert existing.model == "Updated model"
+    assert session_mock.flush.call_count == 2
+
+
+def test_performance_profile_repository_get_list_and_missing_result() -> None:
+    session, session_mock = _session()
+    first = _performance_profile_row()
+    second = _performance_profile_row(profile_id="TRANSPORT-POC-V1", aircraft_type_code=None)
+    session_mock.get.side_effect = [first, None]
+    session_mock.scalars.return_value.all.return_value = [first, second]
+    repository = SqlAlchemyAircraftPerformanceProfileRepository(session)
+
+    assert repository.get("A320-POC-V1") == _performance_profile()
+    assert repository.get("missing") is None
+    assert tuple(item.profile_id for item in repository.list_all()) == (
+        "A320-POC-V1",
+        "TRANSPORT-POC-V1",
+    )
+
+
+def test_performance_profile_repository_inserts_and_updates_every_field() -> None:
+    session, session_mock = _session()
+    existing = _performance_profile_row()
+    session_mock.get.side_effect = [None, existing]
+    repository = SqlAlchemyAircraftPerformanceProfileRepository(session)
+
+    repository.upsert(_performance_profile())
+    inserted = session_mock.add.call_args.args[0]
+    assert isinstance(inserted, AircraftPerformanceProfileRow)
+    assert inserted.profile_id == "A320-POC-V1"
+
+    updated = _performance_profile(
+        source=PerformanceDataSource.PUBLIC_REFERENCE,
+        source_reference="public-test-reference",
+        min_speed_kt=140.0,
+        max_speed_kt=360.0,
+        max_climb_rate_fpm=2_600.0,
+        max_descent_rate_fpm=3_100.0,
+        max_turn_rate_deg_per_second=2.5,
+        ceiling_ft=40_000.0,
+        aircraft_type_code=None,
+    )
+    repository.upsert(updated)
+
+    assert existing.source == "PUBLIC_REFERENCE"
+    assert existing.source_reference == "public-test-reference"
+    assert existing.min_speed_kt == 140.0
+    assert existing.max_speed_kt == 360.0
+    assert existing.max_climb_rate_fpm == 2_600.0
+    assert existing.max_descent_rate_fpm == 3_100.0
+    assert existing.max_turn_rate_deg_per_second == 2.5
+    assert existing.ceiling_ft == 40_000.0
+    assert existing.aircraft_type_code is None
+    assert session_mock.flush.call_count == 2
 
 
 def test_aircraft_repository_get_and_list_map_rows_to_domain() -> None:
@@ -187,6 +343,10 @@ def test_aircraft_state_repository_rejects_reversed_range() -> None:
 
 
 def test_repositories_require_real_sqlalchemy_session() -> None:
+    with pytest.raises(TypeError, match="SQLAlchemy Session"):
+        SqlAlchemyAircraftTypeRepository(cast(Session, "not-session"))
+    with pytest.raises(TypeError, match="SQLAlchemy Session"):
+        SqlAlchemyAircraftPerformanceProfileRepository(cast(Session, "not-session"))
     with pytest.raises(TypeError, match="SQLAlchemy Session"):
         SqlAlchemyAircraftRepository(cast(Session, "not-session"))
     with pytest.raises(TypeError, match="SQLAlchemy Session"):

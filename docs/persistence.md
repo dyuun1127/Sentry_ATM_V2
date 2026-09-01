@@ -47,8 +47,8 @@ SQLite는 PostgreSQL Schema를 지원하지 않으므로 물리 Schema 분리 �
 
 | 영역 | Table | 현재 상태 |
 |---|---|---|
-| Reference | `aircraft_type` | 구현 |
-| Reference | `aircraft_performance_profile` | Table 구현, Repository 후속 |
+| Reference | `aircraft_type` | Table과 Repository 구현 |
+| Reference | `aircraft_performance_profile` | Table과 Repository 구현 |
 | Reference | `aircraft` | Table과 Repository 구현 |
 | Traffic | `aircraft_state` | Table과 Repository 구현 |
 | Intent | `flight` | Domain만 구현, Table 후속 |
@@ -100,6 +100,14 @@ Repository 내부에서 임의 Commit을 수행하지 않는다.
 
 ## 8. 구현된 Repository
 
+- `SqlAlchemyAircraftTypeRepository`
+  - `get`
+  - `list_all`
+  - `upsert`
+- `SqlAlchemyAircraftPerformanceProfileRepository`
+  - `get`
+  - `list_all`
+  - `upsert`
 - `SqlAlchemyAircraftRepository`
   - `get`
   - `list_all`
@@ -117,6 +125,4 @@ Repository 내부에서 임의 Commit을 수행하지 않는다.
 - 동시 다중 Process Write 부하는 목표 범위가 아니다.
 - DB 내부 공간 Polygon 연산은 지원하지 않는다.
 - 자동 Migration 도구는 아직 도입하지 않는다. 현재 초기 Table은 `create_all()`로 생성한다.
-- 다음 Persistence 작업은 실제 사용 시점에 Aircraft Type과 Performance Profile Adapter를
-  추가하는 것이다.
 - Flight, Trajectory, PredictionRun은 각 기능 Phase에서 Table과 Adapter를 함께 추가한다.

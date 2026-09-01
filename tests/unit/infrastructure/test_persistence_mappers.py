@@ -6,11 +6,14 @@ import pytest
 from sentry_atm.domain import (
     AircraftCategory,
     AircraftMetadata,
+    AircraftPerformanceProfile,
     AircraftState,
+    AircraftType,
     DataSource,
     EmergencyStatus,
     EmergencyType,
     FlightPhase,
+    PerformanceDataSource,
 )
 from sentry_atm.geo import RKTU_ARP_LATITUDE_DEG, RKTU_ARP_LONGITUDE_DEG
 from sentry_atm.infrastructure.persistence.mappers import (
@@ -18,8 +21,15 @@ from sentry_atm.infrastructure.persistence.mappers import (
     aircraft_state_from_row,
     aircraft_state_to_row,
     aircraft_to_row,
+    aircraft_type_from_row,
+    aircraft_type_to_row,
+    performance_profile_from_row,
+    performance_profile_to_row,
 )
-from sentry_atm.infrastructure.persistence.models import AircraftRow, AircraftStateRow
+from sentry_atm.infrastructure.persistence.models import (
+    AircraftRow,
+    AircraftStateRow,
+)
 
 TIMESTAMP_UTC = datetime(2026, 9, 1, 3, 0, tzinfo=UTC)
 
@@ -39,6 +49,46 @@ def _state() -> AircraftState:
         emergency_status=EmergencyStatus.DECLARED,
         emergency_type=EmergencyType.PRIORITY_RETURN,
     )
+
+
+def _performance_profile() -> AircraftPerformanceProfile:
+    return AircraftPerformanceProfile(
+        profile_id="A320-POC-V1",
+        category=AircraftCategory.AIRLINER,
+        source=PerformanceDataSource.SIMULATION_ASSUMPTION,
+        source_reference="docs/assumptions.md#airliner-profile",
+        min_speed_kt=130.0,
+        max_speed_kt=350.0,
+        max_climb_rate_fpm=2_500.0,
+        max_descent_rate_fpm=3_000.0,
+        max_turn_rate_deg_per_second=3.0,
+        ceiling_ft=39_000.0,
+        aircraft_type_code="a320",
+    )
+
+
+def test_aircraft_type_mapper_round_trip_preserves_domain_fields() -> None:
+    aircraft_type = AircraftType(
+        type_code="a320",
+        category=AircraftCategory.AIRLINER,
+        manufacturer="Airbus",
+        model="A320",
+    )
+
+    row = aircraft_type_to_row(aircraft_type)
+
+    assert row.type_code == "A320"
+    assert aircraft_type_from_row(row) == aircraft_type
+
+
+def test_performance_profile_mapper_round_trip_preserves_domain_fields() -> None:
+    profile = _performance_profile()
+
+    row = performance_profile_to_row(profile)
+
+    assert row.category == "AIRLINER"
+    assert row.source == "SIMULATION_ASSUMPTION"
+    assert performance_profile_from_row(row) == profile
 
 
 def test_aircraft_mapper_round_trip_preserves_domain_fields() -> None:
@@ -79,6 +129,10 @@ def test_aircraft_state_mapper_round_trip_uses_canonical_local_values() -> None:
 @pytest.mark.parametrize(
     ("mapper", "value", "message"),
     [
+        (aircraft_type_to_row, "aircraft type", "AircraftType"),
+        (aircraft_type_from_row, "row", "AircraftTypeRow"),
+        (performance_profile_to_row, "profile", "AircraftPerformanceProfile"),
+        (performance_profile_from_row, "row", "AircraftPerformanceProfileRow"),
         (aircraft_to_row, "aircraft", "AircraftMetadata"),
         (aircraft_from_row, "row", "AircraftRow"),
         (aircraft_state_to_row, "state", "AircraftState"),

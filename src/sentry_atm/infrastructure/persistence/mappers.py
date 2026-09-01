@@ -1,8 +1,80 @@
 """Explicit Domain↔SQLite row mapping functions."""
 
-from sentry_atm.domain import AircraftMetadata, AircraftState
+from sentry_atm.domain import (
+    AircraftMetadata,
+    AircraftPerformanceProfile,
+    AircraftState,
+    AircraftType,
+)
 from sentry_atm.geo import rktu_local_to_geodetic
-from sentry_atm.infrastructure.persistence.models import AircraftRow, AircraftStateRow
+from sentry_atm.infrastructure.persistence.models import (
+    AircraftPerformanceProfileRow,
+    AircraftRow,
+    AircraftStateRow,
+    AircraftTypeRow,
+)
+
+
+def aircraft_type_to_row(aircraft_type: AircraftType) -> AircraftTypeRow:
+    if not isinstance(aircraft_type, AircraftType):
+        raise TypeError("aircraft_type must be AircraftType")
+    return AircraftTypeRow(
+        type_code=aircraft_type.type_code,
+        category=aircraft_type.category.value,
+        manufacturer=aircraft_type.manufacturer,
+        model=aircraft_type.model,
+    )
+
+
+def aircraft_type_from_row(row: AircraftTypeRow) -> AircraftType:
+    if not isinstance(row, AircraftTypeRow):
+        raise TypeError("row must be AircraftTypeRow")
+    return AircraftType(
+        type_code=row.type_code,
+        category=row.category,
+        manufacturer=row.manufacturer,
+        model=row.model,
+    )
+
+
+def performance_profile_to_row(
+    profile: AircraftPerformanceProfile,
+) -> AircraftPerformanceProfileRow:
+    if not isinstance(profile, AircraftPerformanceProfile):
+        raise TypeError("profile must be AircraftPerformanceProfile")
+    return AircraftPerformanceProfileRow(
+        profile_id=profile.profile_id,
+        category=profile.category.value,
+        source=profile.source.value,
+        source_reference=profile.source_reference,
+        min_speed_kt=profile.min_speed_kt,
+        max_speed_kt=profile.max_speed_kt,
+        max_climb_rate_fpm=profile.max_climb_rate_fpm,
+        max_descent_rate_fpm=profile.max_descent_rate_fpm,
+        max_turn_rate_deg_per_second=profile.max_turn_rate_deg_per_second,
+        ceiling_ft=profile.ceiling_ft,
+        aircraft_type_code=profile.aircraft_type_code,
+    )
+
+
+def performance_profile_from_row(
+    row: AircraftPerformanceProfileRow,
+) -> AircraftPerformanceProfile:
+    if not isinstance(row, AircraftPerformanceProfileRow):
+        raise TypeError("row must be AircraftPerformanceProfileRow")
+    return AircraftPerformanceProfile(
+        profile_id=row.profile_id,
+        category=row.category,
+        source=row.source,
+        source_reference=row.source_reference,
+        min_speed_kt=row.min_speed_kt,
+        max_speed_kt=row.max_speed_kt,
+        max_climb_rate_fpm=row.max_climb_rate_fpm,
+        max_descent_rate_fpm=row.max_descent_rate_fpm,
+        max_turn_rate_deg_per_second=row.max_turn_rate_deg_per_second,
+        ceiling_ft=row.ceiling_ft,
+        aircraft_type_code=row.aircraft_type_code,
+    )
 
 
 def aircraft_to_row(aircraft: AircraftMetadata) -> AircraftRow:
