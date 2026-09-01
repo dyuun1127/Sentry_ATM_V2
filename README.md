@@ -19,7 +19,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 3-C: SQLite Persistence Foundation 구현 완료
 - Phase 3-D: Aircraft Type/Performance Profile SQLite Adapter 구현 완료
 - Phase 3-E: Synthetic Reference Data Seed 구현 완료
-- Scenario Builder, Predictor, Conflict, UI: 아직 구현하지 않음
+- Phase 4-A: Constant-Velocity Baseline Trajectory Predictor 구현 완료
+- Scenario Builder, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -29,6 +30,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [RKTU Local Coordinate System](docs/coordinate_system.md)
 - [Deterministic Simulation Clock](docs/simulation.md)
 - [SQLite Persistence Contract](docs/persistence.md)
+- [Baseline Trajectory Predictor](docs/prediction.md)
 
 ## 요구 환경
 
