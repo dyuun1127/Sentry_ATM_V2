@@ -115,8 +115,18 @@
 ### ASM-013 - Synthetic 성능값
 
 - 상태: `PROVISIONAL`
-- 내용: 속도, 상승률, 강하율, 선회율 및 고도 Envelope는 공개자료를 참고한 비민감 단순값으로 설정한다.
-- 검증: `performance_classes.yaml` 작성 시 값별 근거와 범위 검토
+- 내용: 초기 Reference Seed는 실제 기종이 아닌 세 가지 Synthetic Category Envelope를 사용한다.
+- 출처 표기: 모든 값은 `SIMULATION_ASSUMPTION` 및
+  `ASM-013:SENTRY_POC_CATEGORY_ENVELOPE_V1`으로 저장한다.
+- 주의: 아래 값은 실제 항공기 성능, BADA 성능 또는 공식 운용한계가 아니다.
+
+| Profile | 속도 kt (min/max) | 상승/강하 ft/min | 선회 deg/s | 고도상한 ft |
+|---|---:|---:|---:|---:|
+| `AIRLINER-POC-V1` | 130 / 350 | 2,500 / 3,000 | 3.0 | 39,000 |
+| `FAST-JET-POC-V1` | 160 / 480 | 6,000 / 6,000 | 6.0 | 50,000 |
+| `TRANSPORT-POC-V1` | 110 / 320 | 2,000 / 2,500 | 3.0 | 35,000 |
+
+- 검증: Predictor/Scenario 통합 시 도달 가능성과 데모 안정성을 측정한 뒤 값과 버전을 조정한다.
 
 ### ASM-014 - 대상 비행체
 

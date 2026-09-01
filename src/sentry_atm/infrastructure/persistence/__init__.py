@@ -12,9 +12,18 @@ from sentry_atm.infrastructure.persistence.repositories import (
     SqlAlchemyAircraftStateRepository,
     SqlAlchemyAircraftTypeRepository,
 )
+from sentry_atm.infrastructure.persistence.seed import (
+    POC_AIRCRAFT_TYPES,
+    POC_PERFORMANCE_PROFILES,
+    ReferenceSeedResult,
+    seed_poc_reference_data,
+)
 
 __all__ = [
     "DatabaseSettings",
+    "POC_AIRCRAFT_TYPES",
+    "POC_PERFORMANCE_PROFILES",
+    "ReferenceSeedResult",
     "SqlAlchemyAircraftPerformanceProfileRepository",
     "SqlAlchemyAircraftRepository",
     "SqlAlchemyAircraftStateRepository",
@@ -22,4 +31,5 @@ __all__ = [
     "create_database_engine",
     "create_session_factory",
     "initialize_database",
+    "seed_poc_reference_data",
 ]

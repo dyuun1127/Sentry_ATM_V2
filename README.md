@@ -18,6 +18,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 3-B: Aircraft Performance Profile 및 Persistence Contract 구현 완료
 - Phase 3-C: SQLite Persistence Foundation 구현 완료
 - Phase 3-D: Aircraft Type/Performance Profile SQLite Adapter 구현 완료
+- Phase 3-E: Synthetic Reference Data Seed 구현 완료
 - Scenario Builder, Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
@@ -58,6 +59,13 @@ python -m venv .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence init --path tmp/demo.db
+```
+
+세 가지 Synthetic Category의 초기 Aircraft Type과 Performance Profile을 추가하려면 실행한다.
+기존에 같은 ID가 있으면 덮어쓰지 않는다.
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence seed
 ```
 
 ## 테스트 및 정적 검사

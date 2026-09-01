@@ -31,6 +31,15 @@ data/sentry_atm.db
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence init
 ```
 
+PoC Reference Data 적재:
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence seed
+```
+
+`seed`는 Schema를 먼저 초기화한 뒤 누락된 Synthetic Aircraft Type과 Performance Profile만
+추가한다. 동일 ID가 이미 있으면 사용자가 검토하거나 수정한 값을 덮어쓰지 않는다.
+
 경로 변경:
 
 ```powershell
@@ -126,3 +135,4 @@ Repository 내부에서 임의 Commit을 수행하지 않는다.
 - DB 내부 공간 Polygon 연산은 지원하지 않는다.
 - 자동 Migration 도구는 아직 도입하지 않는다. 현재 초기 Table은 `create_all()`로 생성한다.
 - Flight, Trajectory, PredictionRun은 각 기능 Phase에서 Table과 Adapter를 함께 추가한다.
+- 초기 Reference Data는 `ASM-013`의 시뮬레이션 가정이며 실제 기종 성능자료가 아니다.

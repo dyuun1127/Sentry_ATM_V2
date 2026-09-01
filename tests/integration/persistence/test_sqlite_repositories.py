@@ -23,6 +23,7 @@ from sentry_atm.infrastructure.persistence import (
     create_database_engine,
     create_session_factory,
     initialize_database,
+    seed_poc_reference_data,
 )
 from sentry_atm.infrastructure.persistence.models import AircraftStateRow
 
@@ -140,4 +141,43 @@ def test_sqlite_initialization_is_idempotent_and_seeds_unknown_type(tmp_path: Pa
             text("SELECT COUNT(*) FROM aircraft_type WHERE type_code = 'UNKNOWN'")
         )
     assert unknown_count == 1
+    engine.dispose()
+
+
+def test_reference_seed_is_idempotent_and_preserves_existing_profile(tmp_path: Path) -> None:
+    engine = create_database_engine(DatabaseSettings(database_path=tmp_path / "seed.db"))
+    initialize_database(engine)
+    session_factory = create_session_factory(engine)
+
+    with session_factory.begin() as session:
+        first_result = seed_poc_reference_data(session)
+        profile_repository = SqlAlchemyAircraftPerformanceProfileRepository(session)
+        existing = profile_repository.get("AIRLINER-POC-V1")
+        assert existing is not None
+        profile_repository.upsert(
+            AircraftPerformanceProfile(
+                profile_id=existing.profile_id,
+                category=existing.category,
+                source=existing.source,
+                source_reference="locally-reviewed-profile",
+                min_speed_kt=existing.min_speed_kt,
+                max_speed_kt=existing.max_speed_kt,
+                max_climb_rate_fpm=existing.max_climb_rate_fpm,
+                max_descent_rate_fpm=existing.max_descent_rate_fpm,
+                max_turn_rate_deg_per_second=existing.max_turn_rate_deg_per_second,
+                ceiling_ft=existing.ceiling_ft,
+                aircraft_type_code=existing.aircraft_type_code,
+            )
+        )
+
+    with session_factory.begin() as session:
+        second_result = seed_poc_reference_data(session)
+        preserved = SqlAlchemyAircraftPerformanceProfileRepository(session).get("AIRLINER-POC-V1")
+
+    assert first_result.aircraft_types_added == 3
+    assert first_result.performance_profiles_added == 3
+    assert second_result.aircraft_types_added == 0
+    assert second_result.performance_profiles_added == 0
+    assert preserved is not None
+    assert preserved.source_reference == "locally-reviewed-profile"
     engine.dispose()

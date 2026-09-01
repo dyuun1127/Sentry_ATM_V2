@@ -6,7 +6,9 @@ from collections.abc import Sequence
 from sentry_atm.infrastructure.persistence import (
     DatabaseSettings,
     create_database_engine,
+    create_session_factory,
     initialize_database,
+    seed_poc_reference_data,
 )
 
 
@@ -14,8 +16,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = ArgumentParser(description="SENTRY ATM SQLite persistence utility")
     parser.add_argument(
         "command",
-        choices=("init",),
-        help="initialize the local database schema",
+        choices=("init", "seed"),
+        help="initialize the schema or add missing PoC reference data",
     )
     parser.add_argument(
         "--path",
@@ -32,9 +34,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     engine = create_database_engine(settings)
     try:
         initialize_database(engine)
+        if arguments.command == "seed":
+            session_factory = create_session_factory(engine)
+            with session_factory.begin() as session:
+                result = seed_poc_reference_data(session)
     finally:
         engine.dispose()
-    print(f"SQLite database initialized: {settings.database_path.resolve()}")
+    if arguments.command == "init":
+        print(f"SQLite database initialized: {settings.database_path.resolve()}")
+    else:
+        print(
+            "SQLite reference data seeded: "
+            f"types={result.aircraft_types_added}, "
+            f"profiles={result.performance_profiles_added}, "
+            f"path={settings.database_path.resolve()}"
+        )
     return 0
 
 
