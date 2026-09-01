@@ -56,7 +56,35 @@ predicted_trajectory = predictor.predict(current_aircraft_state)
 - Aircraft Performance Profile의 Envelope를 아직 적용하지 않는다.
 - 풍향·풍속과 불확실성 구간을 반영하지 않는다.
 - Horizon 사이의 조밀한 중간점을 생성하지 않는다.
-- 다중 Aircraft 실행 주기와 `PredictionRun` 생성은 후속 Phase에서 결합한다.
+- 5초 Rolling 실행 스케줄과 Prediction 저장 Adapter는 아직 결합하지 않는다.
 
 따라서 이 결과는 충돌 예측 파이프라인을 검증하기 위한 Baseline이며 실제 항공기 성능 예측이나
 운항 판단에 사용할 수 없다.
+
+## 6. Multi-Aircraft Prediction Run
+
+Phase 4-B의 `PredictionRunService`는 하나의 `TrafficSnapshot`에 포함된 모든 활성 State를
+등록 순서대로 예측하고 하나의 `PredictionRun`으로 묶는다.
+
+```python
+from sentry_atm.prediction import ConstantVelocityPredictor, PredictionRunService
+
+service = PredictionRunService(ConstantVelocityPredictor())
+run = service.run(
+    traffic_snapshot,
+    prediction_run_id="RUN-0001",
+    generated_at_utc=generated_at_utc,
+)
+```
+
+- `input_timestamp_utc`: Snapshot 시각
+- `generated_at_utc`: 호출자가 전달한 timezone-aware 생성시각
+- `trajectories`: Snapshot의 Aircraft 순서를 보존한 예측 결과
+- 모델 정보: Predictor의 이름·버전·설정 ID
+
+Playback의 Zero-order Hold State는 기록시각이 Snapshot보다 과거일 수 있다. 이 경우 마지막
+기록 위치에서 먼저 Snapshot 시각까지 동일 운동으로 전파한 뒤, Snapshot 기준 `+30/+60/+120초`
+시각의 위치를 계산한다. Snapshot보다 미래인 State는 입력 오류로 거부한다.
+
+자동 UUID나 실제 시스템 시각을 내부에서 생성하지 않는다. 호출자가 Run ID와 생성시각을
+명시하므로 같은 입력으로 완전히 동일한 `PredictionRun`을 재현할 수 있다.

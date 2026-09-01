@@ -103,6 +103,31 @@ def test_predictor_supports_descent_and_opensky_state_without_mutation() -> None
     )
 
 
+def test_predictor_uses_explicit_reference_time_for_stale_playback_state() -> None:
+    state = _state(ground_speed_kt=360.0, vertical_speed_fpm=0.0)
+    reference_time = INPUT_TIME_UTC + timedelta(seconds=10)
+
+    point = (
+        ConstantVelocityPredictor((30,))
+        .predict(
+            state,
+            reference_time_utc=reference_time,
+        )
+        .points[0]
+    )
+
+    assert point.timestamp_utc == INPUT_TIME_UTC + timedelta(seconds=40)
+    assert point.x_nm == pytest.approx(4.0)
+
+
+def test_predictor_rejects_reference_time_before_state() -> None:
+    with pytest.raises(ValueError, match="must not be earlier"):
+        ConstantVelocityPredictor().predict(
+            _state(),
+            reference_time_utc=INPUT_TIME_UTC - timedelta(seconds=1),
+        )
+
+
 def test_predictor_materializes_custom_horizons() -> None:
     horizons = [10, 20]
     predictor = ConstantVelocityPredictor(horizons)

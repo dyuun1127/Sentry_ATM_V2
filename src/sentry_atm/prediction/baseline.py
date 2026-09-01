@@ -1,10 +1,11 @@
 """Deterministic constant-velocity baseline trajectory predictor."""
 
 from collections.abc import Iterable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from math import cos, radians, sin
 
 from sentry_atm.domain import AircraftState, Trajectory, TrajectoryPoint, TrajectoryType
+from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.units import fpm_to_ft_per_second, knots_to_nm_per_second
 
 DEFAULT_HORIZONS_SECONDS = (30, 60, 120)
@@ -49,34 +50,50 @@ class ConstantVelocityPredictor:
     def horizons_seconds(self) -> tuple[int, ...]:
         return self._horizons_seconds
 
-    def predict(self, state: AircraftState) -> Trajectory:
+    def predict(
+        self,
+        state: AircraftState,
+        *,
+        reference_time_utc: datetime | None = None,
+    ) -> Trajectory:
         """Return PREDICTED 4DT points at each configured future horizon."""
 
         if not isinstance(state, AircraftState):
             raise TypeError("state must be an AircraftState")
+        reference_time = (
+            state.timestamp_utc
+            if reference_time_utc is None
+            else to_utc(reference_time_utc, field_name="reference_time_utc")
+        )
+        if reference_time < state.timestamp_utc:
+            raise ValueError("reference_time_utc must not be earlier than state timestamp")
 
         heading_rad = radians(state.heading_deg)
         horizontal_speed_nm_per_second = knots_to_nm_per_second(state.ground_speed_kt)
         vertical_speed_ft_per_second = fpm_to_ft_per_second(state.vertical_speed_fpm)
+        points = []
+        for horizon_seconds in self._horizons_seconds:
+            target_time = reference_time + timedelta(seconds=horizon_seconds)
+            elapsed_seconds = (target_time - state.timestamp_utc).total_seconds()
+            points.append(
+                TrajectoryPoint(
+                    timestamp_utc=target_time,
+                    x_nm=(
+                        state.x_nm
+                        + horizontal_speed_nm_per_second * elapsed_seconds * sin(heading_rad)
+                    ),
+                    y_nm=(
+                        state.y_nm
+                        + horizontal_speed_nm_per_second * elapsed_seconds * cos(heading_rad)
+                    ),
+                    altitude_ft=(
+                        state.altitude_ft + vertical_speed_ft_per_second * elapsed_seconds
+                    ),
+                )
+            )
 
         return Trajectory(
             aircraft_id=state.aircraft_id,
             trajectory_type=TrajectoryType.PREDICTED,
-            points=tuple(
-                TrajectoryPoint(
-                    timestamp_utc=state.timestamp_utc + timedelta(seconds=horizon_seconds),
-                    x_nm=(
-                        state.x_nm
-                        + horizontal_speed_nm_per_second * horizon_seconds * sin(heading_rad)
-                    ),
-                    y_nm=(
-                        state.y_nm
-                        + horizontal_speed_nm_per_second * horizon_seconds * cos(heading_rad)
-                    ),
-                    altitude_ft=(
-                        state.altitude_ft + vertical_speed_ft_per_second * horizon_seconds
-                    ),
-                )
-                for horizon_seconds in self._horizons_seconds
-            ),
+            points=tuple(points),
         )

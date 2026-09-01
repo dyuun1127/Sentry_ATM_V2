@@ -20,6 +20,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 3-D: Aircraft Type/Performance Profile SQLite Adapter 구현 완료
 - Phase 3-E: Synthetic Reference Data Seed 구현 완료
 - Phase 4-A: Constant-Velocity Baseline Trajectory Predictor 구현 완료
+- Phase 4-B: Multi-Aircraft Prediction Run 구현 완료
 - Scenario Builder, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
