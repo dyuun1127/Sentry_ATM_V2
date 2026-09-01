@@ -2,5 +2,11 @@
 
 from sentry_atm.simulation.clock import ClockState, SimulationClock
 from sentry_atm.simulation.playback import PlaybackAircraftRuntime
+from sentry_atm.simulation.synthetic import SyntheticAircraftRuntime
 
-__all__ = ["ClockState", "PlaybackAircraftRuntime", "SimulationClock"]
+__all__ = [
+    "ClockState",
+    "PlaybackAircraftRuntime",
+    "SimulationClock",
+    "SyntheticAircraftRuntime",
+]

@@ -13,7 +13,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 1-B: Local 수평거리·고도 수직분리·위경도 대권거리 구현 완료
 - Phase 2-A: UTC 기반 Deterministic Simulation Clock 구현 완료
 - Phase 2-B: Clock 기반 OPENSKY Playback Aircraft Runtime 구현 완료
-- Synthetic Runtime, Predictor, Conflict, UI: 아직 구현하지 않음
+- Phase 2-C: Constant Motion 기반 Synthetic Aircraft Runtime 구현 완료
+- Traffic Engine, Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

@@ -1,14 +1,15 @@
-# Simulation Time and Playback Runtime
+# Simulation Time and Aircraft Runtimes
 
 ## 1. 목적
 
-SENTRY의 Playback Aircraft, Synthetic Aircraft 및 후속 Rolling Prediction이 같은 재현 가능한 UTC Simulation Time을 사용하도록 한다. Phase 2-A는 공통 Clock을, Phase 2-B는 기록된 OPENSKY 상태를 Clock에 맞춰 조회하는 Playback Runtime을 제공한다.
+SENTRY의 Playback Aircraft, Synthetic Aircraft 및 후속 Rolling Prediction이 같은 재현 가능한 UTC Simulation Time을 사용하도록 한다. Phase 2-A는 공통 Clock을, Phase 2-B는 OPENSKY Playback Runtime을, Phase 2-C는 기초 Synthetic Runtime을 제공한다.
 
 구현 위치:
 
 ```text
 src/sentry_atm/simulation/clock.py
 src/sentry_atm/simulation/playback.py
+src/sentry_atm/simulation/synthetic.py
 ```
 
 ## 2. 시간 모델
@@ -78,11 +79,30 @@ state = runtime.current_state
 
 이 방식은 Zero-order Hold이며 원본 기록을 수정하거나 새 상태를 생성하지 않는다. Playback과 Synthetic Runtime의 책임 분리를 위해 `source=OPENSKY` 상태만 허용한다.
 
-## 7. 현재 제한사항
+## 7. Synthetic Aircraft Runtime
+
+`SyntheticAircraftRuntime`은 초기 `source=SYNTHETIC` 상태의 속도, Heading 및 수직속도가 유지된다는 기초 운동 가정으로 Clock 현재 시각의 상태를 계산한다.
+
+```text
+distance_nm = ground_speed_kt × elapsed_seconds / 3600
+x = initial_x + distance_nm × sin(heading)
+y = initial_y + distance_nm × cos(heading)
+altitude = initial_altitude + vertical_speed_fpm × elapsed_seconds / 60
+```
+
+Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. Runtime은 이전 Tick 결과를 누적하지 않고 초기 상태와 Clock 시각으로 매번 다시 계산하므로 Reset과 반복 실행 결과가 동일하다.
+
+초기 상태 시각 이전에는 `None`을 반환하며, 정확히 초기 시각이면 원래 상태를 반환한다. 이후 상태는 기존 식별자, 운동 값, 비행단계 및 비상 상태를 보존한다.
+
+이 Runtime은 현재 Clock 시각의 단일 Actual State만 계산한다. 미래 시점 목록이나 `PREDICTED` Trajectory를 생성하지 않으므로 Phase 4 Predictor 책임과 분리된다.
+
+## 8. 현재 제한사항
 
 - 종료 시각과 `FINISHED` 상태는 아직 없다.
 - 재생 배속과 실제 화면 Frame Rate를 연결하지 않는다.
 - 5초 Rolling Prediction 갱신 스케줄은 Predictor 구현 단계에서 추가한다.
 - 기록 사이 위치·고도 보간은 아직 수행하지 않는다.
 - CSV와 OpenSky 원본 자료를 `AircraftState`로 변환하는 Adapter는 아직 없다.
-- Synthetic Aircraft Runtime은 후속 Phase에서 별도로 구현한다.
+- Synthetic 운동은 Constant Speed, Constant Heading, Constant Vertical Rate만 지원한다.
+- 선회율, 가감속, 목표 고도 Capture 및 Aircraft Performance 제한은 아직 없다.
+- 관제 명령 적용과 운동 상태 변경은 후속 Phase에서 구현한다.
