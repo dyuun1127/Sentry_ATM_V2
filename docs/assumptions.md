@@ -255,12 +255,20 @@
 - 내용: 실제 군 레이더 항적, 실제 군 Callsign, 개인 식별정보, API Key 및 인증정보를 저장소에 포함하지 않는다.
 - 검증: Commit 전 staged diff와 Secret Scan 확인
 
+### ASM-034 - 좌표 변환 지구 모델
+
+- 상태: `POC_ASSUMPTION`
+- 내용: Phase 1의 RKTU Local Tangent Plane은 평균 지구 반지름 3,440.065 NM인 구면 지구 모델을 사용한다.
+- 이유: 외부 측지 라이브러리 없이 Terminal 범위의 결정론적 좌표 변환과 역변환을 제공하기 위함이다.
+- 주의: WGS84 타원체 기반 공식 측지 변환이나 실제 감시체계 좌표변환을 대체하지 않는다.
+- 검증: 원점, 축 방향, 30 NM Envelope 왕복 변환 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
 |---|---|
 | Phase 0 | ASM-001, 002, 005~009, 012, 014, 023, 025~029, 033 |
-| Phase 1 | ASM-003, 004 |
+| Phase 1 | ASM-003, 004, 034 |
 | Phase 2 | ASM-017 |
 | Phase 3 | ASM-010, 013, 015 |
 | Phase 4 | ASM-016, 022 |

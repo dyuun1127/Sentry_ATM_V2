@@ -147,7 +147,7 @@ Heading은 `[0, 360)` 범위만 유효하다.
 | `y_nm` | NM |
 | `altitude_ft` | ft |
 
-Phase 1에서 위경도와 RKTU Local x/y 간 좌표 변환을 추가한다. 핵심 Trajectory 계산은 Local x/y를 사용한다.
+Phase 1에서 `GeodeticPosition`, `LocalPosition`과 RKTU Local Tangent Plane 변환을 추가했다. 핵심 Trajectory 계산은 Local x/y를 사용하고, 위경도는 Geo Adapter 경계에서 변환한다. 자세한 내용은 `docs/coordinate_system.md`를 참조한다.
 
 ## 7. Trajectory
 
