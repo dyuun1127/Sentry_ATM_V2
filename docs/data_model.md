@@ -10,9 +10,13 @@
 src/sentry_atm/domain/
 ├─ aircraft.py
 ├─ enums.py
+├─ flight.py
+├─ performance.py
+├─ prediction.py
 ├─ time_policy.py
 ├─ trajectory.py
-└─ units.py
+├─ units.py
+└─ validation.py
 ```
 
 ## 2. 공통 불변조건
@@ -99,6 +103,14 @@ Heading은 `[0, 360)` 범위만 유효하다.
 - `PREDICTED`
 
 세 Trajectory는 같은 자료구조를 사용하지만 의미를 혼합하지 않는다.
+
+### 3.6 Persistence 확장 Enum
+
+`PerformanceDataSource`는 성능 Profile의 출처를 `SIMULATION_ASSUMPTION`,
+`PUBLIC_REFERENCE`, `OPENAP`, `LICENSED_REFERENCE`로 구분한다. 실제 수치의 근거는
+`source_reference`에 별도로 기록한다.
+
+`FlightStatus`는 `PLANNED`, `ACTIVE`, `COMPLETED`, `CANCELLED`를 사용한다.
 
 ## 4. AircraftMetadata
 
@@ -212,12 +224,22 @@ trajectory = Trajectory(
 )
 ```
 
-## 9. 의도적으로 제외한 모델
+## 9. Persistence 준비 Domain
+
+PostgreSQL/PostGIS 연결 전에 다음 DB 독립 객체를 추가했다.
+
+- `AircraftType`: 공개 기종 코드와 비민감 Category
+- `AircraftPerformanceProfile`: 속도·상승/강하·선회·고도 Envelope와 출처
+- `Flight`: 한 항공기의 계획 시간 구간과 상태
+- `PredictionRun`: 입력시각, 모델 버전, Horizon 및 Predicted Trajectory Aggregate
+
+Repository 계약과 논리 Schema는 `docs/persistence.md`를 참조한다.
+
+## 10. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
 - 위경도 및 RKTU 좌표 변환: Phase 1
-- Aircraft Performance: Phase 3 전 준비
 - PredictionResult: Phase 4
 - Conflict와 CPA/TCPA: Phase 6
 - Risk와 Priority: Phase 7

@@ -15,6 +15,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 2-B: Clock 기반 OPENSKY Playback Aircraft Runtime 구현 완료
 - Phase 2-C: Constant Motion 기반 Synthetic Aircraft Runtime 구현 완료
 - Phase 3-A: 공유 Clock 기반 다중 항공기 Traffic Simulation Engine 구현 완료
+- Phase 3-B: Aircraft Performance Profile 및 Persistence Contract 구현 완료
 - Scenario Builder, Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
@@ -24,6 +25,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Domain Data Model](docs/data_model.md)
 - [RKTU Local Coordinate System](docs/coordinate_system.md)
 - [Deterministic Simulation Clock](docs/simulation.md)
+- [PostgreSQL + PostGIS Persistence Contract](docs/persistence.md)
 
 ## 요구 환경
 

@@ -50,3 +50,21 @@ class TrajectoryType(StrEnum):
     PLANNED = "PLANNED"
     ACTUAL = "ACTUAL"
     PREDICTED = "PREDICTED"
+
+
+class PerformanceDataSource(StrEnum):
+    """Provenance category for non-sensitive performance profiles."""
+
+    SIMULATION_ASSUMPTION = "SIMULATION_ASSUMPTION"
+    PUBLIC_REFERENCE = "PUBLIC_REFERENCE"
+    OPENAP = "OPENAP"
+    LICENSED_REFERENCE = "LICENSED_REFERENCE"
+
+
+class FlightStatus(StrEnum):
+    """Lifecycle state of a flight record."""
+
+    PLANNED = "PLANNED"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"

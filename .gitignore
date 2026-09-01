@@ -66,7 +66,7 @@ Desktop.ini
 # Office temporary files
 ~$*
 
-# Optional: uncomment these lines if reference documents should not be uploaded.
-# /자료/
+# Local reference documents must not be uploaded.
+/자료/
 # /*.pdf
 # /*.hwp

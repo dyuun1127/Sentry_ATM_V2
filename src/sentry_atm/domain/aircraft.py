@@ -17,25 +17,11 @@ from sentry_atm.domain.units import (
     as_heading_deg,
     as_non_negative_float,
 )
-
-
-def _require_identifier(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str):
-        raise TypeError(f"{field_name} must be a string")
-    normalized = value.strip()
-    if not normalized:
-        raise ValueError(f"{field_name} must not be blank")
-    return normalized
-
-
-def _normalize_optional_text(value: str | None, *, field_name: str) -> str | None:
-    if value is None:
-        return None
-    return _require_identifier(value, field_name=field_name)
+from sentry_atm.domain.validation import normalize_optional_text, require_identifier
 
 
 def _normalize_icao24(value: str | None) -> str | None:
-    normalized = _normalize_optional_text(value, field_name="icao24")
+    normalized = normalize_optional_text(value, field_name="icao24")
     if normalized is None:
         return None
     lowered = normalized.lower()
@@ -59,24 +45,24 @@ class AircraftMetadata:
         object.__setattr__(
             self,
             "aircraft_id",
-            _require_identifier(self.aircraft_id, field_name="aircraft_id"),
+            require_identifier(self.aircraft_id, field_name="aircraft_id"),
         )
         object.__setattr__(
             self,
             "aircraft_type",
-            _require_identifier(self.aircraft_type, field_name="aircraft_type"),
+            require_identifier(self.aircraft_type, field_name="aircraft_type"),
         )
         object.__setattr__(self, "category", AircraftCategory(self.category))
         object.__setattr__(
             self,
             "callsign",
-            _normalize_optional_text(self.callsign, field_name="callsign"),
+            normalize_optional_text(self.callsign, field_name="callsign"),
         )
         object.__setattr__(self, "icao24", _normalize_icao24(self.icao24))
         object.__setattr__(
             self,
             "performance_class",
-            _normalize_optional_text(
+            normalize_optional_text(
                 self.performance_class,
                 field_name="performance_class",
             ),
@@ -104,7 +90,7 @@ class AircraftState:
         object.__setattr__(
             self,
             "aircraft_id",
-            _require_identifier(self.aircraft_id, field_name="aircraft_id"),
+            require_identifier(self.aircraft_id, field_name="aircraft_id"),
         )
         object.__setattr__(
             self,
