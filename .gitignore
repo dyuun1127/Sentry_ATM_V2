@@ -1,0 +1,72 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+config/local.yaml
+config/*.local.yaml
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python caches and generated files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging and build outputs
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Frontend dependencies and build outputs
+node_modules/
+simulator/frontend/node_modules/
+simulator/frontend/dist/
+.vite/
+
+# Raw, processed, and generated datasets
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Runtime output, logs, and temporary files
+tmp/
+temp/
+logs/
+*.log
+*.tmp
+*.bak
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# IDE settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Office temporary files
+~$*
+
+# Optional: uncomment these lines if reference documents should not be uploaded.
+# /자료/
+# /*.pdf
+# /*.hwp
