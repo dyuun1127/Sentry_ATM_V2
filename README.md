@@ -7,13 +7,15 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 ## 현재 상태
 
 - Phase 0-A: Golden Demo Scenario Contract 작성 완료
-- Phase 0-B: Python 프로젝트 및 테스트 기반 구성 중
+- Phase 0-B: Python 프로젝트 및 테스트 기반 구성 완료
+- Phase 0-C: UTC·단위·Enum·최소 Aircraft/Trajectory Domain 구현 완료
 - 알고리즘, 시뮬레이터, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
 - [Golden Demo Scenario Contract](docs/scenarios.md)
 - [PoC Assumption Register](docs/assumptions.md)
+- [Domain Data Model](docs/data_model.md)
 
 ## 요구 환경
 
@@ -44,12 +46,15 @@ python -m venv .venv
 .
 ├─ docs/
 │  ├─ assumptions.md
+│  ├─ data_model.md
 │  └─ scenarios.md
 ├─ src/
 │  └─ sentry_atm/
+│     ├─ domain/
 │     └─ __init__.py
 ├─ tests/
 │  └─ unit/
+│     ├─ domain/
 │     └─ test_package.py
 ├─ .gitattributes
 ├─ .gitignore
