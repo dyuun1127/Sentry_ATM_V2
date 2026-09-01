@@ -10,6 +10,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 0-B: Python 프로젝트 및 테스트 기반 구성 완료
 - Phase 0-C: UTC·단위·Enum·최소 Aircraft/Trajectory Domain 구현 완료
 - Phase 1-A: RKTU ARP 기반 위경도↔Local x/y NM 변환 구현 완료
+- Phase 1-B: Local 수평거리·고도 수직분리·위경도 대권거리 구현 완료
 - 알고리즘, 시뮬레이터, UI: 아직 구현하지 않음
 
 ## 핵심 문서

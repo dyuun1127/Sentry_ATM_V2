@@ -12,6 +12,11 @@ from sentry_atm.geo.coordinate import (
     rktu_geodetic_to_local,
     rktu_local_to_geodetic,
 )
+from sentry_atm.geo.distance import (
+    geodetic_distance_nm,
+    horizontal_distance_nm,
+    vertical_separation_ft,
+)
 
 __all__ = [
     "MEAN_EARTH_RADIUS_NM",
@@ -24,4 +29,7 @@ __all__ = [
     "LocalTangentPlane",
     "rktu_geodetic_to_local",
     "rktu_local_to_geodetic",
+    "geodetic_distance_nm",
+    "horizontal_distance_nm",
+    "vertical_separation_ft",
 ]
