@@ -134,7 +134,51 @@ Golden Profile의 Template은 Preferred Altitude, Preferred Heading, Other Speed
 
 이 결과는 후보 값만 계산한 것이며 Scenario 문서의 SAFE/UNSAFE/INEFFECTIVE 판정을 의미하지 않는다.
 
-## 8. 다음 단계
+## 8. Safety Validation Domain
 
-Phase 9-C는 각 Candidate를 복제된 Simulation State에만 적용해 재예측하고 1차 Conflict 해소 여부,
-2차 Conflict, Performance Envelope와 잠정 Rule 위반을 별도 `Safety Validator`에서 평가한다.
+Phase 9-C는 실제 Validator 계산 전에 결과와 증거의 타입 안전한 계약을 정의한다.
+
+### 8.1 Verdict
+
+| Verdict | 필수 의미 |
+|---|---|
+| `SAFE` | 1차 Conflict 해소, 2차 Conflict·성능·Rule 실패 없음 |
+| `INEFFECTIVE` | Action 적용 후 다른 실패 없이 1차 Conflict만 지속 |
+| `UNSAFE` | 2차 Conflict, 성능 또는 Rule 실패가 있거나 무조작 기준선이 Conflict를 유지 |
+
+`NO_ACTION` 기준선이 자연스럽게 Conflict를 해소하고 다른 실패가 없다면 `SAFE`도 가능하다. Verdict는
+Candidate 종류만으로 정하지 않고 재시뮬레이션 증거와 함께 결정한다.
+
+### 8.2 Evidence
+
+`CandidateSafetyValidationResult`는 다음을 함께 보존한다.
+
+- Candidate와 Validation Result ID
+- 평가 UTC와 Validation Profile ID
+- Candidate 적용 후 Primary `ConflictEvent`
+- 모든 Secondary `PREDICTED` Conflict
+- Performance Envelope 가능 여부
+- 출처가 있는 `SafetyRuleViolation`
+- Verdict를 설명하는 안정적인 Reason Code
+
+Reason Code와 실제 증거는 양방향으로 일치해야 한다. 예를 들어 Secondary Conflict가 있으면
+`SECONDARY_CONFLICT_DETECTED`가 반드시 존재하고, 해당 Reason만 있고 Conflict가 없는 결과도
+거부한다. Secondary Pair는 Primary Pair와 달라야 하며 ID와 Pair가 모두 고유해야 한다.
+
+Rule 위반은 `MINIMUM_ALTITUDE`, `AIRSPACE`, `PROCEDURE`, `OTHER`로 구분하고 Rule ID, 대상 Aircraft,
+설명과 Source Reference를 남긴다. Performance Envelope 실패는 Rule 위반과 별도 증거로 유지한다.
+
+### 8.3 Validation Run
+
+`ResolutionSafetyValidationRun`은 하나의 Candidate Batch에 대한 같은 UTC·Horizon·Profile의 결과를
+Candidate ID 순으로 보존한다. Result ID와 Candidate ID는 각각 고유하며 `safe_results`는 원본을
+변경하지 않는 파생 View다.
+
+Phase 9-C는 Result를 직접 만들어 Golden 판정을 하드코딩하지 않는다. 실제 Candidate State 적용,
+재예측과 Conflict 탐지는 아직 수행하지 않는다.
+
+## 9. 다음 단계
+
+Phase 9-D는 Candidate마다 복제한 State에 기동을 적용하고 기존 Predictor/Conflict Detector로 같은
+Horizon을 재계산한다. Performance Envelope와 잠정 Rule 검사 결과를 Phase 9-C Domain으로 조립하되
+실제 Aircraft Runtime은 변경하지 않는다.

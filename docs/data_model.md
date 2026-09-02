@@ -308,11 +308,16 @@ Phase 9-B의 `ResolutionCandidateGenerationProfile`은 Candidate Template, 기�
 Profile에 적용해 Batch를 생성하지만 Domain Candidate에 Safety 결과를 추가하거나 Runtime을 변경하지
 않는다.
 
+Phase 9-C는 `SafetyRuleViolation`, `CandidateSafetyValidationResult`와
+`ResolutionSafetyValidationRun`으로 Primary/Secondary Conflict, Performance 가능 여부, Rule 증거와
+SAFE/UNSAFE/INEFFECTIVE 판정을 분리해 보존한다. Reason Code와 증거가 일치하지 않는 Result는 생성할
+수 없다.
+
 ## 15. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Safety Validation과 Recommendation: Phase 9-C~11
+- Safety Validator 계산과 Recommendation: Phase 9-D~11
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

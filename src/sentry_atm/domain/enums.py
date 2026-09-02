@@ -134,6 +134,34 @@ class ResolutionObjective(StrEnum):
     BASELINE_COMPARISON = "BASELINE_COMPARISON"
 
 
+class ResolutionValidationVerdict(StrEnum):
+    """Outcome of isolated Candidate Safety Validation."""
+
+    SAFE = "SAFE"
+    UNSAFE = "UNSAFE"
+    INEFFECTIVE = "INEFFECTIVE"
+
+
+class ResolutionValidationReasonCode(StrEnum):
+    """Stable explanations for a Candidate validation verdict."""
+
+    PRIMARY_CONFLICT_RESOLVED = "PRIMARY_CONFLICT_RESOLVED"
+    PRIMARY_CONFLICT_REMAINS = "PRIMARY_CONFLICT_REMAINS"
+    SECONDARY_CONFLICT_DETECTED = "SECONDARY_CONFLICT_DETECTED"
+    PERFORMANCE_ENVELOPE_EXCEEDED = "PERFORMANCE_ENVELOPE_EXCEEDED"
+    RULE_VIOLATION = "RULE_VIOLATION"
+    NO_ACTION_BASELINE = "NO_ACTION_BASELINE"
+
+
+class SafetyRuleViolationType(StrEnum):
+    """Coarse non-performance rule categories for validation evidence."""
+
+    MINIMUM_ALTITUDE = "MINIMUM_ALTITUDE"
+    AIRSPACE = "AIRSPACE"
+    PROCEDURE = "PROCEDURE"
+    OTHER = "OTHER"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 

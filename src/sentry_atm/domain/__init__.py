@@ -24,8 +24,11 @@ from sentry_atm.domain.enums import (
     PriorityReasonCode,
     ResolutionManeuverType,
     ResolutionObjective,
+    ResolutionValidationReasonCode,
+    ResolutionValidationVerdict,
     RiskLevel,
     RiskReasonCode,
+    SafetyRuleViolationType,
     TrajectoryType,
 )
 from sentry_atm.domain.exception_queue import (
@@ -56,6 +59,11 @@ from sentry_atm.domain.resolution import (
     SequenceChangeManeuver,
     SpeedManeuver,
 )
+from sentry_atm.domain.resolution_validation import (
+    CandidateSafetyValidationResult,
+    ResolutionSafetyValidationRun,
+    SafetyRuleViolation,
+)
 from sentry_atm.domain.risk import (
     POC_RISK_V1_POLICY_PROFILE,
     ConflictRiskAssessment,
@@ -71,6 +79,7 @@ __all__ = [
     "AircraftType",
     "AltitudeManeuver",
     "CandidateCostEstimate",
+    "CandidateSafetyValidationResult",
     "ConflictEvent",
     "ConflictAssessmentRun",
     "ConflictPair",
@@ -108,10 +117,15 @@ __all__ = [
     "ResolutionManeuver",
     "ResolutionManeuverType",
     "ResolutionObjective",
+    "ResolutionSafetyValidationRun",
+    "ResolutionValidationReasonCode",
+    "ResolutionValidationVerdict",
     "ConflictExceptionItem",
     "OperationalPriorityExceptionItem",
     "SeparationMinimum",
     "SeparationRuleProfile",
+    "SafetyRuleViolation",
+    "SafetyRuleViolationType",
     "SequenceChangeManeuver",
     "SpeedManeuver",
     "Trajectory",

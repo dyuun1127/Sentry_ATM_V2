@@ -271,6 +271,9 @@
 
 - 상태: `PROJECT_DECISION`
 - 내용: Recommendation 생성만으로 Actual Aircraft Runtime을 변경하지 않는다.
+- Phase 9-C 결정: Safety Validation은 Candidate별 복제 State의 결과만 기록한다. SAFE는 1차 Conflict
+  해소와 실패 없음, INEFFECTIVE는 Action의 1차 Conflict만 지속, UNSAFE는 2차 Conflict·성능·Rule
+  실패 또는 Conflict가 남은 NO_ACTION 기준선으로 정의한다.
 - 검증: 승인 전후 State Snapshot 비교
 
 ### ASM-029 - UI 형태
