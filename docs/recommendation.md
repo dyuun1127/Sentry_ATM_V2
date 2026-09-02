@@ -67,7 +67,47 @@ Phase 9-E 계산 결과에서는 `CAND-A`만 `SAFE`이므로 Phase 10-B의 Golde
 `CAND-A` 하나를 Rank 1로 포함해야 한다. `CAND-B`부터 `CAND-E`까지는 추천 대상이 될 수 없다.
 이 Mapping은 Phase 10-A Domain에 하드코딩하지 않는다.
 
-## 6. 다음 단계
+## 6. Deterministic Recommendation Ranking Service
 
-Phase 10-B는 Candidate Batch와 같은 Validation Run을 입력받아 SAFE Action Candidate만 추출하고,
-교체 가능한 비용 정책으로 결정론적 Rank와 설명문을 계산한다.
+Phase 10-B의 `DeterministicRecommendationRankingService`는 다음 입력을 사용한다.
+
+- 하나의 `ResolutionCandidateBatch`
+- 그 Batch ID를 참조하고 모든 Candidate 결과를 정확히 한 번 포함하는
+  `ResolutionSafetyValidationRun`
+- 시스템 현재시간이 아닌 명시적인 timezone-aware UTC 생성시각
+- 교체 가능한 `RecommendationRankingProfile`
+
+Validation은 Candidate 생성보다 이를 수 없고 Recommendation은 Validation보다 이를 수 없다. 입력
+Candidate나 Validation Result를 변경하지 않으며 같은 입력은 같은 ID, Rank와 설명을 생성한다.
+
+### 6.1 `POC_RECOMMENDATION_V1` 순서
+
+SAFE Action Candidate만 다음 Tuple의 오름차순으로 정렬한다.
+
+1. `operational_cost_score`
+2. `estimated_delay_seconds`
+3. `estimated_path_extension_nm`
+4. `candidate_id`
+
+가중치를 숨겨 합산하지 않고 원래 비용 필드를 그대로 비교한다. 기본 Profile은 주 추천을 포함해 최대
+3개까지 보존한다. 이는 안전성보다 비용을 우선한다는 뜻이 아니며 Safety Filter를 통과한 후보 사이의
+표시 순서일 뿐이다.
+
+### 6.2 설명과 Golden 결과
+
+서비스는 Maneuver 목표값, 5가지 긍정 안전 근거와 Candidate Cost를 안정적인 설명문으로 만든다.
+Heading, Altitude, Speed, Entry Delay와 Sequence Change를 각각 타입에 맞게 표현한다.
+
+Phase 9-E Golden Batch와 Validation Run을 입력하면 실제 결과는 다음과 같다.
+
+| Rank | Candidate | Target | 결과 |
+|---:|---|---|---|
+| 1 | `CAND-A` | `MIL-F01` | 9,000 ft 목표, `AVAILABLE` |
+
+`CAND-B`는 2차 Conflict, `CAND-C`는 1차 Conflict 지속, `CAND-D`는 Rule 위반,
+`CAND-E`는 기준선이므로 모두 자동으로 제외된다. Candidate ID별 예외 분기는 사용하지 않는다.
+
+## 7. 다음 단계
+
+Phase 10-C는 Recommendation Set을 UI와 HTTP Adapter가 사용할 수 있는 JSON 호환 Read Model/API
+계약으로 변환하되 Domain Source of Truth와 관제사 결정을 분리한다.

@@ -366,6 +366,9 @@
 - Phase 10-A 결정: 안전 후보가 있으면 `AVAILABLE`, 없으면 빈 `NO_SAFE_CANDIDATE` 결과를 만든다.
   추천에는 1차 Conflict 해소, 2차 Conflict 없음, 성능 가능 및 Rule 위반 없음의 긍정 근거를 모두
   보존한다.
+- Phase 10-B 결정: `POC_RECOMMENDATION_V1`은 SAFE Action Candidate를 Cost Score, Delay,
+  Path Extension, Candidate ID 오름차순으로 정렬하고 최대 3개를 표시한다. 가중 합산 점수나
+  Callsign·군/민 Category 우대는 사용하지 않는다.
 - Human-in-the-loop: Recommendation 생성은 Accept/Modify/Reject가 아니며 Aircraft Runtime을
   변경하지 않는다. 관제사 결정과 승인된 기동 적용은 별도 Domain/Application 단계다.
 - 검증: Phase 10 Recommendation Domain 및 Ranking Service 테스트
