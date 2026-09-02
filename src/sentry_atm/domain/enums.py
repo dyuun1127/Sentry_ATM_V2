@@ -162,6 +162,23 @@ class SafetyRuleViolationType(StrEnum):
     OTHER = "OTHER"
 
 
+class RecommendationAvailability(StrEnum):
+    """Whether a validation run produced any recommendable option."""
+
+    AVAILABLE = "AVAILABLE"
+    NO_SAFE_CANDIDATE = "NO_SAFE_CANDIDATE"
+
+
+class RecommendationReasonCode(StrEnum):
+    """Stable positive evidence required for a recommendation."""
+
+    VALIDATED_SAFE = "VALIDATED_SAFE"
+    PRIMARY_CONFLICT_RESOLVED = "PRIMARY_CONFLICT_RESOLVED"
+    NO_SECONDARY_CONFLICT = "NO_SECONDARY_CONFLICT"
+    PERFORMANCE_FEASIBLE = "PERFORMANCE_FEASIBLE"
+    NO_RULE_VIOLATION = "NO_RULE_VIOLATION"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 

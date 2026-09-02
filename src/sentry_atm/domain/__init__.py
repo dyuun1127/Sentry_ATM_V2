@@ -22,6 +22,8 @@ from sentry_atm.domain.enums import (
     OperationalPriorityLevel,
     PerformanceDataSource,
     PriorityReasonCode,
+    RecommendationAvailability,
+    RecommendationReasonCode,
     ResolutionManeuverType,
     ResolutionObjective,
     ResolutionValidationReasonCode,
@@ -46,6 +48,10 @@ from sentry_atm.domain.priority import (
     POC_OPERATIONAL_PRIORITY_V1_POLICY_PROFILE,
     OperationalPriorityAssessment,
     OperationalPriorityPolicyProfile,
+)
+from sentry_atm.domain.recommendation import (
+    ResolutionRecommendation,
+    ResolutionRecommendationSet,
 )
 from sentry_atm.domain.resolution import (
     AltitudeManeuver,
@@ -109,11 +115,15 @@ __all__ = [
     "POC_RISK_V1_POLICY_PROFILE",
     "PredictionRun",
     "PriorityReasonCode",
+    "RecommendationAvailability",
+    "RecommendationReasonCode",
     "RiskLevel",
     "RiskPolicyProfile",
     "RiskReasonCode",
     "ResolutionCandidate",
     "ResolutionCandidateBatch",
+    "ResolutionRecommendation",
+    "ResolutionRecommendationSet",
     "ResolutionManeuver",
     "ResolutionManeuverType",
     "ResolutionObjective",
