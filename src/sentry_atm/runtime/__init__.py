@@ -5,6 +5,10 @@ from sentry_atm.runtime.composition import (
     InMemoryRecommendationCatalog,
     build_golden_demo_runtime,
 )
+from sentry_atm.runtime.decision_orchestrator import (
+    GoldenDemoControllerDecisionOrchestrator,
+    GoldenDemoControllerDecisionResult,
+)
 from sentry_atm.runtime.orchestrator import (
     GoldenDemoStepOrchestrator,
     GoldenDemoStepResult,
@@ -15,6 +19,8 @@ from sentry_atm.runtime.resolution_orchestrator import (
 )
 
 __all__ = [
+    "GoldenDemoControllerDecisionOrchestrator",
+    "GoldenDemoControllerDecisionResult",
     "GoldenDemoRuntime",
     "GoldenDemoResolutionOrchestrator",
     "GoldenDemoResolutionResult",

@@ -400,6 +400,9 @@
 - Resolution Step: T+75의 활성 `CIV-A02 / MIL-F01` HIGH Conflict Exception만 선택해 9,000 ft를
   선호 목표로 Candidate 생성, 전체 Traffic 격리 검증, SAFE 후보 Ranking과 Catalog Publish를 수행한다.
   이 계산 시점과 데모 화면의 단계별 공개 시점은 분리할 수 있다.
+- Decision Step: T+90에 process-local Catalog의 현재 `CAND-A` Recommendation을 비개인
+  `RKTU-DEMO-CONTROLLER` Position이 `ACCEPT`한 것으로 Audit한다. 이 Entry는 후속 적용을 허가하지만
+  그 자체로 Aircraft Runtime을 변경하지 않는다.
 - 검증: Phase 12 Runtime Composition, Step 결정론 및 상태 격리 테스트
 
 ## 5. Phase별 확정 시점

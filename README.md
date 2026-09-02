@@ -52,7 +52,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 12-A: Golden Demo Runtime Composition Foundation 구현 완료
 - Phase 12-B: Deterministic Golden Demo Step Orchestrator 구현 완료
 - Phase 12-C: Deterministic Golden Demo Resolution Step 구현 완료
-- Controller Decision Demo Step, 승인 명령 적용, UI: 아직 구현하지 않음
+- Phase 12-D: Deterministic Golden Demo Controller Decision Step 구현 완료
+- 승인 명령 적용·사후 재검증, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

@@ -107,8 +107,22 @@ Reset 후 같은 입력을 재생하면 동일한 결과를 만든다.
 PoC Performance Profile은 SQLAlchemy가 필요 없는 `sentry_atm.reference_data`에 정의하고 SQLite Seed와
 Runtime이 같은 불변 객체를 사용한다.
 
-## 8. 다음 단계
+## 8. Phase 12-D Deterministic Golden Demo Controller Decision Step
 
-Phase 12-D는 게시된 `CAND-A` Recommendation에 대한 관제사 `ACCEPT`를 결정론적 Demo Decision
-Step으로 기록한다. Decision Audit과 실제 승인 기동 적용은 계속 분리하며 적용·재검증은 후속 단계에서
-다룬다.
+`GoldenDemoControllerDecisionOrchestrator.accept()`는 T+75 Resolution이 존재하고 최신 Step과 Clock이
+정확히 T+90일 때만 실행한다. Catalog의 현재 Recommendation Set이 Resolution Source와 같은 객체인지
+확인하고, Primary `CAND-A`를 `RKTU-DEMO-CONTROLLER` Position의 `ACCEPT`로 Decision Service에
+기록한다.
+
+`GoldenDemoControllerDecisionResult`는 T+90 Step, T+75 Resolution, 선택 Recommendation,
+Decision Entry 및 Audit Log Revision을 함께 보존한다. 같은 Tick의 중복 Decision을 거부하고 Clock
+Reset 시 process-local Audit과 Orchestrator 결과를 비운 뒤 같은 순서를 동일하게 재생한다.
+
+`ACCEPT` Entry의 `authorizes_application=true`는 후속 기동 적용 허가를 의미한다. 이 Step은 Candidate의
+9,000 ft 기동을 Aircraft Runtime에 적용하거나 Prediction/Conflict를 재계산하지 않는다. 따라서 감사
+기록 직전과 직후의 T+90 Traffic Snapshot은 동일하다.
+
+## 9. 다음 단계
+
+Phase 12-E는 감사된 `ACCEPT`만 입력으로 받아 승인된 `CAND-A` 기동을 명시적으로 적용하고, 새 Actual
+State와 Predicted 4DT, 전체 Traffic Conflict를 다시 계산해 최초 Conflict 해소 증거를 남긴다.

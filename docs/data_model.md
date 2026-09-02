@@ -377,11 +377,16 @@ Domain 전용 `reference_data`에서 공급하며 SQLite Seed도 같은 객체�
 새 Domain Aggregate나 Persistence 모델이 아니며 Controller Decision 또는 Aircraft State를 포함하지
 않는다.
 
+Phase 12-D의 `GoldenDemoControllerDecisionResult`는 T+90 Step, T+75 Resolution, 선택한
+Recommendation과 기존 `ControllerDecisionAuditEntry/Log`를 연결하는 불변 Application 결과다.
+`ACCEPT`의 `authorizes_application`은 후속 적용 권한이며 적용 완료 상태가 아니다. 따라서 이 Result에도
+적용 후 Aircraft State나 Conflict 해소 판정을 저장하지 않는다.
+
 ## 18. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Controller Decision Demo Step과 승인 명령 적용: Phase 12-D 이후
+- 승인 명령 적용과 사후 재검증: Phase 12-E 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.
