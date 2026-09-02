@@ -86,14 +86,31 @@ Read API와 Command Service를 하나의 독립된 process-local Container로 �
 Read API와 Command API는 반드시 같은 Application Orchestrator를 사용해야 하며 Session Runtime Factory가
 WSGI App까지 함께 조립한다.
 
-## 7. 현재 제한사항
+## 7. Phase 13-D Local Golden Demo HTTP Server
 
-- WSGI App을 실제 Port에 Bind하는 Server Entry Point가 아직 없다.
+다음 명령은 새로운 process-local Session Runtime 하나를 만들고 WSGI App을 실행한다.
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http
+```
+
+기본 Bind는 `127.0.0.1:8000`이며 CLI는 `--port`만 허용한다. `--port`는 `1..65535` 범위이고 Host는
+외부 Interface로 변경할 수 없다. Python 표준 라이브러리 `wsgiref.simple_server`를 사용하므로 별도
+Runtime Dependency가 없다. `Ctrl+C`로 종료하면 Listening Socket을 닫는다.
+
+테스트용 Factory 호출에서는 운영체제가 빈 Port를 선택하도록 Port `0`을 허용하지만 CLI에서는
+허용하지 않는다. 실제 Loopback Socket을 통한 GET/POST 테스트로 WSGI Adapter와 동일 Session State가
+연결되는지 확인한다.
+
+## 8. 현재 제한사항
+
+- 개발·Golden Demo용 단일 프로세스 Server이며 Production 배포 구성이 아니다.
+- TLS, 외부 Interface Bind와 다중 Worker를 제공하지 않는다.
 - Session ID와 결과는 프로세스 재시작 후 복구되지 않는다.
 - Authentication, authorization, streaming과 다중 동시 Session을 제공하지 않는다.
 - Trajectory Point 전체와 Candidate A~E 전체 검증표는 아직 Session 요약에 포함하지 않는다.
 
-## 8. 다음 단계
+## 9. 다음 단계
 
-Phase 13-D는 Python 표준 라이브러리 기반 Local Demo Server Entry Point와 안전한 기본 Bind 설정을
-추가한다. 이후 Phase 14에서 이 API를 사용하는 Web UI를 구현한다.
+Phase 14-A는 같은 Local Server에서 제공되고 Session API를 사용하는 최소 Golden Demo Web UI Shell을
+추가한다.

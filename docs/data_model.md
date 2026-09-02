@@ -407,12 +407,14 @@ Phase 13-C의 WSGI Environ, Request JSON, Response JSON과 Error Payload는 Tran
 `GoldenDemoSessionWsgiApp`은 같은 Session Source를 공유하는 Read/Command API만 연결하며 새로운
 Domain Model이나 별도 Session State를 만들지 않는다.
 
+Phase 13-D의 `LocalGoldenDemoServerSettings`는 process-local Infrastructure Configuration이다. 고정
+Loopback Host와 TCP Port만 가지며 Domain Model이나 영속 데이터가 아니다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Local Demo Server 실행 Entry Point: Phase 13-D 이후
-- UI State와 화면 구현: Session Command/HTTP 계약 완성 이후
+- UI State와 화면 구현: Phase 14 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

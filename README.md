@@ -57,7 +57,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 13-A: Golden Demo Session Read Model/API 구현 완료
 - Phase 13-B: Deterministic Golden Demo Session Command Service 구현 완료
 - Phase 13-C: Minimal Golden Demo Session WSGI HTTP Adapter 구현 완료
-- Local Demo Server와 UI: 아직 구현하지 않음
+- Phase 13-D: Loopback-only Local Golden Demo HTTP Server 구현 완료
+- Web UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -114,6 +115,17 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence seed
 ```
+
+## Golden Demo API 실행
+
+별도 Web Framework 없이 Python 표준 라이브러리 서버를 로컬 Loopback에 실행한다.
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http
+```
+
+기본 주소는 `http://127.0.0.1:8000`이다. 다른 로컬 Port가 필요하면 `--port 8123`처럼 지정한다.
+서버를 종료하려면 `Ctrl+C`를 누른다. 외부 장치에서 접속할 수 있도록 Bind하는 기능은 제공하지 않는다.
 
 ## 테스트 및 정적 검사
 

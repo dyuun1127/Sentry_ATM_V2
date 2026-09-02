@@ -147,5 +147,7 @@ Tick의 중복 적용을 거부하며 Reset 후 T+75→T+90 순서를 재생하�
 Phase 13-A의 Session Read Model/API는 T+0부터 적용 후 T+90까지의 Traffic, Queue, Recommendation,
 Decision과 Revalidation을 JSON 호환 응답으로 제공한다. Phase 13-B의 Session Runtime Factory와
 Command Service는 Orchestrator Chain을 고정 Checkpoint 순서로만 실행한다. Phase 13-C는 같은 Session
-Source의 Read/Command를 최소 WSGI HTTP Adapter로 노출하고 Factory가 HTTP App까지 조립한다. 다음
-Phase 13-D는 이를 로컬 Port에 Bind하는 실행 Entry Point를 추가한다.
+Source의 Read/Command를 최소 WSGI HTTP Adapter로 노출하고 Factory가 HTTP App까지 조립한다.
+Phase 13-D는 매 실행마다 새 Session Runtime을 만들고 HTTP App을 IPv4 Loopback Port에 Bind한다.
+서버는 Domain이나 Orchestrator를 직접 조립하지 않으며 종료 시 Listening Socket을 닫는다. 다음 Phase
+14는 같은 Origin에서 이 API를 사용하는 최소 Golden Demo Web UI를 추가한다.
