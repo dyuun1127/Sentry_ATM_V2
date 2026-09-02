@@ -250,14 +250,13 @@ Repository 계약과 논리 Schema는 `docs/persistence.md`를 참조한다.
 
 `ConflictEvent.tcpa_seconds`는 평가시각과 최근접 예상시각의 차이에서 계산하므로 중복된 시간 상태를
 저장하지 않는다. `POC_TERMINAL_V1`의 5 NM/1,000 ft는 `ASM-018`의 잠정 PoC 값이며 공식적인
-보편 분리기준이 아니다. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하며 전체 Pair 탐색은
-후속 Phase가 담당한다.
+보편 분리기준이 아니다. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하고, Phase 6-C의
+Pairwise Detector가 전체 Assessment와 탐지 결과를 생성한다.
 
 ## 11. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- 전체 Traffic Pair Conflict Detector: Phase 6-C
 - Risk와 Priority: Phase 7
 - ResolutionCandidate와 Recommendation: Phase 9~11
 - API DTO와 UI State: Phase 12

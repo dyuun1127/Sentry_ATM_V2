@@ -4,7 +4,8 @@
 
 Phase 6-A는 미래 충돌 계산 결과를 표현하는 불변 Domain 계약과 교체 가능한 분리 Rule을 정의한다.
 Phase 6-B는 같은 UTC Snapshot의 Aircraft 두 대에 대해 Constant-Velocity 수평 CPA/TCPA를
-연속시간으로 계산한다. 전체 Traffic Pair 탐색, Risk, Priority와 대응 후보 생성은 포함하지 않는다.
+연속시간으로 계산한다. Phase 6-C는 Snapshot의 모든 고유 Pair를 평가한다. Risk, Priority와 대응
+후보 생성은 포함하지 않는다.
 
 ## 2. Domain 객체
 
@@ -74,8 +75,22 @@ tcpa = clamp(unbounded_tcpa, 0, horizon_seconds)
 이는 수평 최근접점 계산이다. 수직분리만 별도로 최소화하거나 서로 다른 시각의 최소 수평·수직 값을
 결합하지 않는다. 실제 Conflict는 같은 시각의 분리를 Rule Profile로 평가해야 한다.
 
-### 5.2 후속 단계
+### 5.2 Phase 6-C Pairwise Detector
 
-- Phase 6-C: 전체 Traffic Pair 순회와 `ConflictEvent` 생성
+Phase 6-C의 `PairwiseConflictDetector`는 입력을 Aircraft ID로 정렬한 후 중복 없는 모든 조합을
+계산한다. 항공기 수가 `n`이면 Assessment 수는 `n(n-1)/2`다.
+
+- `assess(states)`: `SAFE`와 `PREDICTED`를 포함한 모든 `ConflictEvent` 반환
+- `detect(states)`: 전체 Assessment 중 `PREDICTED`만 반환
+- 입력 순서와 관계없이 Pair 순서, Conflict ID와 결과가 동일함
+- 모든 입력 State는 같은 UTC Snapshot과 고유한 Aircraft ID를 가져야 함
+- 빈 입력 또는 Aircraft 한 대는 유효하며 빈 결과를 반환함
+- 각 결과에는 평가시각, Pair와 적용한 Rule Profile ID가 포함됨
+
+`SAFE` 결과도 보존할 수 있어 특정 Pair가 왜 탐지되지 않았는지 최소분리와 적용 Rule을 통해 설명할
+수 있다. Detector는 Risk 또는 Priority를 계산하지 않으며 Aircraft Runtime도 변경하지 않는다.
+
+### 5.3 후속 단계
+
 - Phase 6-D: Rolling Prediction Scheduler 연결
 - Phase 6-E: Golden Demo의 `MIL-F01`/`CIV-A02` 미래 충돌 재현

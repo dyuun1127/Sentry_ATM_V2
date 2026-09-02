@@ -168,6 +168,8 @@
 - 설계: 공역, 비행방식, 운항조건에 따라 교체 가능한 Rule Profile이어야 한다.
 - Phase 6-A 결정: `POC_TERMINAL_V1`을 주입 가능한 `SeparationRuleProfile` 객체로 정의한다.
   수평·수직 값이 동시에 각 기준보다 작은 경우만 `PREDICTED`로 분류하며 경계값은 `SAFE`다.
+- Phase 6-C 결정: 전체 Pair에 Phase 6-B의 동일시각 CPA 분리를 적용하고 Rule Profile로 분류한다.
+  모든 Assessment를 보존하되 실제 탐지 목록에는 `PREDICTED`만 포함한다.
 - 남은 검증: 제공된 항공교통관제절차와 관련 자료를 검토한 뒤 운영별 Profile을 별도로 확정
 
 ### ASM-019 - TCAS/ACAS 활용 범위
