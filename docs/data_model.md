@@ -287,11 +287,15 @@ ID로 최신 Item과 Snapshot Revision을 관리한다. 새 LOW/ROUTINE은 제�
 `OPEN → ACKNOWLEDGED → RESOLVED`이고 해결 뒤 위험이 재상승하면 새 Open 시각으로 재개한다.
 상세 계약과 잠정 Rank는 `docs/exception_queue.md`를 참조한다.
 
+Phase 8-C의 `ConflictExceptionReadModel`, `OperationalPriorityExceptionReadModel`과
+`ExceptionQueueSnapshotReadModel`은 Domain을 JSON 호환 표현으로 변환한다. Read Model은 파생된
+표시 데이터이며 Domain Source of Truth 또는 별도 Persistence Aggregate가 아니다.
+
 ## 14. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
 - ResolutionCandidate와 Recommendation: Phase 9~11
-- Exception Queue Read Model/API와 UI State: Phase 8-C 이후
+- 실제 HTTP Adapter와 UI State: Phase 8-D 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

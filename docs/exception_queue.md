@@ -108,8 +108,29 @@ Snapshot 생성시각보다 늦을 수 없다. `active_items`는 `RESOLVED`를 �
 - `T+70`: `MIL-F01 / CIV-A02` HIGH Conflict가 최상위이고 `MIL-F01` ATTENTION이 뒤따른다.
 - `T+240`: `MIL-T01` EMERGENCY Priority가 전체 Queue 최상위다.
 
-## 7. 다음 단계 경계
+## 7. Read Model과 API 계약
 
-Phase 8-C는 Queue Snapshot을 외부에 전달할 Read Model/API 계약을 정의한다. 경로 변경이나
-Resolution Candidate 생성은 별도 Phase에서 수행하며 Queue Service가 Aircraft Runtime을 직접
-변경하지 않는다.
+Phase 8-C는 Domain 객체를 외부 표현에 직접 노출하지 않는 다음 계약을 정의한다.
+
+- Conflict와 Operational Priority를 구분하는 타입별 Read Model
+- RFC 3339 UTC 문자열, Enum 문자열과 JSON Array로 직렬화되는 안정 필드
+- Snapshot ID, 정책 ID, 활성 건수, 최상위 Exception ID와 정책 순서의 Item 목록
+- 기본 조회에서는 `RESOLVED` 제외, 명시적인 `include_resolved` 조회에서만 이력 포함
+- `get_current`와 `acknowledge` 동작을 정의한 동기식 `ExceptionQueueApiContract`
+- HTTP/Desktop Adapter 이전에 동일 계약을 검증하는 `InProcessExceptionQueueApi`
+
+아직 Snapshot이 생성되지 않았으면 `get_current`는 `None`을 반환한다. 확인 요청은 안정 ID와
+timezone-aware 시각을 요구한다. 알 수 없는 ID는 `KeyError`, 해결 상태나 시간 역행은 `ValueError`로
+구분해 후속 HTTP Adapter가 각각 404, 409 또는 422 응답으로 명시적으로 변환할 수 있게 한다.
+
+제안하는 후속 HTTP 표현은 다음과 같지만 Phase 8-C는 서버를 실행하거나 네트워크 포트를 열지 않는다.
+
+```text
+GET  /api/v1/exception-queue?include_resolved=false
+POST /api/v1/exceptions/{exception_id}/acknowledgements
+```
+
+## 8. 다음 단계 경계
+
+Phase 8-D는 필요 시 실제 HTTP Adapter와 상태 전달 방식을 구현한다. 경로 변경이나 Resolution
+Candidate 생성은 별도 Phase에서 수행하며 Queue API가 Aircraft Runtime을 직접 변경하지 않는다.

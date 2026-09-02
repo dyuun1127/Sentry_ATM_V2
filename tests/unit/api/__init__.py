@@ -1,0 +1,1 @@
+"""Application API contract tests."""
