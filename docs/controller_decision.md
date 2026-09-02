@@ -59,7 +59,7 @@ ControllerDecisionAuditLog
 ## 4. Audit Log
 
 `ControllerDecisionAuditLog`는 Decision Entry를 결정 UTC와 Decision ID 순으로 보존하는 불변
-Snapshot이다.
+Snapshot이다. `revision`은 1부터 시작하며 Service가 성공적으로 Decision을 추가할 때만 증가한다.
 
 - Decision ID, Recommendation Set ID와 Recommendation ID는 각각 고유하다.
 - 하나의 Recommendation Set에는 최대 하나의 최종 Controller Decision만 존재한다.
@@ -75,7 +75,25 @@ T+85 Recommendation에서 관제사가 `CAND-A`를 선택하면 `ACCEPT` Entry�
 후속 적용 가능 대상으로 노출된다. 이 시점까지 T+75 원본 Aircraft State와 Runtime은 변하지 않는다.
 실제 적용과 적용 후 재평가는 후속 단계의 책임이다.
 
-## 6. 다음 단계
+## 6. Phase 11-B Deterministic Controller Decision Service
 
-Phase 11-B는 Decision ID와 Audit Log Revision을 결정론적으로 관리하는 Controller Decision Service를
-구현하고, Recommendation Set당 중복 결정을 거부한다.
+`DeterministicControllerDecisionService`는 하나의 `ResolutionRecommendationSet`과 그 안의
+Recommendation ID를 입력받아 다음을 원자적으로 수행한다.
+
+1. Recommendation이 입력 Set에 실제로 포함되는지 확인한다.
+2. Set에 기존 최종 Decision이 없는지 확인한다.
+3. UTC, Revision, Source Identity로 Decision ID와 Audit Log ID를 결정론적으로 생성한다.
+4. 불변 Audit Entry를 누적한 새 Audit Log Snapshot을 발행한다.
+
+동일한 초기상태와 입력 순서는 같은 ID와 Audit Log를 만든다. 동일 Recommendation Set에 대한 두
+번째 `ACCEPT`, `MODIFY`, `REJECT`는 모두 거부하며 실패한 요청은 Revision이나 현재 Log를 바꾸지
+않는다. 결정시각은 이전 Log보다 이를 수 없다.
+
+Service의 메모리 상태는 현재 프로세스 범위의 최소 구현이다. Persistence, HTTP Command Adapter,
+인증·인가, Runtime 적용은 포함하지 않는다.
+
+## 7. 다음 단계
+
+Phase 11-C는 Controller Decision Command/API 계약을 정의한다. `ACCEPT` 이후의 실제 Runtime 적용은
+별도 Application 단계에서 수행하고, `MODIFY`는 새 Candidate로 조립한 뒤 Safety Validation을 다시
+통과해야 한다.

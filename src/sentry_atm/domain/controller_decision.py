@@ -109,6 +109,7 @@ class ControllerDecisionAuditLog:
     """Immutable, deterministically ordered snapshot of controller decisions."""
 
     audit_log_id: str
+    revision: int
     generated_at_utc: datetime
     entries: tuple[ControllerDecisionAuditEntry, ...]
 
@@ -118,6 +119,10 @@ class ControllerDecisionAuditLog:
             "audit_log_id",
             require_identifier(self.audit_log_id, field_name="audit_log_id"),
         )
+        if isinstance(self.revision, bool) or not isinstance(self.revision, int):
+            raise TypeError("revision must be an integer")
+        if self.revision < 1:
+            raise ValueError("revision must be at least 1")
         object.__setattr__(
             self,
             "generated_at_utc",

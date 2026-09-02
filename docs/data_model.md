@@ -345,17 +345,19 @@ Phase 10-D의 `RecommendationWsgiApp`은 현재 Read Model을 `GET
 
 - `ControllerDecisionAuditEntry`: SAFE Recommendation에 대한 `ACCEPT`, `MODIFY`, `REJECT`와 UTC,
   Controller Position, Rationale 및 변경 Maneuver
-- `ControllerDecisionAuditLog`: Recommendation Set당 한 Decision을 시간순으로 보존하는 불변 Snapshot
+- `ControllerDecisionAuditLog`: Recommendation Set당 한 Decision을 시간순으로 보존하고 1부터 증가하는
+  Revision을 포함하는 불변 Snapshot
 
 `ACCEPT`는 후속 적용을 허가하지만 Entry 생성만으로 Runtime을 변경하지 않는다. `MODIFY`는 변경
 Maneuver의 재검증이 필수이고 `REJECT`는 적용을 허가하지 않는다. 자세한 계약은
-`docs/controller_decision.md`를 참조한다.
+`docs/controller_decision.md`를 참조한다. Phase 11-B Service는 성공한 Decision에만 Revision을 할당하고
+동일 Set의 중복 최종 결정을 원자적으로 거부한다.
 
 ## 17. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Controller Decision Service와 승인 명령 적용: Phase 11-B 이후
+- Controller Decision Command/API와 승인 명령 적용: Phase 11-C 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

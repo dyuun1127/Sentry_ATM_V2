@@ -104,6 +104,7 @@ def _entry(
 def _log(entries=(), **overrides) -> ControllerDecisionAuditLog:
     values = {
         "audit_log_id": "CONTROLLER-AUDIT-001",
+        "revision": 1,
         "generated_at_utc": DECIDED_AT + timedelta(seconds=10),
         "entries": entries,
     }
@@ -231,6 +232,19 @@ def test_empty_audit_log_is_valid_and_has_no_latest_entry() -> None:
     assert log.accepted_entries == ()
     assert log.modified_entries == ()
     assert log.rejected_entries == ()
+
+
+@pytest.mark.parametrize(
+    ("revision", "error_type", "message"),
+    [
+        (True, TypeError, "integer"),
+        (1.5, TypeError, "integer"),
+        (0, ValueError, "at least 1"),
+    ],
+)
+def test_audit_log_requires_positive_integer_revision(revision, error_type, message) -> None:
+    with pytest.raises(error_type, match=message):
+        _log(revision=revision)
 
 
 def test_audit_log_sorts_entries_and_exposes_decision_views() -> None:
