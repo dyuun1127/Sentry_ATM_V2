@@ -92,6 +92,26 @@
 - 모든 항공기는 Planned Trajectory와 현재 Actual State를 가진다.
 - Predictor는 30, 60, 120초 Horizon을 지원한다 (`ASM-016`).
 
+### 7.1 Phase 5-A Synthetic 초기 State
+
+다음 값은 동일한 초기 Snapshot을 재현하기 위한 비공식 Foundation 값이다. RKTU ARP 반경
+30 NM·0~20,000 ft 계산 Envelope 안에 있으며 실제 항적이나 공식 절차를 나타내지 않는다.
+
+| Aircraft | x/y NM | 고도 ft | 속도 kt | Heading | 수직속도 ft/min | Phase | Profile |
+|---|---:|---:|---:|---:|---:|---|---|
+| `CIV-A01` | -3 / -4 | 3,000 | 170 | 0 | 0 | APPROACH | `AIRLINER-POC-V1` |
+| `CIV-A02` | 10 / 14 | 9,000 | 250 | 220 | -700 | DESCENT | `AIRLINER-POC-V1` |
+| `CIV-A03` | -14 / 12 | 11,000 | 240 | 140 | -500 | DESCENT | `AIRLINER-POC-V1` |
+| `CIV-D01` | -16 / -14 | 5,000 | 220 | 60 | +1,000 | CLIMB | `AIRLINER-POC-V1` |
+| `MIL-F01` | 18 / 18 | 9,000 | 320 | 210 | 0 | LEVEL | `FAST-JET-POC-V1` |
+| `MIL-F02` | -20 / 18 | 12,000 | 300 | 135 | -500 | DESCENT | `FAST-JET-POC-V1` |
+| `MIL-T01` | 18 / -12 | 7,000 | 210 | 300 | 0 | LEVEL | `TRANSPORT-POC-V1` |
+| `MIL-T02` | 2 / 20 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
+
+모든 State는 `SYNTHETIC`이며 Scenario 시작시각 `2026-09-01T03:00:00Z`를 사용한다. 초기
+Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없다. 이는 공식 분리 판정이 아니라
+초기 배치 검증이며, 미래 Conflict와 이벤트 재현은 후속 Scenario Event 단계에서 조정한다.
+
 ## 8. 시나리오 진행
 
 시각은 재현 가능한 데모를 위한 기준값이다. Simulation Tick과 Prediction 갱신 주기는 `ASM-017`을 따르며, 후속 운동학 검증에서 이벤트 시각을 수 초 범위로 조정할 수 있다 (`ASM-022`).

@@ -191,6 +191,8 @@
 - 상태: `PROVISIONAL`
 - 내용: `MIL-F01`의 기대 9,000 ft, 실제 7,400 ft, 2.1 NM 이탈, 25초 지연 및 예상 최소 분리값은 Golden Demo 목표값이다.
 - 정책: Phase 4와 Phase 6에서 실제 운동학 계산으로 재현되도록 초기 상태를 조정한다.
+- Phase 5-A 결정: `docs/scenarios.md` 7.1의 8대 초기 State를 결정론적 Foundation으로 사용한다.
+  이 값에는 아직 T+60 진입 불일치와 T+240 비상 이벤트가 적용되지 않는다.
 - 금지: 목표 Conflict 결과를 코드에 하드코딩하는 것
 - 검증: Golden Demo 통합 테스트
 
