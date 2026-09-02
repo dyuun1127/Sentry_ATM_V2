@@ -1,0 +1,299 @@
+"""SQLAlchemy implementations of the initial repository ports."""
+
+from collections.abc import Iterable
+from datetime import datetime
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from sentry_atm.domain import (
+    AircraftMetadata,
+    AircraftPerformanceProfile,
+    AircraftState,
+    AircraftType,
+    PredictionRun,
+)
+from sentry_atm.domain.time_policy import to_utc
+from sentry_atm.domain.validation import require_identifier
+from sentry_atm.infrastructure.persistence.mappers import (
+    aircraft_from_row,
+    aircraft_state_from_row,
+    aircraft_state_to_row,
+    aircraft_to_row,
+    aircraft_type_from_row,
+    aircraft_type_to_row,
+    performance_profile_from_row,
+    performance_profile_to_row,
+    prediction_run_from_row,
+    prediction_run_to_row,
+    trajectory_from_rows,
+    trajectory_point_to_row,
+    trajectory_to_row,
+)
+from sentry_atm.infrastructure.persistence.models import (
+    AircraftPerformanceProfileRow,
+    AircraftRow,
+    AircraftStateRow,
+    AircraftTypeRow,
+    PredictionRunRow,
+    TrajectoryPointRow,
+    TrajectoryRow,
+)
+
+
+def _require_session(session: Session) -> Session:
+    if not isinstance(session, Session):
+        raise TypeError("session must be a SQLAlchemy Session")
+    return session
+
+
+class SqlAlchemyAircraftTypeRepository:
+    """Aircraft-type reference adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, type_code: str) -> AircraftType | None:
+        normalized_code = require_identifier(type_code, field_name="type_code").upper()
+        row = self._session.get(AircraftTypeRow, normalized_code)
+        return aircraft_type_from_row(row) if row is not None else None
+
+    def list_all(self) -> tuple[AircraftType, ...]:
+        rows = self._session.scalars(
+            select(AircraftTypeRow).order_by(AircraftTypeRow.type_code)
+        ).all()
+        return tuple(aircraft_type_from_row(row) for row in rows)
+
+    def upsert(self, aircraft_type: AircraftType) -> None:
+        incoming = aircraft_type_to_row(aircraft_type)
+        existing = self._session.get(AircraftTypeRow, incoming.type_code)
+        if existing is None:
+            self._session.add(incoming)
+        else:
+            existing.category = incoming.category
+            existing.manufacturer = incoming.manufacturer
+            existing.model = incoming.model
+        self._session.flush()
+
+
+class SqlAlchemyAircraftPerformanceProfileRepository:
+    """Performance-profile reference adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, profile_id: str) -> AircraftPerformanceProfile | None:
+        identifier = require_identifier(profile_id, field_name="profile_id")
+        row = self._session.get(AircraftPerformanceProfileRow, identifier)
+        return performance_profile_from_row(row) if row is not None else None
+
+    def list_all(self) -> tuple[AircraftPerformanceProfile, ...]:
+        rows = self._session.scalars(
+            select(AircraftPerformanceProfileRow).order_by(AircraftPerformanceProfileRow.profile_id)
+        ).all()
+        return tuple(performance_profile_from_row(row) for row in rows)
+
+    def upsert(self, profile: AircraftPerformanceProfile) -> None:
+        incoming = performance_profile_to_row(profile)
+        existing = self._session.get(AircraftPerformanceProfileRow, incoming.profile_id)
+        if existing is None:
+            self._session.add(incoming)
+        else:
+            existing.category = incoming.category
+            existing.source = incoming.source
+            existing.source_reference = incoming.source_reference
+            existing.min_speed_kt = incoming.min_speed_kt
+            existing.max_speed_kt = incoming.max_speed_kt
+            existing.max_climb_rate_fpm = incoming.max_climb_rate_fpm
+            existing.max_descent_rate_fpm = incoming.max_descent_rate_fpm
+            existing.max_turn_rate_deg_per_second = incoming.max_turn_rate_deg_per_second
+            existing.ceiling_ft = incoming.ceiling_ft
+            existing.aircraft_type_code = incoming.aircraft_type_code
+        self._session.flush()
+
+
+class SqlAlchemyAircraftRepository:
+    """Aircraft metadata adapter; the caller owns commit and rollback."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, aircraft_id: str) -> AircraftMetadata | None:
+        identifier = require_identifier(aircraft_id, field_name="aircraft_id")
+        row = self._session.get(AircraftRow, identifier)
+        return aircraft_from_row(row) if row is not None else None
+
+    def list_all(self) -> tuple[AircraftMetadata, ...]:
+        rows = self._session.scalars(select(AircraftRow).order_by(AircraftRow.aircraft_id)).all()
+        return tuple(aircraft_from_row(row) for row in rows)
+
+    def upsert(self, aircraft: AircraftMetadata) -> None:
+        incoming = aircraft_to_row(aircraft)
+        existing = self._session.get(AircraftRow, incoming.aircraft_id)
+        if existing is None:
+            self._session.add(incoming)
+        else:
+            existing.aircraft_type = incoming.aircraft_type
+            existing.category = incoming.category
+            existing.callsign = incoming.callsign
+            existing.icao24 = incoming.icao24
+            existing.performance_profile_id = incoming.performance_profile_id
+        self._session.flush()
+
+
+class SqlAlchemyAircraftStateRepository:
+    """Append-only state adapter; the caller owns commit and rollback."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def append(self, state: AircraftState) -> None:
+        self._session.add(aircraft_state_to_row(state))
+        self._session.flush()
+
+    def append_many(self, states: Iterable[AircraftState]) -> None:
+        rows = tuple(aircraft_state_to_row(state) for state in states)
+        self._session.add_all(rows)
+        self._session.flush()
+
+    def latest_at_or_before(
+        self,
+        aircraft_id: str,
+        timestamp_utc: datetime,
+    ) -> AircraftState | None:
+        identifier = require_identifier(aircraft_id, field_name="aircraft_id")
+        timestamp = to_utc(timestamp_utc, field_name="timestamp_utc")
+        row = self._session.scalars(
+            select(AircraftStateRow)
+            .where(
+                AircraftStateRow.aircraft_id == identifier,
+                AircraftStateRow.timestamp_utc <= timestamp,
+            )
+            .order_by(AircraftStateRow.timestamp_utc.desc())
+            .limit(1)
+        ).first()
+        return aircraft_state_from_row(row) if row is not None else None
+
+    def list_between(
+        self,
+        aircraft_id: str,
+        start_time_utc: datetime,
+        end_time_utc: datetime,
+    ) -> tuple[AircraftState, ...]:
+        identifier = require_identifier(aircraft_id, field_name="aircraft_id")
+        start = to_utc(start_time_utc, field_name="start_time_utc")
+        end = to_utc(end_time_utc, field_name="end_time_utc")
+        if end < start:
+            raise ValueError("end_time_utc must not be earlier than start_time_utc")
+        rows = self._session.scalars(
+            select(AircraftStateRow)
+            .where(
+                AircraftStateRow.aircraft_id == identifier,
+                AircraftStateRow.timestamp_utc >= start,
+                AircraftStateRow.timestamp_utc <= end,
+            )
+            .order_by(AircraftStateRow.timestamp_utc)
+        ).all()
+        return tuple(aircraft_state_from_row(row) for row in rows)
+
+
+class SqlAlchemyPredictionRunRepository:
+    """Append-only PredictionRun aggregate adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, prediction_run_id: str) -> PredictionRun | None:
+        identifier = require_identifier(
+            prediction_run_id,
+            field_name="prediction_run_id",
+        )
+        row = self._session.get(PredictionRunRow, identifier)
+        return self._load_aggregate(row) if row is not None else None
+
+    def save(self, prediction_run: PredictionRun) -> None:
+        incoming = prediction_run_to_row(prediction_run)
+        existing = self._session.get(PredictionRunRow, incoming.prediction_run_id)
+        if existing is not None:
+            raise ValueError(f"prediction_run_id already exists: {incoming.prediction_run_id}")
+
+        self._session.add(incoming)
+        self._session.flush()
+
+        trajectory_rows = tuple(
+            trajectory_to_row(
+                trajectory,
+                prediction_run_id=prediction_run.prediction_run_id,
+                sequence_index=sequence_index,
+            )
+            for sequence_index, trajectory in enumerate(prediction_run.trajectories)
+        )
+        self._session.add_all(trajectory_rows)
+        self._session.flush()
+
+        point_rows = []
+        for trajectory, trajectory_row in zip(
+            prediction_run.trajectories,
+            trajectory_rows,
+            strict=True,
+        ):
+            if trajectory_row.trajectory_id is None:
+                raise RuntimeError("trajectory_id was not assigned after flush")
+            point_rows.extend(
+                trajectory_point_to_row(
+                    point,
+                    trajectory_id=trajectory_row.trajectory_id,
+                    sequence_index=sequence_index,
+                )
+                for sequence_index, point in enumerate(trajectory.points)
+            )
+        self._session.add_all(point_rows)
+        self._session.flush()
+
+    def list_between(
+        self,
+        start_time_utc: datetime,
+        end_time_utc: datetime,
+    ) -> tuple[PredictionRun, ...]:
+        start = to_utc(start_time_utc, field_name="start_time_utc")
+        end = to_utc(end_time_utc, field_name="end_time_utc")
+        if end < start:
+            raise ValueError("end_time_utc must not be earlier than start_time_utc")
+        rows = self._session.scalars(
+            select(PredictionRunRow)
+            .where(
+                PredictionRunRow.input_timestamp_utc >= start,
+                PredictionRunRow.input_timestamp_utc <= end,
+            )
+            .order_by(
+                PredictionRunRow.input_timestamp_utc,
+                PredictionRunRow.prediction_run_id,
+            )
+        ).all()
+        return tuple(self._load_aggregate(row) for row in rows)
+
+    def _load_aggregate(self, row: PredictionRunRow) -> PredictionRun:
+        trajectory_rows = self._session.scalars(
+            select(TrajectoryRow)
+            .where(TrajectoryRow.prediction_run_id == row.prediction_run_id)
+            .order_by(TrajectoryRow.sequence_index)
+        ).all()
+        trajectories = []
+        for trajectory_row in trajectory_rows:
+            point_rows = self._session.scalars(
+                select(TrajectoryPointRow)
+                .where(TrajectoryPointRow.trajectory_id == trajectory_row.trajectory_id)
+                .order_by(TrajectoryPointRow.sequence_index)
+            ).all()
+            trajectories.append(trajectory_from_rows(trajectory_row, tuple(point_rows)))
+        return prediction_run_from_row(row, tuple(trajectories))

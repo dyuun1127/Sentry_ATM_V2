@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentry-atm"
+version = "0.1.0"
+description = "Predictive ATC decision-support PoC for an RKTU terminal simulation area"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [
+    { name = "Team Sejong" },
+]
+dependencies = []
+
+[project.optional-dependencies]
+persistence = [
+    "SQLAlchemy>=2.0.52,<2.1",
+]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "integration: exercises multiple components with a real local resource",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+branch = true
+source = ["sentry_atm"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

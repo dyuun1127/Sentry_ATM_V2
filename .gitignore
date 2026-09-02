@@ -42,6 +42,11 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
+# Local SQLite database and journal files
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+
 # Runtime output, logs, and temporary files
 tmp/
 temp/
@@ -66,7 +71,7 @@ Desktop.ini
 # Office temporary files
 ~$*
 
-# Optional: uncomment these lines if reference documents should not be uploaded.
-# /자료/
+# Local reference documents must not be uploaded.
+/자료/
 # /*.pdf
 # /*.hwp
