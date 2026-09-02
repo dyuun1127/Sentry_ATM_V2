@@ -2,9 +2,8 @@
 
 ## 1. 범위
 
-Phase 9-A는 하나의 Conflict Exception에 대해 생성될 제한된 대응 후보를 타입 안전한 불변 Domain으로
-표현한다. Candidate Generator, 재시뮬레이션, Rule/Safety Validation, 추천 순위와 관제사 승인 적용은
-아직 포함하지 않는다.
+Phase 9는 하나의 Conflict Exception에 대해 제한된 대응 후보를 생성하고, 원본 Runtime을 변경하지
+않는 격리 State에서 안전성을 계산한다. 추천 순위와 관제사 승인 적용은 아직 포함하지 않는다.
 
 ```text
 Conflict Exception
@@ -175,10 +174,58 @@ Candidate ID 순으로 보존한다. Result ID와 Candidate ID는 각각 고유�
 변경하지 않는 파생 View다.
 
 Phase 9-C는 Result를 직접 만들어 Golden 판정을 하드코딩하지 않는다. 실제 Candidate State 적용,
-재예측과 Conflict 탐지는 아직 수행하지 않는다.
+재예측과 Conflict 탐지는 Phase 9-D Validator의 책임이다.
 
-## 9. 다음 단계
+## 9. Isolated Resolution Safety Validator
 
-Phase 9-D는 Candidate마다 복제한 State에 기동을 적용하고 기존 Predictor/Conflict Detector로 같은
-Horizon을 재계산한다. Performance Envelope와 잠정 Rule 검사 결과를 Phase 9-C Domain으로 조립하되
-실제 Aircraft Runtime은 변경하지 않는다.
+Phase 9-D의 `IsolatedResolutionSafetyValidator`는 Candidate마다 Aircraft State Mapping을 복제하고
+다음 순서로 검증한다.
+
+1. Candidate 대상 State에 기동을 적용한다.
+2. 같은 120초 Horizon의 Continuous Relative-Motion CPA 계산으로 모든 Traffic Pair를 재평가한다.
+3. Source Conflict Pair를 1차 Conflict로, 나머지 `PREDICTED` Pair를 2차 Conflict로 분리한다.
+4. 대상 Aircraft Performance Profile과 잠정 최저고도 Rule을 검사한다.
+5. 계산 증거를 Phase 9-C의 `CandidateSafetyValidationResult`와
+   `ResolutionSafetyValidationRun`으로 조립한다.
+
+Generator와 Validator는 별도 서비스다. Validator는 원본 State, Candidate Batch 또는 실제 Aircraft
+Runtime을 변경하지 않는다 (`ASM-028`). 입력 State는 동일한 UTC 시각이어야 하며 Batch 생성시각과
+Candidate 적용시각도 이 시각과 일치해야 한다.
+
+### 9.1 기동 적용 모델
+
+현재 PoC는 `ASM-037`의 단순화된 즉시 목표 모델을 사용한다.
+
+| Maneuver | 격리 State 적용 |
+|---|---|
+| Heading | 목표 침로로 교체 |
+| Altitude | 목표 고도로 교체하고 수직속도 0으로 유지 |
+| Speed | 목표 지상속도로 교체 |
+| Entry Delay | 현재 속도·침로·수직속도 방향의 이동량만큼 State를 뒤로 이동 |
+| Sequence Change | 운동학적 State 변경 없음 |
+| No Action | State 변경 없음 |
+
+Performance 검사는 60초 명령 실행시간을 기준으로 최소/최대 속도, Ceiling, 상승·강하율, 선회율과
+한 번의 최대 속도 변화 50 kt를 확인한다. 잠정 최저고도 7,500 ft는 `AltitudeManeuver`의 목표값에만
+적용하며 현재 Traffic 전체에 대한 공식 최저고도로 해석하지 않는다.
+
+### 9.2 Golden Demo 실제 계산 결과
+
+T+70 Conflict, T+75 Candidate와 전체 8대 Traffic State를 입력하면 현재 계산은 다음 결과를 만든다.
+
+| Candidate | 계산 판정 | 핵심 증거 |
+|---|---|---|
+| `CAND-A` | `SAFE` | 1차 Conflict 해소, 추가 실패 없음 |
+| `CAND-B` | `INEFFECTIVE` | 현재 즉시 목표 침로 모델에서는 1차 Conflict 지속 |
+| `CAND-C` | `INEFFECTIVE` | 감속 후에도 1차 Conflict 지속 |
+| `CAND-D` | `UNSAFE` | 7,125 ft 목표가 잠정 최저고도 Rule 위반 |
+| `CAND-E` | `UNSAFE` | 조작 없음 기준선에서 1차 Conflict 지속 |
+
+Scenario Contract는 `CAND-B`가 1차 Conflict를 해소한 뒤 `MIL-F02`와 2차 근접을 만드는 것을 목표로
+한다. 현재 결과는 이를 아직 재현하지 못하므로 판정을 하드코딩하지 않고, 후속 Golden Resolution
+Calibration에서 Aircraft 초기조건 또는 기동 실행 모델을 조정한다.
+
+## 10. 다음 단계
+
+Golden Resolution Calibration으로 Scenario Contract와 계산 결과를 정합시킨 뒤, 안전한 Candidate만
+대상으로 결정론적 Recommendation 순위를 계산한다.

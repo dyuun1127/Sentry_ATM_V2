@@ -343,6 +343,17 @@
 - 주의: 관제사 화면의 잠정 표시 순서이며 자동 항공기 기동 또는 공식 관제 우선순위를 의미하지 않는다.
 - 검증: 입력 순서 변경, 동일 등급 TCPA, Stable ID, Lifecycle 및 Golden T+0/T+70/T+240 Queue 테스트
 
+### ASM-037 - 격리 Candidate 검증 입력
+
+- 상태: `PROVISIONAL`
+- 내용: Phase 9-D의 `POC_SAFETY_V1`은 120초 재평가 Horizon, 60초 명령 실행시간, 한 Candidate의
+  최대 속도 변화 50 kt와 Altitude Candidate 목표에만 적용하는 7,500 ft 잠정 최저고도를 사용한다.
+- 적용 모델: Heading·Altitude·Speed는 격리 State의 목표값을 즉시 교체하고, Entry Delay는 현재
+  운동량만큼 State를 뒤로 이동한다. Sequence Change는 아직 운동학적 State를 변경하지 않는다.
+- 주의: 7,500 ft는 공식 최저안전고도 또는 모든 현재 Traffic에 적용되는 규칙이 아니다. 구조화·검증된
+  공식 공역 및 절차 Rule이 준비되면 Profile을 교체해야 한다 (`ASM-030`).
+- 검증: Phase 9-D Performance, Rule, 1차·2차 Conflict 및 원본 State 불변 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -355,6 +366,7 @@
 | Phase 6 | ASM-018, 019 |
 | Phase 7 | ASM-024, 035 |
 | Phase 8 | ASM-036 |
+| Phase 9 | ASM-027, 028, 037 |
 | Phase 12 이후 | ASM-011, 021, 030, 032 |
 
 ## 6. 변경 규칙
