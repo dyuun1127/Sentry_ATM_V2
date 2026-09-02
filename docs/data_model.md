@@ -403,11 +403,15 @@ Phase 13-B의 `GoldenDemoSessionCommandService`와 `GoldenDemoSessionRuntime`은
 후자는 Core Runtime, Orchestrator Chain, Read API와 Command Service를 연결하는 process-local
 Composition Container다.
 
+Phase 13-C의 WSGI Environ, Request JSON, Response JSON과 Error Payload는 Transport 표현이다.
+`GoldenDemoSessionWsgiApp`은 같은 Session Source를 공유하는 Read/Command API만 연결하며 새로운
+Domain Model이나 별도 Session State를 만들지 않는다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Golden Demo Session HTTP Adapter: Phase 13-C 이후
+- Local Demo Server 실행 Entry Point: Phase 13-D 이후
 - UI State와 화면 구현: Session Command/HTTP 계약 완성 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 

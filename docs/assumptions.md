@@ -426,6 +426,9 @@
   GENERATE_RECOMMENDATION(T+75) → ACCEPT_RECOMMENDATION(T+90) →
   APPLY_APPROVED_MANEUVER(T+90)` 순서만 허용한다. 각 Command는 현재 Stage와 정확한 경과시각을
   실행 전에 확인하며 `RESET`은 새 process-local Run을 시작한다.
+- HTTP: Phase 13-C는 `GET /api/v1/golden-demo/session`과 `POST
+  /api/v1/golden-demo/session/commands`만 제공한다. Query를 허용하지 않고 POST Body는 16 KiB 이하의
+  `{"command":"<고정값>"}` JSON Object로 제한한다. 모든 응답은 `Cache-Control: no-store`다.
 - 검증: 모든 단계의 JSON 직렬화, Reset 격리 및 동일 실행 결정론 테스트
 
 ## 5. Phase별 확정 시점

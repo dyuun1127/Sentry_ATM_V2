@@ -39,6 +39,17 @@ class GoldenDemoSessionStage(StrEnum):
     CONFLICT_RESOLVED = "CONFLICT_RESOLVED"
 
 
+class GoldenDemoSessionCommand(StrEnum):
+    """Fixed commands accepted by the deterministic Session boundary."""
+
+    START = "START"
+    ADVANCE_TO_CONFLICT = "ADVANCE_TO_CONFLICT"
+    GENERATE_RECOMMENDATION = "GENERATE_RECOMMENDATION"
+    ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
+    APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
+    RESET = "RESET"
+
+
 @dataclass(frozen=True, slots=True)
 class GoldenDemoAircraftReadModel:
     """Metadata-enriched current Aircraft State for map and table views."""
@@ -179,6 +190,19 @@ class GoldenDemoSessionApiContract(Protocol):
     """Synchronous read-only Session API for presentation adapters."""
 
     def get_current(self) -> GoldenDemoSessionReadModel: ...
+
+
+@runtime_checkable
+class GoldenDemoSessionCommandApiContract(Protocol):
+    """Synchronous command API consumed by transport adapters."""
+
+    @property
+    def read_api(self) -> GoldenDemoSessionApiContract: ...
+
+    def execute(
+        self,
+        command: GoldenDemoSessionCommand,
+    ) -> GoldenDemoSessionReadModel: ...
 
 
 class InProcessGoldenDemoSessionApi:

@@ -1,13 +1,14 @@
 """Strict deterministic Golden Demo Session command composition."""
 
 from dataclasses import dataclass
-from enum import StrEnum
 
 from sentry_atm.api import (
+    GoldenDemoSessionCommand,
     GoldenDemoSessionReadModel,
     GoldenDemoSessionStage,
     InProcessGoldenDemoSessionApi,
 )
+from sentry_atm.infrastructure.http import GoldenDemoSessionWsgiApp
 from sentry_atm.runtime.application_orchestrator import (
     GoldenDemoApprovedManeuverOrchestrator,
 )
@@ -17,17 +18,6 @@ from sentry_atm.runtime.decision_orchestrator import (
 )
 from sentry_atm.runtime.orchestrator import GoldenDemoStepOrchestrator
 from sentry_atm.runtime.resolution_orchestrator import GoldenDemoResolutionOrchestrator
-
-
-class GoldenDemoSessionCommand(StrEnum):
-    """Fixed commands exposed by the process-local Golden Demo Session."""
-
-    START = "START"
-    ADVANCE_TO_CONFLICT = "ADVANCE_TO_CONFLICT"
-    GENERATE_RECOMMENDATION = "GENERATE_RECOMMENDATION"
-    ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
-    APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
-    RESET = "RESET"
 
 
 class GoldenDemoSessionCommandService:
@@ -141,6 +131,7 @@ class GoldenDemoSessionRuntime:
     application_orchestrator: GoldenDemoApprovedManeuverOrchestrator
     read_api: InProcessGoldenDemoSessionApi
     command_service: GoldenDemoSessionCommandService
+    http_app: GoldenDemoSessionWsgiApp
 
 
 def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
@@ -153,6 +144,7 @@ def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
     application = GoldenDemoApprovedManeuverOrchestrator(decision)
     read_api = InProcessGoldenDemoSessionApi(application)
     command_service = GoldenDemoSessionCommandService(application, read_api)
+    http_app = GoldenDemoSessionWsgiApp(read_api, command_service)
     return GoldenDemoSessionRuntime(
         runtime=runtime,
         step_orchestrator=steps,
@@ -161,4 +153,5 @@ def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
         application_orchestrator=application,
         read_api=read_api,
         command_service=command_service,
+        http_app=http_app,
     )

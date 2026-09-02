@@ -1,6 +1,7 @@
 import pytest
 
 from sentry_atm.api import GoldenDemoSessionStage, InProcessGoldenDemoSessionApi
+from sentry_atm.infrastructure.http import GoldenDemoSessionWsgiApp
 from sentry_atm.runtime import (
     GoldenDemoSessionCommand,
     GoldenDemoSessionCommandService,
@@ -21,6 +22,7 @@ def test_session_factory_wires_one_unstarted_independent_command_boundary() -> N
     second = build_golden_demo_session_runtime()
 
     assert first.command_service.read_api is first.read_api
+    assert isinstance(first.http_app, GoldenDemoSessionWsgiApp)
     assert first.read_api.application_orchestrator is first.application_orchestrator
     assert first.application_orchestrator.decision_orchestrator is first.decision_orchestrator
     assert first.decision_orchestrator.resolution_orchestrator is (first.resolution_orchestrator)

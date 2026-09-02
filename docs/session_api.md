@@ -61,14 +61,39 @@ Revalidation은 비어 있다.
 Read API와 Command Service를 하나의 독립된 process-local Container로 조립하지만 Command를 자동으로
 실행하지 않는다.
 
-## 6. 현재 제한사항
+## 6. Phase 13-C Minimal WSGI HTTP Adapter
 
-- HTTP Adapter가 아직 없다.
+`GoldenDemoSessionWsgiApp`은 다음 Endpoint만 제공한다.
+
+- `GET /api/v1/golden-demo/session`: 현재 Session JSON, 항상 `200 OK`
+- `POST /api/v1/golden-demo/session/commands`: `{"command":"START"}` 형태의 고정 Command 실행 후
+  새 Session JSON, 성공 시 `200 OK`
+
+두 Endpoint는 Query를 거부한다. POST는 `application/json`, 정확한 Content-Length, UTF-8 JSON Object,
+정확히 하나의 `command` 필드와 16 KiB Body 제한을 검증한다. 응답 JSON은 Key를 정렬하고 공백을
+제거해 동일 상태에서 같은 bytes를 만들며 `Cache-Control: no-store`를 사용한다.
+
+오류 응답은 `{"error":{"code":"...","message":"..."}}` 구조다.
+
+- `400`: 잘못된 WSGI 환경, Query, Content-Length, Body 길이 또는 JSON
+- `404`: 없는 Route
+- `405`: 허용되지 않은 Method와 `Allow` Header
+- `409 SESSION_STATE_CONFLICT`: 순서·Stage·Checkpoint 시각 위반
+- `413`: 16 KiB Body 초과
+- `415`: JSON이 아닌 Media Type
+- `422`: Body Schema 또는 Command 값 오류
+
+Read API와 Command API는 반드시 같은 Application Orchestrator를 사용해야 하며 Session Runtime Factory가
+WSGI App까지 함께 조립한다.
+
+## 7. 현재 제한사항
+
+- WSGI App을 실제 Port에 Bind하는 Server Entry Point가 아직 없다.
 - Session ID와 결과는 프로세스 재시작 후 복구되지 않는다.
 - Authentication, authorization, streaming과 다중 동시 Session을 제공하지 않는다.
 - Trajectory Point 전체와 Candidate A~E 전체 검증표는 아직 Session 요약에 포함하지 않는다.
 
-## 7. 다음 단계
+## 8. 다음 단계
 
-Phase 13-C는 `GET` Session 조회와 고정 Command 제출을 제공하는 최소 WSGI HTTP Adapter를 추가한다.
-Read/Command Application 계약은 유지하며 Transport 오류를 고정 JSON 형식으로 변환한다.
+Phase 13-D는 Python 표준 라이브러리 기반 Local Demo Server Entry Point와 안전한 기본 Bind 설정을
+추가한다. 이후 Phase 14에서 이 API를 사용하는 Web UI를 구현한다.
