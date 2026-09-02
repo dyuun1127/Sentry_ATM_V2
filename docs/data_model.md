@@ -291,11 +291,23 @@ Phase 8-C의 `ConflictExceptionReadModel`, `OperationalPriorityExceptionReadMode
 `ExceptionQueueSnapshotReadModel`은 Domain을 JSON 호환 표현으로 변환한다. Read Model은 파생된
 표시 데이터이며 Domain Source of Truth 또는 별도 Persistence Aggregate가 아니다.
 
-## 14. 의도적으로 제외한 모델
+## 14. Phase 9-A Resolution Candidate Domain
+
+- `HeadingManeuver`, `AltitudeManeuver`, `SpeedManeuver`: 절대 목표값 기반 기동
+- `EntryDelayManeuver`, `SequenceChangeManeuver`: 시간·순서 관리 기동
+- `NoActionManeuver`: 적용 전후 비교 기준선
+- `CandidateCostEstimate`: 지연 sec, 경로 연장 NM와 0~100 PoC Cost
+- `ResolutionCandidate`: 대상, Maneuver, Objective, 적용시각과 Cost
+- `ResolutionCandidateBatch`: 하나의 Conflict Exception에 대한 결정론적 Candidate 집합
+
+Candidate는 아직 안전성이나 실행 가능성이 검증되지 않은 제안이며 Aircraft State를 변경하지 않는다.
+자세한 계약은 `docs/resolution.md`를 참조한다.
+
+## 15. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- ResolutionCandidate와 Recommendation: Phase 9~11
+- Candidate Generator, Safety Validation과 Recommendation: Phase 9-B~11
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

@@ -36,7 +36,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 8-B: Deterministic Exception Queue Lifecycle Service 구현 완료
 - Phase 8-C: Exception Queue Read Model/API Contract 구현 완료
 - Phase 8-D: Minimal WSGI HTTP Adapter 구현 완료
-- Runtime Composition, Resolution Candidate, UI: 아직 구현하지 않음
+- Phase 9-A: Resolution Candidate Domain Contract 구현 완료
+- Candidate Generator, Safety Validation, Runtime Composition, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -50,6 +51,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Predictive Conflict Contract](docs/conflict.md)
 - [Risk and Operational Priority Contract](docs/risk_priority.md)
 - [Deterministic Exception Queue Contract](docs/exception_queue.md)
+- [Resolution Candidate Contract](docs/resolution.md)
 
 ## 요구 환경
 

@@ -256,8 +256,12 @@
 
 - 상태: `PROJECT_DECISION`
 - 내용: 초기 후보는 Heading, Altitude, Speed, Entry Delay 및 Sequence Change로 제한한다.
+- Phase 9-A 결정: 각 Primitive는 절대 목표값을 가진 별도 타입으로 표현하고 Primary Objective를
+  고정한다. `NO_ACTION`은 실행 후보가 아닌 전후 비교 기준선으로 Batch마다 정확히 한 개 둔다.
+  예상 비용은 지연 sec, 경로 연장 NM와 0~100 PoC Score로 표현하며 정밀 연료/운항비용으로 해석하지
+  않는다.
 - 제외: 자유형 3D 경로 생성과 강화학습 기반 명령
-- 검증: Phase 9 Candidate Generator 테스트
+- 검증: Phase 9 Candidate Domain 및 Generator 테스트
 
 ### ASM-028 - Controller 승인 전 상태 불변
 

@@ -1,0 +1,94 @@
+# Resolution Candidate Contract
+
+## 1. 범위
+
+Phase 9-A는 하나의 Conflict Exception에 대해 생성될 제한된 대응 후보를 타입 안전한 불변 Domain으로
+표현한다. Candidate Generator, 재시뮬레이션, Rule/Safety Validation, 추천 순위와 관제사 승인 적용은
+아직 포함하지 않는다.
+
+```text
+Conflict Exception
+        ↓
+ResolutionCandidateBatch
+        ├─ ResolutionCandidate + typed Maneuver
+        ├─ ResolutionCandidate + typed Maneuver
+        └─ NO_ACTION baseline
+```
+
+Candidate가 존재한다는 사실은 안전하거나 실행 가능하다는 뜻이 아니다. 모든 Candidate는 후속
+Safety Validation을 통과하기 전까지 `unvalidated proposal`이다.
+
+## 2. 제한된 Maneuver Primitive
+
+`ASM-027`에 따라 자유형 3D 경로 대신 다음 Primitive만 허용한다.
+
+| Maneuver | Canonical 값 | 기본 Objective |
+|---|---|---|
+| `HEADING` | 절대 목표 침로 degree `[0, 360)` | `LATERAL_SEPARATION` |
+| `ALTITUDE` | 절대 목표 고도 ft | `VERTICAL_SEPARATION` |
+| `SPEED` | 양수 목표 지상속도 kt | `TIME_SEPARATION` |
+| `ENTRY_DELAY` | 양수 지연시간 sec | `TIME_SEPARATION` |
+| `SEQUENCE_CHANGE` | 1부터 시작하는 목표 순번 | `SEQUENCE_MANAGEMENT` |
+| `NO_ACTION` | 별도 값 없음 | `BASELINE_COMPARISON` |
+
+`NO_ACTION`은 개입 Primitive가 아니라 후보 적용 전후를 같은 계산으로 비교하기 위한 기준선이다.
+상대 표현인 우측 20도, 30 kt 감속 또는 1,000 ft 추가 강하는 Generator가 생성시점 Aircraft State를
+사용해 절대 목표값으로 변환한다. 이 변환은 Phase 9-B 책임이다.
+
+## 3. Candidate
+
+`ResolutionCandidate`는 다음을 보존한다.
+
+- 안정적인 Candidate ID
+- 대상 Aircraft ID
+- 타입이 구분된 Maneuver
+- Maneuver와 일치하는 단일 Primary Objective
+- timezone-aware UTC 적용 시작시각
+- 예상 지연 sec, 경로 연장 NM, 0~100 Operational Cost Score
+
+Cost는 후보 비교를 위한 PoC 값이며 정밀 연료소모량이나 공식 운항비용을 의미하지 않는다.
+`NO_ACTION`은 대상 Aircraft가 없고 예상 Cost가 모두 0이어야 한다. 다른 Maneuver는 반드시 대상
+Aircraft가 있어야 한다.
+
+## 4. Candidate Batch
+
+`ResolutionCandidateBatch`는 한 Source Exception과 Conflict Pair에 대한 생성 결과다.
+
+- Batch, Source Exception, Source Conflict와 Generator Profile ID
+- Conflict Pair
+- 생성 UTC
+- Candidate ID 순으로 정렬된 불변 Candidate Tuple
+- 정확히 하나의 `NO_ACTION` 기준선
+
+모든 Action Candidate 대상은 Conflict Pair에 속해야 하고 적용시각은 Batch 생성시각보다 이를 수
+없다. Candidate ID는 Batch 안에서 고유해야 한다. `actionable_candidates`와 `baseline_candidate`는
+원본 Tuple을 변경하지 않는 파생 View다.
+
+## 5. Golden Demo Mapping
+
+시나리오의 `CAND-A`부터 `CAND-E`는 다음 타입으로 표현한다.
+
+| ID | Target | Domain Maneuver |
+|---|---|---|
+| `CAND-A` | `MIL-F01` | `AltitudeManeuver(target_altitude_ft=9000)` |
+| `CAND-B` | `MIL-F01` | 생성시점 침로에서 우측 20도를 계산한 `HeadingManeuver` |
+| `CAND-C` | `CIV-A02` | 생성시점 속도에서 30 kt를 뺀 `SpeedManeuver` |
+| `CAND-D` | `CIV-A02` | 생성시점 고도에서 1,000 ft를 뺀 `AltitudeManeuver` |
+| `CAND-E` | 없음 | `NoActionManeuver` |
+
+Phase 9-A 테스트는 이 다섯 Candidate가 하나의 결정론적 Batch로 표현됨을 확인하지만 SAFE, UNSAFE,
+INEFFECTIVE 결과는 하드코딩하지 않는다.
+
+## 6. 안전 및 Human-in-the-loop 경계
+
+- Candidate 생성만으로 Aircraft Runtime을 변경하지 않는다 (`ASM-028`).
+- Performance Envelope, 공역, 최저고도와 2차 충돌은 후속 Validator가 검사한다.
+- Candidate Generation과 Safety Validation 구현을 분리한다.
+- 추천 순위는 검증 결과와 비용이 준비된 이후에만 계산한다.
+- 관제사의 Accept/Modify/Reject 이전에는 후보를 실제 State에 적용하지 않는다.
+
+## 7. 다음 단계
+
+Phase 9-B는 Conflict Exception, 해당 Pair의 Aircraft State와 Performance Profile을 입력받아 제한된
+Candidate와 `NO_ACTION` 기준선을 결정론적으로 생성한다. 안전 판정은 그 다음 Phase의 별도
+Validator가 수행한다.
