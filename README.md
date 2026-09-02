@@ -43,7 +43,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 9-E: Golden Resolution Calibration 구현 완료
 - Phase 10-A: Resolution Recommendation Domain Contract 구현 완료
 - Phase 10-B: Deterministic Recommendation Ranking Service 구현 완료
-- Recommendation API, Runtime Composition, UI: 아직 구현하지 않음
+- Phase 10-C: Recommendation Read Model/API Contract 구현 완료
+- Recommendation HTTP Adapter, Runtime Composition, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

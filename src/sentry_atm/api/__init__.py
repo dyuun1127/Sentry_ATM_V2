@@ -10,6 +10,18 @@ from sentry_atm.api.exception_queue import (
     InProcessExceptionQueueApi,
     OperationalPriorityExceptionReadModel,
 )
+from sentry_atm.api.recommendation import (
+    InProcessRecommendationApi,
+    RecommendationApiContract,
+    RecommendationConflictEvidenceReadModel,
+    RecommendationCostReadModel,
+    RecommendationManeuverReadModel,
+    RecommendationReadModelMapper,
+    RecommendationSafetyReadModel,
+    RecommendationSetSource,
+    ResolutionRecommendationReadModel,
+    ResolutionRecommendationSetReadModel,
+)
 
 __all__ = [
     "AcknowledgeExceptionRequest",
@@ -19,5 +31,15 @@ __all__ = [
     "ExceptionQueueReadModelMapper",
     "ExceptionQueueSnapshotReadModel",
     "InProcessExceptionQueueApi",
+    "InProcessRecommendationApi",
     "OperationalPriorityExceptionReadModel",
+    "RecommendationApiContract",
+    "RecommendationConflictEvidenceReadModel",
+    "RecommendationCostReadModel",
+    "RecommendationManeuverReadModel",
+    "RecommendationReadModelMapper",
+    "RecommendationSafetyReadModel",
+    "RecommendationSetSource",
+    "ResolutionRecommendationReadModel",
+    "ResolutionRecommendationSetReadModel",
 ]

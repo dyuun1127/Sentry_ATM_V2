@@ -333,11 +333,15 @@ Phase 10-B의 `RecommendationRankingProfile`은 표시할 최대 추천 수와 �
 `DeterministicRecommendationRankingService`는 완전한 Validation Run의 SAFE Action Candidate만
 Cost Score, Delay, Path Extension, Candidate ID 순으로 정렬해 Recommendation Set을 생성한다.
 
+Phase 10-C의 Recommendation Read Model은 Set, Candidate Maneuver/Cost와 Safety Evidence를 JSON
+호환 값으로 변환한다. `RecommendationSetSource`와 `RecommendationApiContract`는 현재 결과의
+생명주기와 전송 Adapter를 Domain에서 분리하며 Read Model 자체를 별도 Aggregate로 저장하지 않는다.
+
 ## 16. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Recommendation Read Model/API와 Controller Decision: Phase 10-C~11
+- Recommendation HTTP Adapter와 Controller Decision: Phase 10-D~11
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

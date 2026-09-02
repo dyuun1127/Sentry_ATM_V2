@@ -369,6 +369,8 @@
 - Phase 10-B 결정: `POC_RECOMMENDATION_V1`은 SAFE Action Candidate를 Cost Score, Delay,
   Path Extension, Candidate ID 오름차순으로 정렬하고 최대 3개를 표시한다. 가중 합산 점수나
   Callsign·군/민 Category 우대는 사용하지 않는다.
+- Phase 10-C 결정: Read API는 Domain을 직접 노출하지 않고 고정 Maneuver 필드, Cost와 Safety
+  Evidence를 JSON 호환 DTO로 변환한다. 조회 API에는 Accept/Modify/Reject 부작용을 포함하지 않는다.
 - Human-in-the-loop: Recommendation 생성은 Accept/Modify/Reject가 아니며 Aircraft Runtime을
   변경하지 않는다. 관제사 결정과 승인된 기동 적용은 별도 Domain/Application 단계다.
 - 검증: Phase 10 Recommendation Domain 및 Ranking Service 테스트

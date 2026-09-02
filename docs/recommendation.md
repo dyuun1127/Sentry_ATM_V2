@@ -107,7 +107,43 @@ Phase 9-E Golden Batch와 Validation Run을 입력하면 실제 결과는 다음
 `CAND-B`는 2차 Conflict, `CAND-C`는 1차 Conflict 지속, `CAND-D`는 Rule 위반,
 `CAND-E`는 기준선이므로 모두 자동으로 제외된다. Candidate ID별 예외 분기는 사용하지 않는다.
 
-## 7. 다음 단계
+## 7. Recommendation Read Model/API Contract
 
-Phase 10-C는 Recommendation Set을 UI와 HTTP Adapter가 사용할 수 있는 JSON 호환 Read Model/API
-계약으로 변환하되 Domain Source of Truth와 관제사 결정을 분리한다.
+Phase 10-C의 `RecommendationReadModelMapper`는 Recommendation Set을 Domain 객체가 없는 JSON 호환
+DTO로 변환한다. 변환 결과는 파생된 표시 데이터이며 Domain Source of Truth가 아니다.
+
+### 7.1 응답 구조
+
+Set Read Model은 다음 값을 제공한다.
+
+- Recommendation Set, Source Exception, Candidate Batch, Validation Run ID
+- RFC 3339 UTC 생성시각과 Ranking Policy ID
+- `AVAILABLE` 또는 `NO_SAFE_CANDIDATE`
+- Primary Recommendation ID와 Rank 순서의 Recommendation 목록
+
+각 Recommendation은 대상 Aircraft, Objective, 적용 UTC, Cost, 설명과 긍정 Reason Code를 가진다.
+Safety View는 Validation Result ID, Verdict, 평가 UTC, Primary Conflict의 CPA/TCPA·분리값, Secondary
+Conflict, 성능 가능 여부와 Rule 위반 ID를 보존한다.
+
+Maneuver JSON은 다음 고정 필드를 항상 제공하며 해당하지 않는 값은 `null`이다.
+
+- `target_heading_deg`
+- `target_altitude_ft`
+- `target_ground_speed_kt`
+- `delay_seconds`
+- `target_sequence_position`
+
+### 7.2 Transport-neutral API
+
+`RecommendationApiContract.get_current()`는 현재 Recommendation Set Read Model 또는 아직 결과가
+없을 때 `None`을 반환한다. `RecommendationSetSource`가 Domain 결과의 생명주기를 소유하고,
+`InProcessRecommendationApi`는 읽기와 Mapping만 담당한다.
+
+향후 HTTP Adapter의 조회 경로는 `GET /api/v1/recommendations/current`로 예약한다. 현재 계약에는
+Accept/Modify/Reject 요청이 없다. 관제사 결정이 조회 API를 통해 암묵적으로 기록되는 것을 막고,
+Phase 11의 별도 Command 계약에서 처리한다.
+
+## 8. 다음 단계
+
+Phase 10-D는 Transport-neutral 계약 위에 최소 WSGI HTTP Adapter를 구현하고 200 JSON, 결과 없음
+204, 잘못된 경로·메서드 오류 및 `Cache-Control: no-store`를 검증한다.
