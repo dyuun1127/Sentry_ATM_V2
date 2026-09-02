@@ -382,11 +382,16 @@ Recommendation과 기존 `ControllerDecisionAuditEntry/Log`를 연결하는 불�
 `ACCEPT`의 `authorizes_application`은 후속 적용 권한이며 적용 완료 상태가 아니다. 따라서 이 Result에도
 적용 후 Aircraft State나 Conflict 해소 판정을 저장하지 않는다.
 
+Phase 12-E의 `GoldenDemoApprovedManeuverApplicationResult`는 승인 전후 Actual State, 적용 후 Traffic
+Snapshot, 새 Prediction/Conflict Run, Risk/Priority, Exception Queue와 원 Pair의 재검증 결과를 연결한다.
+`SyntheticAircraftRuntime.applied_states`는 현재 Clock Run에만 존재하는 승인 State Anchor이며 Reset 시
+제거된다. Application Result는 process-local 실행 증거이고 아직 영속 Audit Aggregate는 아니다.
+
 ## 18. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- 승인 명령 적용과 사후 재검증: Phase 12-E 이후
+- Golden Demo Session Read Model/API와 UI State: Phase 13 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

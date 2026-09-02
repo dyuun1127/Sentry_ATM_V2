@@ -122,7 +122,28 @@ Reset 시 process-local Audit과 Orchestrator 결과를 비운 뒤 같은 순서
 9,000 ft 기동을 Aircraft Runtime에 적용하거나 Prediction/Conflict를 재계산하지 않는다. 따라서 감사
 기록 직전과 직후의 T+90 Traffic Snapshot은 동일하다.
 
-## 9. 다음 단계
+## 9. Phase 12-E Approved Maneuver Application & Post-action Revalidation
 
-Phase 12-E는 감사된 `ACCEPT`만 입력으로 받아 승인된 `CAND-A` 기동을 명시적으로 적용하고, 새 Actual
-State와 Predicted 4DT, 전체 Traffic Conflict를 다시 계산해 최초 Conflict 해소 증거를 남긴다.
+`GoldenDemoApprovedManeuverOrchestrator.apply_and_revalidate()`는 최신 T+90 Decision이 현재 Audit
+Service의 `ACCEPT`이고 승인 Candidate가 `CAND-A / MIL-F01 / 9,000 ft`일 때만 실행한다.
+
+1. 적용 전 `MIL-F01` Actual State 보존
+2. 같은 위치·속도·Heading에서 고도 9,000 ft와 수직속도 0 ft/min인 승인 State Anchor 적용
+3. 적용 후 8대 Traffic Snapshot 수집
+4. 별도 `POST-APPLY` Prediction Run과 전체 28 Pair Conflict Run 생성
+5. 전체 Risk/Priority 재평가 및 Exception Queue 갱신
+6. 원 `CIV-A02 / MIL-F01` Pair의 SAFE/LOW와 Queue `RESOLVED` 증거 보존
+
+적용 후 원 Pair의 계산 결과는 수평 CPA 약 2.3 NM, 수직분리 약 1,791.67 ft로 `SAFE`이며 Risk는
+`LOW(0)`이다. 이는 수평·수직 기준을 동시에 침범하지 않기 때문이다. 전체 `predicted_events`는 비어
+있지만 근접 임계에 따른 다른 MEDIUM Queue 감시 항목은 남을 수 있으므로, 원 Conflict 해소와 전체
+Queue 비어 있음을 같은 의미로 취급하지 않는다.
+
+승인 Anchor는 `SyntheticAircraftRuntime`의 현재 Clock Run에만 추가되고 Reset 시 자동 제거된다. 같은
+Tick의 중복 적용을 거부하며 Reset 후 T+75→T+90 순서를 재생하면 동일한 적용·재검증 결과가 나온다.
+
+## 10. 다음 단계
+
+Phase 13-A는 T+0부터 적용 후 T+90까지의 Traffic, Queue, Recommendation, Decision과 Revalidation을
+하나의 JSON 호환 Golden Demo Session Read Model/API로 제공해 프론트엔드가 내부 Domain 객체 없이
+단계별 화면을 렌더링할 수 있게 한다.

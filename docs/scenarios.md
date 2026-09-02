@@ -249,6 +249,12 @@ Expected result: Horizontal or vertical separation restored
 HIGH -> MONITORING -> RESOLVED
 ```
 
+Phase 12-E의 즉시 적용·재검증에서는 T+90 `MIL-F01`을 9,000 ft/0 ft/min 승인 Anchor로 바꾼 뒤
+8대 전체 28 Pair를 다시 계산한다. 원 Pair의 CPA는 수평 약 2.3 NM, 수직 약 1,791.67 ft로
+`SAFE`, Risk `LOW(0)`가 되며 기존 Conflict Exception은 `RESOLVED`로 전이한다. `MONITORING`은 UI
+표시 단계이고 별도 Domain Risk Level이 아니다. 이 즉시 목표값 적용은 PoC 단순화이며 실제 명령
+전달 또는 고도 Capture 동역학을 구현한 것이 아니다.
+
 ### 8.8 T+240초 - MIL-T01 비상 우선 복귀
 
 다음 이벤트를 발생시킨다.

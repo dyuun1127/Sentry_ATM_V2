@@ -403,6 +403,12 @@
 - Decision Step: T+90에 process-local Catalog의 현재 `CAND-A` Recommendation을 비개인
   `RKTU-DEMO-CONTROLLER` Position이 `ACCEPT`한 것으로 Audit한다. 이 Entry는 후속 적용을 허가하지만
   그 자체로 Aircraft Runtime을 변경하지 않는다.
+- Application Step: 감사된 `ACCEPT` 이후에만 T+90 `MIL-F01` Actual State를 9,000 ft, 수직속도
+  0 ft/min의 승인 Anchor로 교체한다. PoC의 즉시 목표값 적용은 `ASM-037`의 격리 검증과 같은
+  단순화이며 실제 항공기 명령 실행·고도 Capture 동역학을 뜻하지 않는다.
+- Post-action: 승인 Anchor 적용 직후 전체 8대 Prediction, Pair Conflict, Risk, Priority와 Exception
+  Queue를 다시 계산한다. 원 `CIV-A02 / MIL-F01` Conflict는 SAFE/LOW가 되고 기존 Queue Item은
+  `RESOLVED`로 전이해야 한다.
 - 검증: Phase 12 Runtime Composition, Step 결정론 및 상태 격리 테스트
 
 ## 5. Phase별 확정 시점

@@ -1,5 +1,9 @@
 """Golden Demo application composition."""
 
+from sentry_atm.runtime.application_orchestrator import (
+    GoldenDemoApprovedManeuverApplicationResult,
+    GoldenDemoApprovedManeuverOrchestrator,
+)
 from sentry_atm.runtime.composition import (
     GoldenDemoRuntime,
     InMemoryRecommendationCatalog,
@@ -19,6 +23,8 @@ from sentry_atm.runtime.resolution_orchestrator import (
 )
 
 __all__ = [
+    "GoldenDemoApprovedManeuverApplicationResult",
+    "GoldenDemoApprovedManeuverOrchestrator",
     "GoldenDemoControllerDecisionOrchestrator",
     "GoldenDemoControllerDecisionResult",
     "GoldenDemoRuntime",

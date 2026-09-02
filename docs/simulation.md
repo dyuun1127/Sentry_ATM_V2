@@ -98,6 +98,12 @@ Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. 현재 시
 Anchor는 같은 Aircraft ID와 `SYNTHETIC` Source를 사용하며 초기 State 뒤에 엄격한 시간순으로
 배치해야 한다.
 
+Phase 12-E부터 `apply_state_anchor()`는 현재 `RUNNING` Clock 시각과 일치하는 승인 State를 현재 Run의
+동적 Anchor로 한 번 추가할 수 있다. ID와 Source가 Runtime과 같아야 하며 기존 Scenario/승인 Anchor와
+같은 시각을 덮어쓸 수 없다. 동적 Anchor는 Clock Reset 시 제거되고 사전 Scenario Anchor는 유지된다.
+이 저수준 Runtime 명령 자체는 승인 권한을 판단하지 않으며, Application Orchestrator가 감사된
+`ACCEPT`를 먼저 검증한다.
+
 초기 상태 시각 이전에는 `None`을 반환하며, 정확히 초기 시각이면 원래 상태를 반환한다. 이후 상태는 기존 식별자, 운동 값, 비행단계 및 비상 상태를 보존한다.
 
 이 Runtime은 현재 Clock 시각의 단일 Actual State만 계산한다. 미래 시점 목록이나 `PREDICTED` Trajectory를 생성하지 않으므로 Phase 4 Predictor 책임과 분리된다.
@@ -136,7 +142,8 @@ Trajectory 생성과 Conflict 판정을 분리한다.
 - CSV와 OpenSky 원본 자료를 `AircraftState`로 변환하는 Adapter는 아직 없다.
 - Synthetic 운동은 각 State Anchor 사이에서만 Constant Speed, Constant Heading, Constant Vertical Rate를 지원한다.
 - 선회율, 가감속, 목표 고도 Capture 및 Aircraft Performance 제한은 아직 없다.
-- 범용 관제 명령 적용은 후속 Phase에서 구현한다. 현재 State Anchor는 사전에 정의된 Scenario Truth다.
+- 범용 관제 명령 적용은 아직 없다. 동적 State Anchor 적용은 Golden Demo의 감사된 Altitude
+  `ACCEPT` 한 건으로 제한한다.
 - Runtime 동적 추가·제거는 아직 지원하지 않는다.
 - 외부 Scenario 파일 Loader는 아직 없으며, 현재는 코드 기반 Golden Scenario Builder만 제공한다.
 - Engine은 Predictor, Conflict Detector 또는 Rule Engine을 직접 호출하지 않는다.
