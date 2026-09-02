@@ -371,11 +371,17 @@ Phase 12-B의 `GoldenDemoStepResult`는 한 Simulation Tick에서 계산된 Traf
 Conflict, Risk, Priority 및 Exception Queue 결과를 함께 참조하는 불변 Application Snapshot이다.
 Domain Aggregate를 합치거나 복제하는 Persistence 모델이 아니다.
 
+Phase 12-C의 `GoldenDemoResolutionResult`는 하나의 Source Step/Conflict Exception, Candidate Batch,
+Safety Validation Run과 게시된 Recommendation Set을 연결하는 불변 Application 결과다. 성능 Profile은
+Domain 전용 `reference_data`에서 공급하며 SQLite Seed도 같은 객체를 재사용한다. Resolution Result 자체는
+새 Domain Aggregate나 Persistence 모델이 아니며 Controller Decision 또는 Aircraft State를 포함하지
+않는다.
+
 ## 18. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Resolution Step과 승인 명령 적용: Phase 12-C 이후
+- Controller Decision Demo Step과 승인 명령 적용: Phase 12-D 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

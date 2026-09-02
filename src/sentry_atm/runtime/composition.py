@@ -13,7 +13,7 @@ from sentry_atm.conflict import (
     RollingConflictScheduler,
 )
 from sentry_atm.controller_decision import DeterministicControllerDecisionService
-from sentry_atm.domain import ResolutionRecommendationSet
+from sentry_atm.domain import AircraftPerformanceProfile, ResolutionRecommendationSet
 from sentry_atm.domain.validation import require_identifier
 from sentry_atm.exception_queue import ExceptionQueueService
 from sentry_atm.infrastructure.http import (
@@ -28,6 +28,7 @@ from sentry_atm.prediction import (
 )
 from sentry_atm.priority import OperationalPriorityEvaluator
 from sentry_atm.recommendation import DeterministicRecommendationRankingService
+from sentry_atm.reference_data import POC_PERFORMANCE_PROFILES
 from sentry_atm.resolution import (
     DeterministicResolutionCandidateGenerator,
     IsolatedResolutionSafetyValidator,
@@ -99,6 +100,7 @@ class GoldenDemoRuntime:
     """Wired components for one unstarted, process-local Golden Demo run."""
 
     simulation: ScenarioSimulation
+    performance_profiles: tuple[AircraftPerformanceProfile, ...]
     prediction_scheduler: RollingPredictionScheduler
     conflict_scheduler: RollingConflictScheduler
     risk_evaluator: ConflictRiskEvaluator
@@ -153,6 +155,7 @@ def build_golden_demo_runtime() -> GoldenDemoRuntime:
 
     return GoldenDemoRuntime(
         simulation=simulation,
+        performance_profiles=POC_PERFORMANCE_PROFILES,
         prediction_scheduler=prediction_scheduler,
         conflict_scheduler=conflict_scheduler,
         risk_evaluator=ConflictRiskEvaluator(),

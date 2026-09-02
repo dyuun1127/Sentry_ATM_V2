@@ -83,8 +83,32 @@ Decision Audit 상태를 지운다. 다시 같은 Step 순서를 실행하면 �
 Step은 Resolution Candidate, Recommendation 또는 Controller Decision을 만들지 않는다. 특히 T+60
 Conflict/Exception이 계산되어도 Aircraft Runtime은 Scenario Truth 외에 변경되지 않는다.
 
-## 7. 다음 단계
+## 7. Phase 12-C Deterministic Golden Demo Resolution Step
 
-Phase 12-C는 T+60 이후의 Conflict Exception을 선택해 T+75 상태에서 Candidate Generation, Isolated
-Safety Validation과 Recommendation Publish를 하나의 결정론적 Resolution Step으로 연결한다. 관제사
-결정이나 승인 기동 적용은 계속 별도 단계로 유지한다.
+`GoldenDemoResolutionOrchestrator.resolve()`는 최신 Step이 정확히 T+75이고 현재 Clock과 일치할 때만
+다음 순서로 실행한다.
+
+1. 활성 `CIV-A02 / MIL-F01` HIGH/CRITICAL Conflict Exception 하나 선택
+2. Pair의 현재 State와 source-labelled Performance Profile로 Candidate A~E 생성
+3. Candidate별 복제 State에 기동을 적용하고 8대 전체 Traffic으로 격리 Safety Validation
+4. SAFE Action만 결정론적으로 Ranking
+5. 완성된 Recommendation Set을 process-local Catalog에 Publish
+
+Golden Calibration 결과는 `CAND-A`만 SAFE이며, `CAND-B`는 `MIL-F02`와 2차 Conflict를 만들어
+UNSAFE, `CAND-C`는 INEFFECTIVE, `CAND-D`는 Rule 위반으로 UNSAFE, `CAND-E`는 충돌이 남는
+NO_ACTION 기준선이다. 결과는 Source Step, Exception, Candidate Batch, Validation Run과 Recommendation
+Set Identity를 모두 보존한다.
+
+Runtime 계산은 T+75에서 원자적으로 완료되며 데모 UI가 Candidate, Validation, Recommendation을
+T+75/T+80/T+85에 단계적으로 공개하는 Presentation Timeline과는 구분된다. Resolve는 Controller
+Decision을 만들거나 Aircraft Runtime을 변경하지 않는다. 같은 Tick의 중복 실행을 거부하고 Clock
+Reset 후 같은 입력을 재생하면 동일한 결과를 만든다.
+
+PoC Performance Profile은 SQLAlchemy가 필요 없는 `sentry_atm.reference_data`에 정의하고 SQLite Seed와
+Runtime이 같은 불변 객체를 사용한다.
+
+## 8. 다음 단계
+
+Phase 12-D는 게시된 `CAND-A` Recommendation에 대한 관제사 `ACCEPT`를 결정론적 Demo Decision
+Step으로 기록한다. Decision Audit과 실제 승인 기동 적용은 계속 분리하며 적용·재검증은 후속 단계에서
+다룬다.

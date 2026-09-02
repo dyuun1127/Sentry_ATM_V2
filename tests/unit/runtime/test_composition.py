@@ -104,6 +104,11 @@ def test_composition_wires_one_shared_clock_and_all_core_services() -> None:
     assert runtime.definition.scenario_id == GOLDEN_DEMO_SCENARIO_ID
     assert runtime.definition.start_time_utc == GOLDEN_DEMO_START_UTC
     assert len(runtime.definition.aircraft) == 8
+    assert tuple(profile.profile_id for profile in runtime.performance_profiles) == (
+        "AIRLINER-POC-V1",
+        "FAST-JET-POC-V1",
+        "TRANSPORT-POC-V1",
+    )
     assert clock.state is ClockState.READY
     assert runtime.simulation.engine.clock is clock
     assert runtime.simulation.timeline.clock is clock

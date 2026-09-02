@@ -397,6 +397,9 @@
 - Human-in-the-loop: `ACCEPT` 적용기와 `MODIFY` 재검증 실행기는 아직 Composition에 포함하지 않는다.
 - Persistence: In-memory Recommendation Catalog는 재시작 복구나 영속 Audit을 제공하지 않는다.
 - Step: 같은 Tick에는 하나의 Step만 허용하고 Clock Reset 시 모든 process-local 파생 상태를 비운다.
+- Resolution Step: T+75의 활성 `CIV-A02 / MIL-F01` HIGH Conflict Exception만 선택해 9,000 ft를
+  선호 목표로 Candidate 생성, 전체 Traffic 격리 검증, SAFE 후보 Ranking과 Catalog Publish를 수행한다.
+  이 계산 시점과 데모 화면의 단계별 공개 시점은 분리할 수 있다.
 - 검증: Phase 12 Runtime Composition, Step 결정론 및 상태 격리 테스트
 
 ## 5. Phase별 확정 시점
