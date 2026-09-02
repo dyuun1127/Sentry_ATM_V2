@@ -61,8 +61,9 @@ SQLite는 PostgreSQL Schema를 지원하지 않으므로 물리 Schema 분리 �
 | Reference | `aircraft` | Table과 Repository 구현 |
 | Traffic | `aircraft_state` | Table과 Repository 구현 |
 | Intent | `flight` | Domain만 구현, Table 후속 |
-| Intent | `trajectory`, `trajectory_point` | Domain만 구현, Table 후속 |
-| Analytics | `prediction_run` | Domain만 구현, Table 후속 |
+| Prediction | `prediction_run` | Table과 Repository 구현 |
+| Prediction | `trajectory`, `trajectory_point` | Predicted Trajectory 저장 구현 |
+| Intent | Planned/Actual `trajectory`, `trajectory_point` | Table 확장 후속 |
 
 `AircraftMetadata.performance_class`는 DB의 `performance_profile_id`로 명시적으로 Mapping한다.
 
@@ -126,13 +127,22 @@ Repository 내부에서 임의 Commit을 수행하지 않는다.
   - `append_many`
   - `latest_at_or_before`
   - `list_between`
+- `SqlAlchemyPredictionRunRepository`
+  - `get`
+  - `save`
+  - `list_between`
 
 `list_between`은 시작과 종료시각을 모두 포함하고 UTC 오름차순으로 반환한다.
+
+Prediction 저장은 `PredictionRun`, 그 Run에 속한 `PREDICTED Trajectory`, 각 4DT Point를 하나의
+Aggregate로 취급한다. Trajectory와 Point의 `sequence_index`를 별도로 저장해 Snapshot 및 Horizon
+순서를 보존한다. 동일한 `prediction_run_id`를 다시 저장하면 기존 결과를 덮어쓰지 않고 거부한다.
+저장 도중 Aircraft Foreign Key 등 하나라도 실패하면 호출자 Transaction 전체가 Rollback된다.
 
 ## 9. 현재 제한사항과 다음 순서
 
 - 동시 다중 Process Write 부하는 목표 범위가 아니다.
 - DB 내부 공간 Polygon 연산은 지원하지 않는다.
 - 자동 Migration 도구는 아직 도입하지 않는다. 현재 초기 Table은 `create_all()`로 생성한다.
-- Flight, Trajectory, PredictionRun은 각 기능 Phase에서 Table과 Adapter를 함께 추가한다.
+- Flight와 Planned/Actual Trajectory는 각 기능 Phase에서 Table과 Adapter를 확장한다.
 - 초기 Reference Data는 `ASM-013`의 시뮬레이션 가정이며 실제 기종 성능자료가 아니다.

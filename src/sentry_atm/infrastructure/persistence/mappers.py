@@ -1,10 +1,16 @@
 """Explicit Domain↔SQLite row mapping functions."""
 
+from json import dumps, loads
+
 from sentry_atm.domain import (
     AircraftMetadata,
     AircraftPerformanceProfile,
     AircraftState,
     AircraftType,
+    PredictionRun,
+    Trajectory,
+    TrajectoryPoint,
+    TrajectoryType,
 )
 from sentry_atm.geo import rktu_local_to_geodetic
 from sentry_atm.infrastructure.persistence.models import (
@@ -12,6 +18,9 @@ from sentry_atm.infrastructure.persistence.models import (
     AircraftRow,
     AircraftStateRow,
     AircraftTypeRow,
+    PredictionRunRow,
+    TrajectoryPointRow,
+    TrajectoryRow,
 )
 
 
@@ -141,4 +150,107 @@ def aircraft_state_from_row(row: AircraftStateRow) -> AircraftState:
         flight_phase=row.flight_phase,
         emergency_status=row.emergency_status,
         emergency_type=row.emergency_type,
+    )
+
+
+def prediction_run_to_row(prediction_run: PredictionRun) -> PredictionRunRow:
+    if not isinstance(prediction_run, PredictionRun):
+        raise TypeError("prediction_run must be PredictionRun")
+    return PredictionRunRow(
+        prediction_run_id=prediction_run.prediction_run_id,
+        input_timestamp_utc=prediction_run.input_timestamp_utc,
+        generated_at_utc=prediction_run.generated_at_utc,
+        model_name=prediction_run.model_name,
+        model_version=prediction_run.model_version,
+        horizons_seconds_json=dumps(
+            prediction_run.horizons_seconds,
+            separators=(",", ":"),
+        ),
+        configuration_id=prediction_run.configuration_id,
+    )
+
+
+def prediction_run_from_row(
+    row: PredictionRunRow,
+    trajectories: tuple[Trajectory, ...],
+) -> PredictionRun:
+    if not isinstance(row, PredictionRunRow):
+        raise TypeError("row must be PredictionRunRow")
+    if not isinstance(trajectories, tuple) or not all(
+        isinstance(trajectory, Trajectory) for trajectory in trajectories
+    ):
+        raise TypeError("trajectories must be a tuple of Trajectory instances")
+    return PredictionRun(
+        prediction_run_id=row.prediction_run_id,
+        input_timestamp_utc=row.input_timestamp_utc,
+        generated_at_utc=row.generated_at_utc,
+        model_name=row.model_name,
+        model_version=row.model_version,
+        horizons_seconds=tuple(loads(row.horizons_seconds_json)),
+        trajectories=trajectories,
+        configuration_id=row.configuration_id,
+    )
+
+
+def trajectory_to_row(
+    trajectory: Trajectory,
+    *,
+    prediction_run_id: str,
+    sequence_index: int,
+) -> TrajectoryRow:
+    if not isinstance(trajectory, Trajectory):
+        raise TypeError("trajectory must be Trajectory")
+    if trajectory.trajectory_type is not TrajectoryType.PREDICTED:
+        raise ValueError("prediction persistence only accepts PREDICTED trajectories")
+    return TrajectoryRow(
+        prediction_run_id=prediction_run_id,
+        aircraft_id=trajectory.aircraft_id,
+        sequence_index=sequence_index,
+        trajectory_type=trajectory.trajectory_type.value,
+    )
+
+
+def trajectory_from_rows(
+    row: TrajectoryRow,
+    point_rows: tuple[TrajectoryPointRow, ...],
+) -> Trajectory:
+    if not isinstance(row, TrajectoryRow):
+        raise TypeError("row must be TrajectoryRow")
+    if not isinstance(point_rows, tuple) or not all(
+        isinstance(point_row, TrajectoryPointRow) for point_row in point_rows
+    ):
+        raise TypeError("point_rows must be a tuple of TrajectoryPointRow instances")
+    return Trajectory(
+        aircraft_id=row.aircraft_id,
+        trajectory_type=row.trajectory_type,
+        points=tuple(trajectory_point_from_row(point_row) for point_row in point_rows),
+    )
+
+
+def trajectory_point_to_row(
+    point: TrajectoryPoint,
+    *,
+    trajectory_id: int,
+    sequence_index: int,
+) -> TrajectoryPointRow:
+    if not isinstance(point, TrajectoryPoint):
+        raise TypeError("point must be TrajectoryPoint")
+    return TrajectoryPointRow(
+        trajectory_id=trajectory_id,
+        sequence_index=sequence_index,
+        timestamp_utc=point.timestamp_utc,
+        x_nm=point.x_nm,
+        y_nm=point.y_nm,
+        altitude_ft=point.altitude_ft,
+    )
+
+
+def trajectory_point_from_row(row: TrajectoryPointRow) -> TrajectoryPoint:
+    if not isinstance(row, TrajectoryPointRow):
+        raise TypeError("row must be TrajectoryPointRow")
+    return TrajectoryPoint(
+        timestamp_utc=row.timestamp_utc,
+        x_nm=row.x_nm,
+        y_nm=row.y_nm,
+        altitude_ft=row.altitude_ft,
     )

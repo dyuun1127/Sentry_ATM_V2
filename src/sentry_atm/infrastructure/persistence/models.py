@@ -193,3 +193,82 @@ class AircraftStateRow(Base):
     flight_phase: Mapped[str] = mapped_column(String(32), nullable=False)
     emergency_status: Mapped[str] = mapped_column(String(32), nullable=False)
     emergency_type: Mapped[str | None] = mapped_column(String(32))
+
+
+class PredictionRunRow(Base):
+    __tablename__ = "prediction_run"
+
+    prediction_run_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    input_timestamp_utc: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
+    generated_at_utc: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    horizons_seconds_json: Mapped[str] = mapped_column(String(256), nullable=False)
+    configuration_id: Mapped[str | None] = mapped_column(String(64))
+
+
+class TrajectoryRow(Base):
+    __tablename__ = "trajectory"
+    __table_args__ = (
+        UniqueConstraint(
+            "prediction_run_id",
+            "aircraft_id",
+            name="uq_trajectory_run_aircraft",
+        ),
+        UniqueConstraint(
+            "prediction_run_id",
+            "sequence_index",
+            name="uq_trajectory_run_sequence",
+        ),
+        CheckConstraint("sequence_index >= 0", name="sequence_non_negative"),
+        CheckConstraint("trajectory_type = 'PREDICTED'", name="predicted_type"),
+        Index(
+            "ix_trajectory_prediction_run_sequence",
+            "prediction_run_id",
+            "sequence_index",
+        ),
+    )
+
+    trajectory_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    prediction_run_id: Mapped[str] = mapped_column(
+        ForeignKey("prediction_run.prediction_run_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    aircraft_id: Mapped[str] = mapped_column(
+        ForeignKey("aircraft.aircraft_id"),
+        nullable=False,
+    )
+    sequence_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    trajectory_type: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class TrajectoryPointRow(Base):
+    __tablename__ = "trajectory_point"
+    __table_args__ = (
+        UniqueConstraint(
+            "trajectory_id",
+            "sequence_index",
+            name="uq_trajectory_point_sequence",
+        ),
+        CheckConstraint("sequence_index >= 0", name="sequence_non_negative"),
+        Index(
+            "ix_trajectory_point_trajectory_sequence",
+            "trajectory_id",
+            "sequence_index",
+        ),
+    )
+
+    trajectory_point_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    trajectory_id: Mapped[int] = mapped_column(
+        ForeignKey("trajectory.trajectory_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sequence_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    timestamp_utc: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
+    x_nm: Mapped[float] = mapped_column(Float, nullable=False)
+    y_nm: Mapped[float] = mapped_column(Float, nullable=False)
+    altitude_ft: Mapped[float] = mapped_column(Float, nullable=False)

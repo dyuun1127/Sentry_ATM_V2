@@ -113,3 +113,23 @@ prediction_run = scheduler.run_if_due(traffic_snapshot)
 
 Run ID는 `<prefix>-<tick_count 12자리>` 형식이며 기본 Prefix는 `PRED`다. 생성시각도
 Snapshot의 Simulation UTC를 사용하므로 wall clock, sleep, UUID 및 난수에 의존하지 않는다.
+
+## 8. Prediction Persistence
+
+Phase 4-D는 `PredictionRun` 전체를 SQLite에 하나의 Aggregate로 저장한다.
+
+```text
+prediction_run
+  └─ trajectory (Snapshot Aircraft 순서)
+       └─ trajectory_point (Horizon 순서)
+```
+
+`SqlAlchemyPredictionRunRepository`는 다음 기능을 제공한다.
+
+- `save`: Run과 모든 하위 Trajectory/Point 저장
+- `get`: ID로 전체 Aggregate 복원
+- `list_between`: Input UTC 범위의 Run을 시간순으로 복원
+
+Repository는 중간에 `flush()`를 사용하지만 `commit()`하지 않는다. Aircraft Metadata가 없거나
+Foreign Key가 잘못된 경우 호출자 Transaction이 전체 Aggregate를 Rollback하므로 일부 Point만
+남지 않는다. 예측 결과는 append-only로 취급하며 같은 Run ID를 덮어쓰지 않는다.

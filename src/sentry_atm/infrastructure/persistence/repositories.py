@@ -11,6 +11,7 @@ from sentry_atm.domain import (
     AircraftPerformanceProfile,
     AircraftState,
     AircraftType,
+    PredictionRun,
 )
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
@@ -23,12 +24,20 @@ from sentry_atm.infrastructure.persistence.mappers import (
     aircraft_type_to_row,
     performance_profile_from_row,
     performance_profile_to_row,
+    prediction_run_from_row,
+    prediction_run_to_row,
+    trajectory_from_rows,
+    trajectory_point_to_row,
+    trajectory_to_row,
 )
 from sentry_atm.infrastructure.persistence.models import (
     AircraftPerformanceProfileRow,
     AircraftRow,
     AircraftStateRow,
     AircraftTypeRow,
+    PredictionRunRow,
+    TrajectoryPointRow,
+    TrajectoryRow,
 )
 
 
@@ -194,3 +203,97 @@ class SqlAlchemyAircraftStateRepository:
             .order_by(AircraftStateRow.timestamp_utc)
         ).all()
         return tuple(aircraft_state_from_row(row) for row in rows)
+
+
+class SqlAlchemyPredictionRunRepository:
+    """Append-only PredictionRun aggregate adapter; the caller owns transactions."""
+
+    __slots__ = ("_session",)
+
+    def __init__(self, session: Session) -> None:
+        self._session = _require_session(session)
+
+    def get(self, prediction_run_id: str) -> PredictionRun | None:
+        identifier = require_identifier(
+            prediction_run_id,
+            field_name="prediction_run_id",
+        )
+        row = self._session.get(PredictionRunRow, identifier)
+        return self._load_aggregate(row) if row is not None else None
+
+    def save(self, prediction_run: PredictionRun) -> None:
+        incoming = prediction_run_to_row(prediction_run)
+        existing = self._session.get(PredictionRunRow, incoming.prediction_run_id)
+        if existing is not None:
+            raise ValueError(f"prediction_run_id already exists: {incoming.prediction_run_id}")
+
+        self._session.add(incoming)
+        self._session.flush()
+
+        trajectory_rows = tuple(
+            trajectory_to_row(
+                trajectory,
+                prediction_run_id=prediction_run.prediction_run_id,
+                sequence_index=sequence_index,
+            )
+            for sequence_index, trajectory in enumerate(prediction_run.trajectories)
+        )
+        self._session.add_all(trajectory_rows)
+        self._session.flush()
+
+        point_rows = []
+        for trajectory, trajectory_row in zip(
+            prediction_run.trajectories,
+            trajectory_rows,
+            strict=True,
+        ):
+            if trajectory_row.trajectory_id is None:
+                raise RuntimeError("trajectory_id was not assigned after flush")
+            point_rows.extend(
+                trajectory_point_to_row(
+                    point,
+                    trajectory_id=trajectory_row.trajectory_id,
+                    sequence_index=sequence_index,
+                )
+                for sequence_index, point in enumerate(trajectory.points)
+            )
+        self._session.add_all(point_rows)
+        self._session.flush()
+
+    def list_between(
+        self,
+        start_time_utc: datetime,
+        end_time_utc: datetime,
+    ) -> tuple[PredictionRun, ...]:
+        start = to_utc(start_time_utc, field_name="start_time_utc")
+        end = to_utc(end_time_utc, field_name="end_time_utc")
+        if end < start:
+            raise ValueError("end_time_utc must not be earlier than start_time_utc")
+        rows = self._session.scalars(
+            select(PredictionRunRow)
+            .where(
+                PredictionRunRow.input_timestamp_utc >= start,
+                PredictionRunRow.input_timestamp_utc <= end,
+            )
+            .order_by(
+                PredictionRunRow.input_timestamp_utc,
+                PredictionRunRow.prediction_run_id,
+            )
+        ).all()
+        return tuple(self._load_aggregate(row) for row in rows)
+
+    def _load_aggregate(self, row: PredictionRunRow) -> PredictionRun:
+        trajectory_rows = self._session.scalars(
+            select(TrajectoryRow)
+            .where(TrajectoryRow.prediction_run_id == row.prediction_run_id)
+            .order_by(TrajectoryRow.sequence_index)
+        ).all()
+        trajectories = []
+        for trajectory_row in trajectory_rows:
+            point_rows = self._session.scalars(
+                select(TrajectoryPointRow)
+                .where(TrajectoryPointRow.trajectory_id == trajectory_row.trajectory_id)
+                .order_by(TrajectoryPointRow.sequence_index)
+            ).all()
+            trajectories.append(trajectory_from_rows(trajectory_row, tuple(point_rows)))
+        return prediction_run_from_row(row, tuple(trajectories))
