@@ -388,6 +388,16 @@
 - 보안: Controller Position ID는 역할·석 식별자이며 실제 개인 이름이나 군 내부 식별자를 사용하지 않는다.
 - 검증: Phase 11 Controller Decision Domain, Service, Command/API 및 HTTP Adapter 테스트
 
+### ASM-040 - Golden Demo Runtime Composition 경계
+
+- 상태: `PROJECT_DECISION`
+- 내용: Phase 12-A Composition Root는 새 process-local Service와 Catalog를 조립하지만 Clock을 시작하거나
+  계산 Pipeline을 실행하지 않는다.
+- 격리: Factory 호출별 mutable Clock, Queue, Catalog와 Decision Service를 공유하지 않는다.
+- Human-in-the-loop: `ACCEPT` 적용기와 `MODIFY` 재검증 실행기는 아직 Composition에 포함하지 않는다.
+- Persistence: In-memory Recommendation Catalog는 재시작 복구나 영속 Audit을 제공하지 않는다.
+- 검증: Phase 12 Runtime Composition 및 상태 격리 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -403,7 +413,7 @@
 | Phase 9 | ASM-027, 028, 037 |
 | Phase 10 | ASM-028, 038 |
 | Phase 11 | ASM-028, 033, 039 |
-| Phase 12 이후 | ASM-011, 021, 030, 032 |
+| Phase 12 | ASM-011, 021, 030, 032, 040 |
 
 ## 6. 변경 규칙
 

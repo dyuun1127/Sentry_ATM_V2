@@ -49,7 +49,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 11-B: Deterministic Controller Decision Service 구현 완료
 - Phase 11-C: Controller Decision Command/API Contract 구현 완료
 - Phase 11-D: Minimal Controller Decision WSGI HTTP Adapter 구현 완료
-- Runtime Composition, 승인 명령 적용, UI: 아직 구현하지 않음
+- Phase 12-A: Golden Demo Runtime Composition Foundation 구현 완료
+- Runtime Step Orchestration, 승인 명령 적용, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -66,6 +67,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Resolution Candidate Contract](docs/resolution.md)
 - [Resolution Recommendation Contract](docs/recommendation.md)
 - [Controller Decision Audit Contract](docs/controller_decision.md)
+- [Golden Demo Runtime Composition](docs/runtime_composition.md)
 
 ## 요구 환경
 
