@@ -326,8 +326,11 @@
   Attention Priority, Medium Risk, Routine Priority, Low Risk 순서다.
 - Phase 8-A 결정: Resolved 여부, 교차 타입 Rank, Acknowledge 여부, TCPA 오름차순, Score 내림차순,
   Exception ID 사전순으로 전체 정렬 키를 구성한다.
+- Phase 8-B 결정: LOW/ROUTINE은 새 항목에서 제외하고, 기존 항목은 같은 Subject의 명시적인
+  LOW/ROUTINE 평가가 도착할 때만 해결한다. 누락은 해결로 추정하지 않으며 해결 후 재상승은 새
+  Open 시각으로 재개한다. 확인 상태는 활성 평가가 계속되는 동안 보존한다.
 - 주의: 관제사 화면의 잠정 표시 순서이며 자동 항공기 기동 또는 공식 관제 우선순위를 의미하지 않는다.
-- 검증: 입력 순서 변경, 동일 등급 TCPA 및 Stable ID Queue 테스트
+- 검증: 입력 순서 변경, 동일 등급 TCPA, Stable ID, Lifecycle 및 Golden T+0/T+70/T+240 Queue 테스트
 
 ## 5. Phase별 확정 시점
 

@@ -3,8 +3,8 @@
 ## 1. 범위
 
 Phase 8-A는 Risk와 Operational Priority 결과를 관제사에게 제시할 타입 안전한 Exception 항목과
-결정론적 Queue Snapshot으로 정의한다. Assessment에서 Item을 생성·갱신·종료하는 Assembler와
-UI 상태 관리는 포함하지 않는다.
+결정론적 Queue Snapshot으로 정의한다. Phase 8-B는 Assessment에서 안정적인 ID의 Item을
+생성·갱신·확인·해결·재개하는 상태 기반 Service를 추가한다. UI 상태 관리는 포함하지 않는다.
 
 ```text
 ConflictRiskAssessment ───────> ConflictExceptionItem
@@ -82,7 +82,34 @@ Exception ID와 Source Assessment ID는 Snapshot 안에서 각각 고유해야 �
 Snapshot 생성시각보다 늦을 수 없다. `active_items`는 `RESOLVED`를 제외하고 `top_item`은 첫 활성
 항목 또는 `None`을 반환한다.
 
-## 5. 다음 단계 경계
+## 5. Lifecycle Service
 
-Phase 8-B는 Phase 7 결과에서 안정적인 Exception ID를 생성하고, LOW/ROUTINE 제외 정책과 기존
-Item의 Open·Acknowledge·Resolve 수명주기를 적용해 Queue Snapshot을 만드는 Service를 구현한다.
+`ExceptionQueueService`는 다음 규칙으로 Source Assessment를 적용한다.
+
+- Conflict는 정렬된 Aircraft Pair를 길이 접두어로 인코딩하고, Priority는 Aircraft ID를 사용해
+  안정적이며 모호하지 않은 Exception ID를 만든다.
+- `LOW` Risk와 `ROUTINE` Priority는 새 Item을 만들지 않는다.
+- 활성 Assessment가 처음 도착하면 `OPEN`으로 생성한다.
+- 활성 Assessment가 갱신되면 최초 Open 시각과 `ACKNOWLEDGED` 상태를 보존한다.
+- 같은 Subject의 `LOW` 또는 `ROUTINE` Assessment가 도착하면 `RESOLVED`로 전환한다.
+- `RESOLVED` Subject가 다시 활성화되면 새 Open 시각과 `OPEN` 상태로 재개한다.
+- 입력에서 누락된 Subject는 해결로 추정하지 않고 기존 상태를 보존한다.
+
+`acknowledge`는 원본 Assessment를 바꾸지 않고 Item 상태와 Update 시각만 변경한다. 이미 확인한
+항목에 대한 같은 요청은 멱등적으로 처리하고, 해결된 항목은 다시 확인할 수 없다.
+
+각 변경은 `QUEUE-{UTC timestamp}-{revision}` 형식의 불변 Snapshot을 만든다. Revision은 같은
+시각에 여러 조작이 있어도 ID 충돌을 막으며 `reset` 이후 동일 입력은 동일 Snapshot을 재현한다.
+모든 Refresh Assessment는 Snapshot 생성시각에 평가된 값이어야 하고 서비스 시간은 역행할 수 없다.
+
+## 6. Golden Demo 검증
+
+- `T+0`: 28개 Pair가 모두 LOW이고 8대가 모두 ROUTINE이므로 활성 Queue가 비어 있다.
+- `T+70`: `MIL-F01 / CIV-A02` HIGH Conflict가 최상위이고 `MIL-F01` ATTENTION이 뒤따른다.
+- `T+240`: `MIL-T01` EMERGENCY Priority가 전체 Queue 최상위다.
+
+## 7. 다음 단계 경계
+
+Phase 8-C는 Queue Snapshot을 외부에 전달할 Read Model/API 계약을 정의한다. 경로 변경이나
+Resolution Candidate 생성은 별도 Phase에서 수행하며 Queue Service가 Aircraft Runtime을 직접
+변경하지 않는다.

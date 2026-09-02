@@ -282,15 +282,16 @@ Risk와 Priority는 별도 결과이며 `ConflictEvent`도 변경하지 않는�
 - `ExceptionQueuePolicy`: Risk/Priority 교차 Rank와 완전한 결정론적 정렬 키
 - `ExceptionQueueSnapshot`: 한 UTC 시각의 고유하고 정렬된 불변 Exception 집합
 
-Item은 `OPEN`, `ACKNOWLEDGED`, `RESOLVED` 수명주기 상태를 표현하지만 전이 자체는 아직 수행하지
-않는다. 상세 계약과 잠정 Rank는 `docs/exception_queue.md`를 참조한다.
+Phase 8-B의 `ExceptionQueueService`는 Conflict Aircraft Pair 또는 Priority Aircraft ID 기반 Stable
+ID로 최신 Item과 Snapshot Revision을 관리한다. 새 LOW/ROUTINE은 제외하며 Lifecycle은
+`OPEN → ACKNOWLEDGED → RESOLVED`이고 해결 뒤 위험이 재상승하면 새 Open 시각으로 재개한다.
+상세 계약과 잠정 Rank는 `docs/exception_queue.md`를 참조한다.
 
 ## 14. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Exception 생성·갱신·종료 Service: Phase 8-B
 - ResolutionCandidate와 Recommendation: Phase 9~11
-- API DTO와 UI State: Phase 12
+- Exception Queue Read Model/API와 UI State: Phase 8-C 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.
