@@ -123,14 +123,52 @@ Phase 8-C는 Domain 객체를 외부 표현에 직접 노출하지 않는 다음
 timezone-aware 시각을 요구한다. 알 수 없는 ID는 `KeyError`, 해결 상태나 시간 역행은 `ValueError`로
 구분해 후속 HTTP Adapter가 각각 404, 409 또는 422 응답으로 명시적으로 변환할 수 있게 한다.
 
-제안하는 후속 HTTP 표현은 다음과 같지만 Phase 8-C는 서버를 실행하거나 네트워크 포트를 열지 않는다.
+HTTP 표현은 다음과 같으며 Phase 8-C 자체는 서버를 실행하거나 네트워크 포트를 열지 않는다.
 
 ```text
 GET  /api/v1/exception-queue?include_resolved=false
 POST /api/v1/exceptions/{exception_id}/acknowledgements
 ```
 
-## 8. 다음 단계 경계
+## 8. Minimal HTTP Adapter
 
-Phase 8-D는 필요 시 실제 HTTP Adapter와 상태 전달 방식을 구현한다. 경로 변경이나 Resolution
-Candidate 생성은 별도 Phase에서 수행하며 Queue API가 Aircraft Runtime을 직접 변경하지 않는다.
+Phase 8-D의 `ExceptionQueueWsgiApp`은 Python 표준 WSGI 서버 또는 호환 서버에 연결할 수 있는
+실제 HTTP 경계를 제공한다. 외부 웹 프레임워크 의존성은 추가하지 않는다.
+
+### 8.1 Endpoint
+
+| Method | Path | 결과 |
+|---|---|---|
+| `GET` | `/api/v1/exception-queue` | 현재 활성 Queue JSON, 미생성 시 `204` |
+| `GET` | `/api/v1/exception-queue?include_resolved=true` | 해결 이력을 포함한 Queue JSON |
+| `POST` | `/api/v1/exceptions/{exception_id}/acknowledgements` | 항목 확인 후 최신 Queue JSON |
+
+확인 요청 Body는 다음 한 필드만 허용한다.
+
+```json
+{"acknowledged_at_utc":"2026-09-01T03:01:11Z"}
+```
+
+응답은 JSON UTF-8이며 항상 `Cache-Control: no-store`를 사용한다. 현재 상태 전달은 결정론적 조회
+Polling 방식이다. Polling 간격은 프론트엔드 Phase에서 정하고, SSE/WebSocket은 항공기 수와 갱신주기
+측정 결과가 필요할 때만 추가한다.
+
+### 8.2 오류 계약
+
+- `400`: 잘못된 Query, Content-Length 또는 JSON
+- `404`: 존재하지 않는 Route나 Exception ID
+- `405`: 허용되지 않은 Method이며 `Allow` Header 제공
+- `409`: 해결된 항목 확인 또는 서비스 시간 역행
+- `413`: 16 KiB를 초과하는 Body
+- `415`: JSON이 아닌 Content-Type
+- `422`: 필드 구조, RFC 3339 시각 또는 Domain 요청 검증 실패
+
+Adapter는 서버를 자동 실행하거나 포트를 열지 않는다. 향후 Composition Root가 Simulation,
+`ExceptionQueueService`, API와 WSGI Server를 조립한다. CORS는 배포 Origin이 확정되기 전에는
+허용하지 않으며 같은 Origin 또는 Reverse Proxy 구성을 기본으로 한다.
+
+## 9. 다음 단계 경계
+
+Phase 9는 Queue 최상위 Conflict를 입력으로 받는 `Resolution Candidate Domain`부터 시작한다.
+HTTP Runtime Composition과 프론트엔드는 핵심 추천·검증 흐름이 완성된 뒤 연결한다. Queue API는
+Aircraft Runtime을 직접 변경하지 않는다.

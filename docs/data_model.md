@@ -296,6 +296,6 @@ Phase 8-C의 `ConflictExceptionReadModel`, `OperationalPriorityExceptionReadMode
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
 - ResolutionCandidate와 Recommendation: Phase 9~11
-- 실제 HTTP Adapter와 UI State: Phase 8-D 이후
+- HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.
