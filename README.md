@@ -31,7 +31,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 6-D: Deterministic Rolling Conflict Integration 구현 완료
 - Phase 6-E: Golden Demo Conflict Calibration 구현 완료
 - Phase 7-A: Risk & Operational Priority Domain Contract 구현 완료
-- Risk/Priority Evaluator, Exception Queue, Resolution, UI: 아직 구현하지 않음
+- Phase 7-B: Deterministic Risk & Priority Evaluators 구현 완료
+- Exception Queue, Resolution, API, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

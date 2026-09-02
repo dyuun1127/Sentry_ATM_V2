@@ -230,6 +230,9 @@
 - Phase 7-A 결정: `POC_RISK_V1` 시작값은 Critical TCPA 30초, High TCPA 120초 및 Medium
   수평·수직 비율 1.25다. LOW/MEDIUM/HIGH/CRITICAL Score는 0/40/75/100이며 실제 Level
   판정은 Phase 7-B에서 구현한다.
+- Phase 7-B 결정: `PREDICTED` TCPA 0~30초는 `CRITICAL`, 30초 초과~120초는 `HIGH`, 그보다
+  길면 `MEDIUM`이다. `SAFE`이면서 수평·수직 비율이 모두 1.25 미만이면 `MEDIUM`, 나머지는
+  `LOW`다. Event Status는 적용 Separation Rule로 다시 검증한다.
 - 주의: 공식적이거나 보편적인 Risk 기준이 아닌 Golden Demo용 잠정 입력이다.
 - 검증: Phase 7 Risk Evaluator 및 Golden Demo 테스트
 
@@ -311,6 +314,8 @@
 - Phase 7-A 결정: `POC_OPERATIONAL_PRIORITY_V1`에서 정상 운항은 0/`ROUTINE`, 진입 조건
   불일치는 40/`ATTENTION`, 비상 선언은 100/`EMERGENCY`로 매핑한다. `URGENT`는 후속 검증된
   비상 외 운항 규칙을 위해 예약한다.
+- Phase 7-B 결정: 평가시각까지 발생한 대상 Aircraft의 Event만 적용하고, 비상 선언이 진입 이탈보다
+  높은 Level을 사용한다. Conflict Risk는 Priority 입력에 포함하지 않는다.
 - 금지: 군용 Category 자체를 Priority 상승 조건으로 사용하는 것
 - 검증: Phase 7 Priority Evaluator 및 `VAL-EMERGENCY-PRIORITY`
 

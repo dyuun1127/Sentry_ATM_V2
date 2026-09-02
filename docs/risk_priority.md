@@ -2,9 +2,9 @@
 
 ## 1. 범위
 
-Phase 7-A는 Conflict Risk와 운항 우선순위를 서로 다른 불변 Domain 결과로 정의한다. 실제
-`ConflictEvent`와 Scenario Event를 점수·Level로 변환하는 Evaluator, Exception Queue 정렬 및
-Runtime 변경은 포함하지 않는다.
+Phase 7-A는 Conflict Risk와 운항 우선순위를 서로 다른 불변 Domain 결과로 정의한다. Phase 7-B는
+`ConflictEvent`와 현재 Aircraft State까지 발생한 Scenario Event를 점수·Level로 변환하는
+결정론적 Evaluator를 제공한다. Exception Queue 정렬 및 Runtime 변경은 포함하지 않는다.
 
 ```text
 ConflictEvent ──> ConflictRiskAssessment
@@ -92,8 +92,48 @@ Risk는 Aircraft Pair의 미래 분리 위험을 의미하고 Priority는 한 Ai
 이 매핑은 `ASM-035`의 Golden Demo용 잠정값이다. Conflict Risk는 이 Priority Score를 올리지 않으며
 `URGENT`는 후속 검증된 비상 외 운항 규칙을 위해 예약한다.
 
-## 5. 다음 단계 경계
+## 5. Phase 7-B 결정론적 Evaluator
 
-Phase 7-B는 기존 `ConflictEvent`와 Scenario Event를 입력으로 받아 위 계약을 생성하는 결정론적
-Evaluator를 구현한다. Golden Demo에서는 T+70 `CIV-A02`/`MIL-F01`을 `HIGH`, T+240
-`MIL-T01`을 Risk와 독립된 `EMERGENCY` Priority로 재현해야 한다.
+### 5.1 Conflict Risk
+
+`ConflictRiskEvaluator`는 Event의 Rule Profile ID와 `ConflictStatus`를 주입된
+`SeparationRuleProfile`로 다시 검증한 뒤 다음 순서로 평가한다.
+
+| 조건 | Level | 기본 Score |
+|---|---|---:|
+| `PREDICTED`, TCPA 0~30초 | `CRITICAL` | 100 |
+| `PREDICTED`, TCPA 30초 초과~120초 | `HIGH` | 75 |
+| `PREDICTED`, TCPA 120초 초과 | `MEDIUM` | 40 |
+| `SAFE`, 수평·수직 비율 모두 1.25 미만 | `MEDIUM` | 40 |
+| 그 외 `SAFE` | `LOW` | 0 |
+
+정확히 TCPA 0초인 `PREDICTED` 결과는 `IMMEDIATE_SEPARATION_LOSS` 이유를 남긴다. Score와
+시간·비율 기준은 `RiskPolicyProfile`에서 교체할 수 있다.
+
+### 5.2 Operational Priority
+
+`OperationalPriorityEvaluator`는 평가할 `AircraftState`의 UTC 시각보다 늦은 이벤트와 다른
+Aircraft 대상 이벤트를 제외한다. 입력 순서와 관계없이 Event 시각과 ID로 정렬한 뒤 다음 우선순위를
+적용한다.
+
+1. State 또는 활성 Event에 비상 선언이 있으면 `EMERGENCY`
+2. 활성 진입 조건 불일치가 있으면 `ATTENTION`
+3. 그 외는 `ROUTINE`
+
+비상과 진입 이탈이 동시에 있으면 비상 Score/Level을 사용하되 두 원인과 Source Event ID를 모두
+보존한다. Conflict Risk는 Operational Priority 입력으로 사용하지 않는다.
+
+### 5.3 Golden Demo 결과
+
+| 시각 | 대상 | Risk | Priority |
+|---|---|---|---|
+| T+70 | `CIV-A02` / `MIL-F01` | `HIGH` / 75 | - |
+| T+70 | `MIL-F01` | - | `ATTENTION` / 40 |
+| T+240 | `MIL-T01` | 별도 결과 | `EMERGENCY` / 100 |
+
+Clock Reset과 동일 입력은 같은 Assessment ID, Score, Level과 Reason Code를 생성한다.
+
+## 6. 다음 단계 경계
+
+Phase 8-A는 Risk와 Priority 결과를 타입이 다른 Exception 항목으로 변환하고, Emergency Priority,
+Risk Level, TCPA 및 안정적인 ID를 사용해 결정론적 Queue를 구성한다.
