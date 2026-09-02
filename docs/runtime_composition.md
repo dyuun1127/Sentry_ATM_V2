@@ -58,8 +58,33 @@ Runtime 조립은 `ACCEPT` Candidate를 Aircraft Runtime에 적용하지 않는�
 HTTP Adapter는 Audit 상태만 소유하며, 실제 명령 적용기는 아직 Composition에 포함하지 않는다.
 `MODIFY` 역시 재검증 전 적용되지 않는다.
 
-## 5. 다음 단계
+## 5. Phase 12-B Deterministic Golden Demo Step
 
-Phase 12-B는 이 Composition을 사용해 Clock Tick, Event Poll, Prediction, Conflict, Risk/Priority와
-Exception Queue 갱신을 하나의 결정론적 Golden Demo Step으로 실행한다. Resolution/Recommendation은
-충돌 Exception이 준비된 후 별도 Step에서 연결한다.
+`GoldenDemoStepOrchestrator.step(advance_steps)`은 Clock이 `RUNNING`일 때 다음 순서로 한 번의 불변
+`GoldenDemoStepResult`를 만든다.
+
+1. 명시한 Tick만큼 Clock 진행 후 Traffic Snapshot 수집 (`0`이면 현재 T+0 평가)
+2. 새로 due가 된 Scenario Event Poll
+3. 현재 5초 Slot이 due이면 Prediction 및 Conflict Run 실행
+4. 새 Conflict Run의 전체 Pair에 대해 Conflict Risk 평가
+5. 모든 활성 Aircraft에 대해 Scenario Event 기반 Operational Priority 평가
+6. Risk/Priority 결과로 Exception Queue Snapshot 갱신
+
+Step ID는 `GOLDEN-STEP-<tick_count 12자리>`이며 같은 Tick에 두 번째 Step을 허용하지 않는다. 5초
+Scheduler Slot이 아닌 Step에서도 Priority와 Queue는 갱신하지만 Prediction/Conflict/Risk 출력은 비어
+있다.
+
+Clock Reset을 감지하면 Orchestrator의 결과와 process-local Queue, Recommendation Catalog 및 Controller
+Decision Audit 상태를 지운다. 다시 같은 Step 순서를 실행하면 동일 결과를 만든다. 영속 Audit 삭제를
+의미하지 않으며 현재 Composition에는 영속 Runtime Audit 저장소가 없다.
+
+## 6. Human-in-the-loop 보존
+
+Step은 Resolution Candidate, Recommendation 또는 Controller Decision을 만들지 않는다. 특히 T+60
+Conflict/Exception이 계산되어도 Aircraft Runtime은 Scenario Truth 외에 변경되지 않는다.
+
+## 7. 다음 단계
+
+Phase 12-C는 T+60 이후의 Conflict Exception을 선택해 T+75 상태에서 Candidate Generation, Isolated
+Safety Validation과 Recommendation Publish를 하나의 결정론적 Resolution Step으로 연결한다. 관제사
+결정이나 승인 기동 적용은 계속 별도 단계로 유지한다.

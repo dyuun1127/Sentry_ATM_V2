@@ -367,11 +367,15 @@ Phase 11-D의 WSGI Request/Response와 오류 Payload는 Transport 모델이며 
 휘발성 Application State이며 영속 Audit 저장소가 아니다. Composition 생성은 어떠한 Runtime 기동도
 적용하지 않는다.
 
+Phase 12-B의 `GoldenDemoStepResult`는 한 Simulation Tick에서 계산된 Traffic, Event, Prediction,
+Conflict, Risk, Priority 및 Exception Queue 결과를 함께 참조하는 불변 Application Snapshot이다.
+Domain Aggregate를 합치거나 복제하는 Persistence 모델이 아니다.
+
 ## 18. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- 승인 명령 적용과 Runtime Step Orchestration: Phase 12-B 이후
+- Resolution Step과 승인 명령 적용: Phase 12-C 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.
