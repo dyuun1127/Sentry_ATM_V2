@@ -82,7 +82,9 @@ state = runtime.current_state
 
 ## 7. Synthetic Aircraft Runtime
 
-`SyntheticAircraftRuntime`은 초기 `source=SYNTHETIC` 상태의 속도, Heading 및 수직속도가 유지된다는 기초 운동 가정으로 Clock 현재 시각의 상태를 계산한다.
+`SyntheticAircraftRuntime`은 초기 `source=SYNTHETIC` 상태와 선택적인 미래 상태 Anchor를 사용해
+Clock 현재 시각의 상태를 계산한다. 각 Anchor 사이에서는 속도, Heading 및 수직속도가 유지되는
+구간별 Constant Motion을 적용한다.
 
 ```text
 distance_nm = ground_speed_kt × elapsed_seconds / 3600
@@ -91,7 +93,10 @@ y = initial_y + distance_nm × cos(heading)
 altitude = initial_altitude + vertical_speed_fpm × elapsed_seconds / 60
 ```
 
-Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. Runtime은 이전 Tick 결과를 누적하지 않고 초기 상태와 Clock 시각으로 매번 다시 계산하므로 Reset과 반복 실행 결과가 동일하다.
+Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. 현재 시각 이전의 가장 최신 Anchor를
+선택하고 그 Anchor와 Clock 시각으로 매번 다시 계산하므로 Reset과 반복 실행 결과가 동일하다.
+Anchor는 같은 Aircraft ID와 `SYNTHETIC` Source를 사용하며 초기 State 뒤에 엄격한 시간순으로
+배치해야 한다.
 
 초기 상태 시각 이전에는 `None`을 반환하며, 정확히 초기 시각이면 원래 상태를 반환한다. 이후 상태는 기존 식별자, 운동 값, 비행단계 및 비상 상태를 보존한다.
 
@@ -129,9 +134,9 @@ Trajectory 생성과 Conflict 판정을 분리한다.
 - 재생 배속과 실제 화면 Frame Rate를 연결하지 않는다.
 - 기록 사이 위치·고도 보간은 아직 수행하지 않는다.
 - CSV와 OpenSky 원본 자료를 `AircraftState`로 변환하는 Adapter는 아직 없다.
-- Synthetic 운동은 Constant Speed, Constant Heading, Constant Vertical Rate만 지원한다.
+- Synthetic 운동은 각 State Anchor 사이에서만 Constant Speed, Constant Heading, Constant Vertical Rate를 지원한다.
 - 선회율, 가감속, 목표 고도 Capture 및 Aircraft Performance 제한은 아직 없다.
-- 관제 명령 적용과 운동 상태 변경은 후속 Phase에서 구현한다.
+- 범용 관제 명령 적용은 후속 Phase에서 구현한다. 현재 State Anchor는 사전에 정의된 Scenario Truth다.
 - Runtime 동적 추가·제거는 아직 지원하지 않는다.
-- Scenario 파일에서 Runtime을 구성하는 Builder는 아직 없다.
+- 외부 Scenario 파일 Loader는 아직 없으며, 현재는 코드 기반 Golden Scenario Builder만 제공한다.
 - Engine은 Predictor, Conflict Detector 또는 Rule Engine을 직접 호출하지 않는다.

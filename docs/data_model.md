@@ -241,7 +241,14 @@ SQLite를 포함한 영속성 구현과 독립적으로 다음 Domain 객체를 
 
 Repository 계약과 논리 Schema는 `docs/persistence.md`를 참조한다.
 
-## 10. Phase 6-A Conflict Domain
+## 10. Scenario State Anchor
+
+`ScenarioAircraft`는 안정적인 `AircraftMetadata`, Scenario 시작시각의 `initial_state`, 선택적인
+`scheduled_states`를 묶는다. `scheduled_states`는 같은 Aircraft ID와 `SYNTHETIC` Source를
+사용하고 초기 State 뒤에 엄격한 UTC 시간순으로 배치되는 불변 State Anchor다. 이는 Golden Demo
+Truth를 재현하기 위한 입력이며 관제 명령이나 Conflict 결과가 아니다.
+
+## 11. Phase 6-A Conflict Domain
 
 - `ConflictPair`: 서로 다른 두 Aircraft ID를 사전순으로 정규화한 안정적인 Pair Key
 - `SeparationMinimum`: 예측 최근접점의 수평분리 NM와 수직분리 ft
@@ -256,7 +263,7 @@ Pairwise Detector가 전체 Assessment와 탐지 결과를 생성한다.
 Phase 6-D의 Rolling Scheduler는 `ConflictAssessmentRun`을 기본 5초 Simulation Time 구간마다
 최대 한 번 생성한다.
 
-## 11. 의도적으로 제외한 모델
+## 12. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 

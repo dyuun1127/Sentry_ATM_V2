@@ -4,8 +4,9 @@
 
 Phase 6-A는 미래 충돌 계산 결과를 표현하는 불변 Domain 계약과 교체 가능한 분리 Rule을 정의한다.
 Phase 6-B는 같은 UTC Snapshot의 Aircraft 두 대에 대해 Constant-Velocity 수평 CPA/TCPA를
-연속시간으로 계산한다. Phase 6-C는 Snapshot의 모든 고유 Pair를 평가한다. Risk, Priority와 대응
-후보 생성은 포함하지 않는다.
+연속시간으로 계산한다. Phase 6-C는 Snapshot의 모든 고유 Pair를 평가하고 Phase 6-D는 이를
+Simulation Clock 기반으로 반복한다. Phase 6-E는 Golden Demo의 실제 상태 전환을 이 계산 경로로
+검증한다. Risk, Priority와 대응 후보 생성은 포함하지 않는다.
 
 ## 2. Domain 객체
 
@@ -118,6 +119,25 @@ State는 입력 오류로 거부한다.
 Scheduler와 Service는 Clock이나 Aircraft Runtime을 변경하지 않는다. Simulation Engine도 Conflict
 구현을 직접 참조하지 않으며 현재 Snapshot만 제공한다.
 
-### 5.4 후속 단계
+### 5.4 Phase 6-E Golden Demo Calibration
 
-- Phase 6-E: Golden Demo의 `MIL-F01`/`CIV-A02` 미래 충돌 재현
+Golden Scenario는 `MIL-F01`에 T+60 실제 State Anchor를 둔다. 이 값은 T+60 계획 상태와 비교해
+고도 7,400 ft, 수평 이탈 2.1 NM이며 이벤트 방출과 같은 Clock 시각에 활성화된다.
+
+기존 `SyntheticAircraftRuntime` → `TrafficSnapshot` → `ConflictAssessmentService` →
+`PairwiseConflictDetector` → CPA Calculator 경로를 그대로 사용한 결과는 다음과 같다.
+
+| 평가시각 | Pair | TCPA | 수평 최소분리 | 수직 최소분리 | 판정 |
+|---|---|---:|---:|---:|---|
+| T+0 | 전체 28 Pair | - | - | - | `PREDICTED` 0건 |
+| T+60 | `CIV-A02` / `MIL-F01` | 100초 | 2.3 NM | 500 ft | `PREDICTED` |
+| T+70 | `CIV-A02` / `MIL-F01` | 90초 | 2.3 NM | 500 ft | `PREDICTED` |
+
+T+60의 현재 수평분리는 약 6.16 NM, T+70은 약 5.63 NM이므로 두 평가시각의 현재 상태는 안전하다.
+최근접 예상시각은 T+160으로 동일하다. Detector와 Rule Profile에는 Aircraft ID, 시나리오 시각,
+목표 분리값을 위한 전용 분기를 추가하지 않았다. Clock Reset 후에도 이벤트와 Assessment가 동일하게
+재생된다.
+
+### 5.5 후속 단계
+
+- Phase 7-A: Conflict Risk와 운항 Priority Domain 계약

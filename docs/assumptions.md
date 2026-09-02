@@ -187,6 +187,8 @@
 - 비교값: 진입 지점, 고도, Heading, 예상 시각
 - Phase 5-B 결정: T+60 이벤트를 불변 `EntryConformanceDeviationPayload`로 정의하고,
   Clock 기반 Timeline이 1회 방출한다. Runtime 반영은 후속 단계에서 수행한다.
+- Phase 6-E 결정: Golden Scenario Definition의 같은 T+60 State Anchor가 실제 진입 상태를
+  제공한다. Timeline 방출은 여전히 Runtime을 직접 변경하지 않는다.
 - 검증: `ENTRY_CONFORMANCE_DEVIATION` Scenario 테스트
 
 ### ASM-021 - Golden Demo 진입 지점 명칭
@@ -198,12 +200,17 @@
 
 ### ASM-022 - 시나리오 수치
 
-- 상태: `PROVISIONAL`
+- 상태: `CALIBRATED_POC_ASSUMPTION`
 - 내용: `MIL-F01`의 기대 9,000 ft, 실제 7,400 ft, 2.1 NM 이탈, 25초 지연 및 예상 최소 분리값은 Golden Demo 목표값이다.
 - 정책: Phase 4와 Phase 6에서 실제 운동학 계산으로 재현되도록 초기 상태를 조정한다.
 - Phase 5-A 결정: `docs/scenarios.md` 7.1의 8대 초기 State를 결정론적 Foundation으로 사용한다.
 - Phase 5-B 결정: T+60 진입 불일치와 T+240 비상 선언을 절대 UTC 시각의 타입화된 이벤트로
   Scenario Definition에 포함한다. 이벤트 방출만으로 Aircraft State를 변경하지 않는다.
+- Phase 6-E 결정: `MIL-F01`의 계획 초기 State와 T+60 실제 State Anchor를 보정했다. 기존
+  CPA/Pairwise/Rolling 계산 결과 T+0은 0건, T+60은 TCPA 100초, T+70은 TCPA 90초이며 두
+  평가 모두 CPA 수평 2.3 NM·수직 500 ft로 `CIV-A02`/`MIL-F01` 한 Pair만 탐지한다. 현재
+  수평분리는 T+60 약 6.16 NM, T+70 약 5.63 NM로 분리기준 밖이다. `MIL-T02` 초기 위치는
+  보정된 계획 궤적과의 무관한 초기 Conflict를 피하도록 0/18 NM로 조정했다.
 - 금지: 목표 Conflict 결과를 코드에 하드코딩하는 것
 - 검증: Golden Demo 통합 테스트
 

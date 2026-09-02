@@ -122,6 +122,57 @@ def test_scenario_aircraft_rejects_wrong_component_types() -> None:
         )
 
 
+def test_scenario_aircraft_materializes_and_validates_scheduled_states() -> None:
+    scheduled = _state(timestamp_utc=START_UTC + timedelta(seconds=5))
+    source = [scheduled]
+    aircraft = ScenarioAircraft(
+        metadata=AircraftMetadata(
+            aircraft_id="CIV-A01",
+            performance_class="AIRLINER-POC-V1",
+        ),
+        initial_state=_state(),
+        scheduled_states=source,
+    )
+    source.clear()
+    assert aircraft.scheduled_states == (scheduled,)
+
+    base = {
+        "metadata": AircraftMetadata(
+            aircraft_id="CIV-A01",
+            performance_class="AIRLINER-POC-V1",
+        ),
+        "initial_state": _state(),
+    }
+    with pytest.raises(TypeError, match="iterable"):
+        ScenarioAircraft(**base, scheduled_states="state")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="iterable"):
+        ScenarioAircraft(**base, scheduled_states=None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="AircraftState"):
+        ScenarioAircraft(**base, scheduled_states=("state",))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="aircraft ID"):
+        ScenarioAircraft(
+            **base,
+            scheduled_states=(
+                _state(
+                    "MIL-F01",
+                    timestamp_utc=START_UTC + timedelta(seconds=5),
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="SYNTHETIC"):
+        ScenarioAircraft(
+            **base,
+            scheduled_states=(
+                _state(
+                    timestamp_utc=START_UTC + timedelta(seconds=5),
+                    source=DataSource.OPENSKY,
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="strictly ordered"):
+        ScenarioAircraft(**base, scheduled_states=(_state(),))
+
+
 def test_scenario_definition_rejects_empty_invalid_duplicate_or_wrong_time() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         ScenarioDefinition(scenario_id="EMPTY", start_time_utc=START_UTC, aircraft=())
