@@ -143,7 +143,27 @@ Maneuver JSON은 다음 고정 필드를 항상 제공하며 해당하지 않는
 Accept/Modify/Reject 요청이 없다. 관제사 결정이 조회 API를 통해 암묵적으로 기록되는 것을 막고,
 Phase 11의 별도 Command 계약에서 처리한다.
 
-## 8. 다음 단계
+## 8. Minimal Recommendation WSGI HTTP Adapter
 
-Phase 10-D는 Transport-neutral 계약 위에 최소 WSGI HTTP Adapter를 구현하고 200 JSON, 결과 없음
-204, 잘못된 경로·메서드 오류 및 `Cache-Control: no-store`를 검증한다.
+Phase 10-D의 `RecommendationWsgiApp`은 Transport-neutral API에 다음 읽기 전용 경로를 연결한다.
+
+```text
+GET /api/v1/recommendations/current
+```
+
+| 조건 | HTTP 결과 |
+|---|---|
+| 현재 Recommendation 존재 | `200 OK`, 결정론적 UTF-8 JSON |
+| 아직 결과 없음 | `204 No Content` |
+| 다른 경로 | `404 ROUTE_NOT_FOUND` |
+| GET 외 메서드 | `405 METHOD_NOT_ALLOWED`, `Allow: GET` |
+| Query Parameter 사용 | `400 INVALID_QUERY` |
+
+모든 응답은 `Cache-Control: no-store`를 사용한다. JSON은 Key 정렬과 압축 Separator를 사용해 같은
+Read Model에서 같은 Byte 결과를 만든다. Adapter는 요청 본문, Candidate 변경 또는 관제사 결정을
+처리하지 않는다.
+
+## 9. 다음 단계
+
+Phase 11-A는 Recommendation에 대한 관제사의 `ACCEPT`, `MODIFY`, `REJECT` 결정을 타입 안전한 Audit
+Domain으로 정의한다. 승인만으로 즉시 Runtime을 바꾸지 않고, 승인된 명령 적용은 별도 단계로 둔다.
