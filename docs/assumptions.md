@@ -386,7 +386,7 @@
   Identity, UTC, 비개인 Controller Position ID를 보존한다.
 - Human-in-the-loop: Decision Audit Entry 생성과 실제 Aircraft Runtime 적용을 분리한다.
 - 보안: Controller Position ID는 역할·석 식별자이며 실제 개인 이름이나 군 내부 식별자를 사용하지 않는다.
-- 검증: Phase 11 Controller Decision Domain, Service 및 Command/API 테스트
+- 검증: Phase 11 Controller Decision Domain, Service, Command/API 및 HTTP Adapter 테스트
 
 ## 5. Phase별 확정 시점
 

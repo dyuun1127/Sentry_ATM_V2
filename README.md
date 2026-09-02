@@ -48,7 +48,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 11-A: Controller Decision Audit Domain 구현 완료
 - Phase 11-B: Deterministic Controller Decision Service 구현 완료
 - Phase 11-C: Controller Decision Command/API Contract 구현 완료
-- Controller Decision HTTP Adapter, Runtime Composition, UI: 아직 구현하지 않음
+- Phase 11-D: Minimal Controller Decision WSGI HTTP Adapter 구현 완료
+- Runtime Composition, 승인 명령 적용, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

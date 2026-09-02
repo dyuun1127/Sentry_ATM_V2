@@ -110,8 +110,22 @@ nullable 고정 Schema를 사용하며 Domain Action Maneuver로 명시적으로
 응답은 JSON 호환 Primitive만 노출한다. API 계약은 Recommendation 객체, Aircraft Runtime 또는
 Service 내부 상태를 클라이언트에 노출하지 않는다.
 
-## 8. 다음 단계
+## 8. Phase 11-D Minimal WSGI HTTP Adapter
 
-Phase 11-D는 Controller Decision Command를 HTTP로 수신하는 최소 WSGI Adapter를 구현한다. 인증·인가와
-실제 Runtime 적용은 포함하지 않으며, `MODIFY`는 새 Candidate 조립 및 Safety 재검증 단계로 연결해야
-한다.
+`ControllerDecisionWsgiApp`은 다음 두 Endpoint만 제공한다.
+
+- `POST /api/v1/controller-decisions`: 고정 JSON Command를 제출하고 `201 Created` 반환
+- `GET /api/v1/controller-decisions/current`: 현재 Audit Log를 반환하며 아직 없으면 `204 No Content`
+
+Adapter는 16 KiB Body 제한, `application/json`, 정확한 Content-Length, UTF-8 JSON Object와 고정
+Command/Maneuver 필드를 검증한다. Response는 결정론적 Key 순서와 `Cache-Control: no-store`를 사용한다.
+
+오류는 Route/Method/Query/Media Type/JSON/Schema/Not Found/State Conflict를 구분한 4xx Code로
+반환한다. 실패한 요청은 Decision Service Revision을 변경하지 않는다. 이 최소 Adapter는 인증·인가,
+TLS, CSRF 방어, Rate Limit 또는 실제 운영 배포 구성을 제공하지 않는다.
+
+## 9. 다음 단계
+
+Phase 12-A는 현재까지 분리된 Simulation, Prediction, Conflict, Risk, Priority, Exception Queue,
+Resolution, Recommendation 및 Controller Decision 구성요소를 Golden Demo Runtime으로 조립한다.
+`ACCEPT` 적용과 `MODIFY` 재검증은 조립 시에도 명시적으로 분리한다.
