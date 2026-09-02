@@ -9,6 +9,7 @@
 ```text
 src/sentry_atm/domain/
 ├─ aircraft.py
+├─ conflict.py
 ├─ enums.py
 ├─ flight.py
 ├─ performance.py
@@ -111,6 +112,11 @@ Heading은 `[0, 360)` 범위만 유효하다.
 `source_reference`에 별도로 기록한다.
 
 `FlightStatus`는 `PLANNED`, `ACTIVE`, `COMPLETED`, `CANCELLED`를 사용한다.
+
+### 3.7 ConflictStatus
+
+- `SAFE`: 설정된 Rule Profile의 수평·수직 조건을 동시에 위반하지 않음
+- `PREDICTED`: 예측 최소 수평·수직 분리가 동시에 Profile 기준 미만임
 
 ## 4. AircraftMetadata
 
@@ -235,13 +241,23 @@ SQLite를 포함한 영속성 구현과 독립적으로 다음 Domain 객체를 
 
 Repository 계약과 논리 Schema는 `docs/persistence.md`를 참조한다.
 
-## 10. 의도적으로 제외한 모델
+## 10. Phase 6-A Conflict Domain
+
+- `ConflictPair`: 서로 다른 두 Aircraft ID를 사전순으로 정규화한 안정적인 Pair Key
+- `SeparationMinimum`: 예측 최근접점의 수평분리 NM와 수직분리 ft
+- `SeparationRuleProfile`: 출처를 기록한 교체 가능한 수평·수직 판정 기준
+- `ConflictEvent`: 평가시각, 최근접 예상시각, 최소분리, Rule Profile ID와 판정 결과
+
+`ConflictEvent.tcpa_seconds`는 평가시각과 최근접 예상시각의 차이에서 계산하므로 중복된 시간 상태를
+저장하지 않는다. `POC_TERMINAL_V1`의 5 NM/1,000 ft는 `ASM-018`의 잠정 PoC 값이며 공식적인
+보편 분리기준이 아니다. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하며 전체 Pair 탐색은
+후속 Phase가 담당한다.
+
+## 11. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- 위경도 및 RKTU 좌표 변환: Phase 1
-- PredictionResult: Phase 4
-- Conflict와 CPA/TCPA: Phase 6
+- 전체 Traffic Pair Conflict Detector: Phase 6-C
 - Risk와 Priority: Phase 7
 - ResolutionCandidate와 Recommendation: Phase 9~11
 - API DTO와 UI State: Phase 12

@@ -25,7 +25,9 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 4-D: PredictionRun SQLite Persistence 구현 완료
 - Phase 5-A: Golden Demo Scenario Foundation 구현 완료
 - Phase 5-B: Deterministic Scenario Event Timeline 구현 완료
-- Event Handler, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
+- Phase 6-A: Conflict Domain 및 Separation Rule Contract 구현 완료
+- Phase 6-B: Continuous Relative-Motion CPA/TCPA 구현 완료
+- Event Handler, Performance-aware Predictor, Pairwise Conflict Detector, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -36,6 +38,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Deterministic Simulation Clock](docs/simulation.md)
 - [SQLite Persistence Contract](docs/persistence.md)
 - [Baseline Trajectory Predictor](docs/prediction.md)
+- [Predictive Conflict Contract](docs/conflict.md)
 
 ## 요구 환경
 

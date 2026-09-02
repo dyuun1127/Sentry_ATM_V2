@@ -52,6 +52,13 @@ class TrajectoryType(StrEnum):
     PREDICTED = "PREDICTED"
 
 
+class ConflictStatus(StrEnum):
+    """Outcome of a predictive separation assessment."""
+
+    SAFE = "SAFE"
+    PREDICTED = "PREDICTED"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 

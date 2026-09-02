@@ -146,6 +146,8 @@
 
 - 상태: `POC_ASSUMPTION`
 - 내용: Baseline Predictor는 30, 60, 120초 Horizon을 우선 지원한다.
+- Phase 6-B 결정: CPA/TCPA 계산기의 기본 연속시간 Look-ahead를 최대 예측 Horizon과 같은
+  120초로 두며 생성자에서 교체할 수 있게 한다.
 - 주의: 예선 기획서의 10분 Look-ahead는 장기 확장 KPI이며 초기 완료조건이 아니다.
 - 검증: Phase 4 Predictor 테스트
 
@@ -164,7 +166,9 @@
 - 내용: 초기 `POC_TERMINAL_V1` Profile은 수평 5 NM, 수직 1,000 ft를 Alert 계산의 시작값으로 검토한다.
 - 주의: 모든 상황에 적용되는 공식 관제 분리기준으로 표현하거나 하드코딩하지 않는다.
 - 설계: 공역, 비행방식, 운항조건에 따라 교체 가능한 Rule Profile이어야 한다.
-- 검증: 제공된 항공교통관제절차와 관련 자료를 검토한 뒤 Phase 6 이전 확정
+- Phase 6-A 결정: `POC_TERMINAL_V1`을 주입 가능한 `SeparationRuleProfile` 객체로 정의한다.
+  수평·수직 값이 동시에 각 기준보다 작은 경우만 `PREDICTED`로 분류하며 경계값은 `SAFE`다.
+- 남은 검증: 제공된 항공교통관제절차와 관련 자료를 검토한 뒤 운영별 Profile을 별도로 확정
 
 ### ASM-019 - TCAS/ACAS 활용 범위
 
