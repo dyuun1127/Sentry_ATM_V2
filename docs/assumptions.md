@@ -411,6 +411,19 @@
   `RESOLVED`로 전이해야 한다.
 - 검증: Phase 12 Runtime Composition, Step 결정론 및 상태 격리 테스트
 
+### ASM-041 - Golden Demo Session Presentation 상태
+
+- 상태: `PROJECT_DECISION`
+- 내용: Session Stage는 별도 mutable 상태가 아니라 현재 Run에 완료된 Step, Resolution,
+  Controller Decision과 Application/Revalidation 증거의 우선순위로 파생한다.
+- 단계: `READY`, `MONITORING`, `DEVIATION_DETECTED`, `CONFLICT_DETECTED`,
+  `RECOMMENDATION_AVAILABLE`, `DECISION_ACCEPTED`, `CONFLICT_RESOLVED`만 사용한다.
+- Run Identity: Clock Reset 횟수를 0부터 증가하는 `run_number`로 사용하며 Session ID는
+  `<scenario_id>-RUN-<6자리>`다. 이는 영속 실행 ID가 아니라 process-local 표시 ID다.
+- API: Phase 13-A는 읽기 전용이며 Clock 진행, 승인 또는 기동 적용 Command를 포함하지 않는다.
+  Queue는 원 Conflict의 `RESOLVED` 전이를 화면에 표시하기 위해 해결 항목도 포함한다.
+- 검증: 모든 단계의 JSON 직렬화, Reset 격리 및 동일 실행 결정론 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -427,6 +440,7 @@
 | Phase 10 | ASM-028, 038 |
 | Phase 11 | ASM-028, 033, 039 |
 | Phase 12 | ASM-011, 021, 030, 032, 040 |
+| Phase 13 | ASM-041 |
 
 ## 6. 변경 규칙
 

@@ -387,11 +387,23 @@ Snapshot, 새 Prediction/Conflict Run, Risk/Priority, Exception Queue와 원 Pai
 `SyntheticAircraftRuntime.applied_states`는 현재 Clock Run에만 존재하는 승인 State Anchor이며 Reset 시
 제거된다. Application Result는 process-local 실행 증거이고 아직 영속 Audit Aggregate는 아니다.
 
-## 18. 의도적으로 제외한 모델
+## 18. Phase 13-A Golden Demo Session Read Model
+
+- `GoldenDemoAircraftReadModel`: Metadata와 현재 Actual State를 합친 지도·표시용 DTO
+- `GoldenDemoRevalidationReadModel`: 승인 적용 전후 고도, 재계산 Run Identity와 원 Conflict 해소 요약
+- `GoldenDemoSessionReadModel`: 현재 Run/Stage, Traffic 및 기존 Queue·Recommendation·Decision DTO를
+  조합한 JSON 호환 응답
+
+Session Stage는 저장되는 Domain 상태가 아니라 완료된 Application Evidence에서 파생된다. Session
+Read Model은 `to_dict()`에서 Enum, tuple 및 중첩 DTO를 JSON Primitive로 변환하며 Clock이나 Runtime을
+진행하지 않는다.
+
+## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Golden Demo Session Read Model/API와 UI State: Phase 13 이후
-- HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
+- Golden Demo Session Command와 HTTP Adapter: Phase 13-B 이후
+- UI State와 화면 구현: Session Command/HTTP 계약 완성 이후
+- Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

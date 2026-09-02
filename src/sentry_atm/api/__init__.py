@@ -32,6 +32,14 @@ from sentry_atm.api.recommendation import (
     ResolutionRecommendationReadModel,
     ResolutionRecommendationSetReadModel,
 )
+from sentry_atm.api.session import (
+    GoldenDemoAircraftReadModel,
+    GoldenDemoRevalidationReadModel,
+    GoldenDemoSessionApiContract,
+    GoldenDemoSessionReadModel,
+    GoldenDemoSessionStage,
+    InProcessGoldenDemoSessionApi,
+)
 
 __all__ = [
     "AcknowledgeExceptionRequest",
@@ -45,7 +53,13 @@ __all__ = [
     "ExceptionQueueApiContract",
     "ExceptionQueueReadModelMapper",
     "ExceptionQueueSnapshotReadModel",
+    "GoldenDemoAircraftReadModel",
+    "GoldenDemoRevalidationReadModel",
+    "GoldenDemoSessionApiContract",
+    "GoldenDemoSessionReadModel",
+    "GoldenDemoSessionStage",
     "InProcessExceptionQueueApi",
+    "InProcessGoldenDemoSessionApi",
     "InProcessControllerDecisionApi",
     "InProcessRecommendationApi",
     "OperationalPriorityExceptionReadModel",
