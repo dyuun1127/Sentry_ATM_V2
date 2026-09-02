@@ -55,7 +55,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 12-D: Deterministic Golden Demo Controller Decision Step 구현 완료
 - Phase 12-E: Approved Maneuver Application & Post-action Revalidation 구현 완료
 - Phase 13-A: Golden Demo Session Read Model/API 구현 완료
-- Golden Demo Session Command와 UI: 아직 구현하지 않음
+- Phase 13-B: Deterministic Golden Demo Session Command Service 구현 완료
+- Golden Demo Session HTTP Adapter와 UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

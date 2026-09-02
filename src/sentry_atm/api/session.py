@@ -198,6 +198,10 @@ class InProcessGoldenDemoSessionApi:
             )
         self._application_orchestrator = application_orchestrator
 
+    @property
+    def application_orchestrator(self) -> "GoldenDemoApprovedManeuverOrchestrator":
+        return self._application_orchestrator
+
     def get_current(self) -> GoldenDemoSessionReadModel:
         application = self._application_orchestrator
         application_result = application.last_result

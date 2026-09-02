@@ -145,5 +145,6 @@ Tick의 중복 적용을 거부하며 Reset 후 T+75→T+90 순서를 재생하�
 ## 10. 다음 단계
 
 Phase 13-A의 Session Read Model/API는 T+0부터 적용 후 T+90까지의 Traffic, Queue, Recommendation,
-Decision과 Revalidation을 JSON 호환 응답으로 제공한다. 다음 Phase 13-B는 이 Orchestrator Chain을
-허용된 Checkpoint 순서로만 실행하는 Session Command Service를 구성한다.
+Decision과 Revalidation을 JSON 호환 응답으로 제공한다. Phase 13-B의 Session Runtime Factory와
+Command Service는 Orchestrator Chain을 고정 Checkpoint 순서로만 실행한다. 다음 Phase 13-C는 이를
+최소 WSGI HTTP Adapter로 노출한다.

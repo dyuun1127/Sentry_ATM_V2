@@ -35,6 +35,7 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
     payload = current.to_dict()
 
     assert isinstance(api, GoldenDemoSessionApiContract)
+    assert api.application_orchestrator is application
     assert current.session_id == "RKTU_GOLDEN_DEMO_V1-RUN-000000"
     assert current.scenario_id == "RKTU_GOLDEN_DEMO_V1"
     assert current.run_number == 0

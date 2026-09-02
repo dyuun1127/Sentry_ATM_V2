@@ -398,11 +398,16 @@ Session Stage는 저장되는 Domain 상태가 아니라 완료된 Application E
 Read Model은 `to_dict()`에서 Enum, tuple 및 중첩 DTO를 JSON Primitive로 변환하며 Clock이나 Runtime을
 진행하지 않는다.
 
+Phase 13-B의 `GoldenDemoSessionCommandService`와 `GoldenDemoSessionRuntime`은 Domain 또는 Persistence
+모델이 아니다. 전자는 고정 Checkpoint 순서를 기존 Orchestrator에 위임하는 Application Service이고,
+후자는 Core Runtime, Orchestrator Chain, Read API와 Command Service를 연결하는 process-local
+Composition Container다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Golden Demo Session Command와 HTTP Adapter: Phase 13-B 이후
+- Golden Demo Session HTTP Adapter: Phase 13-C 이후
 - UI State와 화면 구현: Session Command/HTTP 계약 완성 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 

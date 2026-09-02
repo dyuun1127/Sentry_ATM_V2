@@ -422,6 +422,10 @@
   `<scenario_id>-RUN-<6자리>`다. 이는 영속 실행 ID가 아니라 process-local 표시 ID다.
 - API: Phase 13-A는 읽기 전용이며 Clock 진행, 승인 또는 기동 적용 Command를 포함하지 않는다.
   Queue는 원 Conflict의 `RESOLVED` 전이를 화면에 표시하기 위해 해결 항목도 포함한다.
+- Command: Phase 13-B는 임의 Tick을 받지 않고 `START(T+0) → ADVANCE_TO_CONFLICT(T+70) →
+  GENERATE_RECOMMENDATION(T+75) → ACCEPT_RECOMMENDATION(T+90) →
+  APPLY_APPROVED_MANEUVER(T+90)` 순서만 허용한다. 각 Command는 현재 Stage와 정확한 경과시각을
+  실행 전에 확인하며 `RESET`은 새 process-local Run을 시작한다.
 - 검증: 모든 단계의 JSON 직렬화, Reset 격리 및 동일 실행 결정론 테스트
 
 ## 5. Phase별 확정 시점

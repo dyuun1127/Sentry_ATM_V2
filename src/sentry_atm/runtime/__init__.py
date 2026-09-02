@@ -21,6 +21,12 @@ from sentry_atm.runtime.resolution_orchestrator import (
     GoldenDemoResolutionOrchestrator,
     GoldenDemoResolutionResult,
 )
+from sentry_atm.runtime.session import (
+    GoldenDemoSessionCommand,
+    GoldenDemoSessionCommandService,
+    GoldenDemoSessionRuntime,
+    build_golden_demo_session_runtime,
+)
 
 __all__ = [
     "GoldenDemoApprovedManeuverApplicationResult",
@@ -28,10 +34,14 @@ __all__ = [
     "GoldenDemoControllerDecisionOrchestrator",
     "GoldenDemoControllerDecisionResult",
     "GoldenDemoRuntime",
+    "GoldenDemoSessionCommand",
+    "GoldenDemoSessionCommandService",
+    "GoldenDemoSessionRuntime",
     "GoldenDemoResolutionOrchestrator",
     "GoldenDemoResolutionResult",
     "GoldenDemoStepOrchestrator",
     "GoldenDemoStepResult",
     "InMemoryRecommendationCatalog",
     "build_golden_demo_runtime",
+    "build_golden_demo_session_runtime",
 ]

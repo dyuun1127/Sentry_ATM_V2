@@ -41,14 +41,34 @@ Clock Reset 후 Orchestrator Chain의 파생 결과와 승인 Anchor가 제거�
 Session을 반환한다. Traffic은 Golden Scenario 초기 8대 상태이고 Queue, Recommendation, Decision과
 Revalidation은 비어 있다.
 
-## 5. 현재 제한사항
+## 5. Phase 13-B Session Command Service
 
-- Phase 13-A에는 실행 Command와 HTTP Adapter가 없다.
+`GoldenDemoSessionCommandService.execute()`는 다음 Command만 제공한다.
+
+| Command | 요구 Stage/시각 | 완료 Stage/시각 |
+|---|---|---|
+| `START` | `READY`, T+0 | `MONITORING`, T+0 |
+| `ADVANCE_TO_CONFLICT` | `MONITORING`, T+0 | `CONFLICT_DETECTED`, T+70 |
+| `GENERATE_RECOMMENDATION` | `CONFLICT_DETECTED`, T+70 | `RECOMMENDATION_AVAILABLE`, T+75 |
+| `ACCEPT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_ACCEPTED`, T+90 |
+| `APPLY_APPROVED_MANEUVER` | `DECISION_ACCEPTED`, T+90 | `CONFLICT_RESOLVED`, T+90 |
+| `RESET` | 모든 Stage | 새 `READY`, T+0 Run |
+
+서비스는 caller가 임의 `advance_steps`나 Decision 내용을 전달하게 하지 않는다. 현재 Stage 또는 경과시각이
+다르면 Orchestrator 호출 전에 거부하며, 성공하면 즉시 새 Session Read Model을 반환한다.
+
+`build_golden_demo_session_runtime()`은 Core Runtime, Step/Resolution/Decision/Application Orchestrator,
+Read API와 Command Service를 하나의 독립된 process-local Container로 조립하지만 Command를 자동으로
+실행하지 않는다.
+
+## 6. 현재 제한사항
+
+- HTTP Adapter가 아직 없다.
 - Session ID와 결과는 프로세스 재시작 후 복구되지 않는다.
 - Authentication, authorization, streaming과 다중 동시 Session을 제공하지 않는다.
 - Trajectory Point 전체와 Candidate A~E 전체 검증표는 아직 Session 요약에 포함하지 않는다.
 
-## 6. 다음 단계
+## 7. 다음 단계
 
-Phase 13-B는 허용된 Golden Demo Checkpoint만 순서대로 실행하는 Session Command Service를 추가한다.
-Read API와 Command를 분리하고 임의 Tick, 중복 승인 또는 승인 전 적용을 허용하지 않는다.
+Phase 13-C는 `GET` Session 조회와 고정 Command 제출을 제공하는 최소 WSGI HTTP Adapter를 추가한다.
+Read/Command Application 계약은 유지하며 Transport 오류를 고정 JSON 형식으로 변환한다.
