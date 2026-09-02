@@ -178,3 +178,71 @@ class ConflictEvent:
         """Return seconds from evaluation time to predicted closest approach."""
 
         return (self.closest_approach_time_utc - self.evaluated_at_utc).total_seconds()
+
+
+@dataclass(frozen=True, slots=True)
+class ConflictAssessmentRun:
+    """Reproducible all-pairs conflict assessment for one traffic snapshot."""
+
+    assessment_run_id: str
+    input_timestamp_utc: datetime
+    rule_profile_id: str
+    horizon_seconds: float
+    assessments: tuple[ConflictEvent, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "assessment_run_id",
+            require_identifier(
+                self.assessment_run_id,
+                field_name="assessment_run_id",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "input_timestamp_utc",
+            to_utc(self.input_timestamp_utc, field_name="input_timestamp_utc"),
+        )
+        object.__setattr__(
+            self,
+            "rule_profile_id",
+            require_identifier(
+                self.rule_profile_id,
+                field_name="rule_profile_id",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "horizon_seconds",
+            _as_positive_float(
+                self.horizon_seconds,
+                field_name="horizon_seconds",
+            ),
+        )
+        object.__setattr__(self, "assessments", tuple(self.assessments))
+        if not all(isinstance(event, ConflictEvent) for event in self.assessments):
+            raise TypeError("assessments must contain only ConflictEvent instances")
+        if any(event.evaluated_at_utc != self.input_timestamp_utc for event in self.assessments):
+            raise ValueError("assessment event times must match input_timestamp_utc")
+        if any(event.rule_profile_id != self.rule_profile_id for event in self.assessments):
+            raise ValueError("assessment events must use the run rule_profile_id")
+        if any(event.tcpa_seconds > self.horizon_seconds for event in self.assessments):
+            raise ValueError("assessment event TCPA must not exceed horizon_seconds")
+
+        conflict_ids = tuple(event.conflict_id for event in self.assessments)
+        if len(set(conflict_ids)) != len(conflict_ids):
+            raise ValueError("assessment conflict IDs must be unique")
+        pair_keys = tuple(event.pair.aircraft_ids for event in self.assessments)
+        if any(
+            current <= previous for previous, current in zip(pair_keys, pair_keys[1:], strict=False)
+        ):
+            raise ValueError("assessment pairs must be unique and strictly ordered")
+
+    @property
+    def predicted_events(self) -> tuple[ConflictEvent, ...]:
+        """Return only assessments classified as PREDICTED."""
+
+        return tuple(
+            event for event in self.assessments if event.status is ConflictStatus.PREDICTED
+        )

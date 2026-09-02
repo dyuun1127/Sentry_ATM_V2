@@ -5,6 +5,7 @@ import pytest
 
 from sentry_atm.domain import (
     POC_TERMINAL_V1_RULE_PROFILE,
+    ConflictAssessmentRun,
     ConflictEvent,
     ConflictPair,
     ConflictStatus,
@@ -13,6 +14,26 @@ from sentry_atm.domain import (
 )
 
 EVALUATED_AT_UTC = datetime(2026, 9, 2, 3, 0, tzinfo=UTC)
+
+
+def _event(
+    *,
+    conflict_id: str = "CONFLICT-001",
+    first_aircraft_id: str = "CIV-A01",
+    second_aircraft_id: str = "CIV-A02",
+    status: ConflictStatus = ConflictStatus.PREDICTED,
+    evaluated_at_utc: datetime = EVALUATED_AT_UTC,
+    rule_profile_id: str = "POC_TERMINAL_V1",
+) -> ConflictEvent:
+    return ConflictEvent(
+        conflict_id=conflict_id,
+        pair=ConflictPair(first_aircraft_id, second_aircraft_id),
+        status=status,
+        evaluated_at_utc=evaluated_at_utc,
+        closest_approach_time_utc=evaluated_at_utc + timedelta(seconds=90),
+        minimum_separation=SeparationMinimum(2.3, 500.0),
+        rule_profile_id=rule_profile_id,
+    )
 
 
 def test_conflict_pair_normalizes_order_and_exposes_stable_key() -> None:
@@ -162,3 +183,81 @@ def test_conflict_event_rejects_wrong_components_or_past_approach() -> None:
                 | {"closest_approach_time_utc": EVALUATED_AT_UTC - timedelta(seconds=1)}
             )
         )
+
+
+def test_conflict_assessment_run_materializes_and_filters_events() -> None:
+    predicted = _event()
+    safe = _event(
+        conflict_id="CONFLICT-002",
+        second_aircraft_id="CIV-A03",
+        status=ConflictStatus.SAFE,
+    )
+    source = [predicted, safe]
+
+    run = ConflictAssessmentRun(
+        assessment_run_id=" RUN-001 ",
+        input_timestamp_utc=EVALUATED_AT_UTC,
+        rule_profile_id=" POC_TERMINAL_V1 ",
+        horizon_seconds=120,
+        assessments=source,
+    )
+    source.clear()
+
+    assert run.assessment_run_id == "RUN-001"
+    assert run.rule_profile_id == "POC_TERMINAL_V1"
+    assert run.horizon_seconds == 120.0
+    assert run.assessments == (predicted, safe)
+    assert run.predicted_events == (predicted,)
+
+
+def test_conflict_assessment_run_allows_empty_assessment_set() -> None:
+    run = ConflictAssessmentRun(
+        assessment_run_id="EMPTY-RUN",
+        input_timestamp_utc=EVALUATED_AT_UTC,
+        rule_profile_id="POC_TERMINAL_V1",
+        horizon_seconds=120.0,
+    )
+
+    assert run.assessments == ()
+    assert run.predicted_events == ()
+
+
+def test_conflict_assessment_run_rejects_inconsistent_events() -> None:
+    first = _event()
+    second = _event(
+        conflict_id="CONFLICT-002",
+        second_aircraft_id="CIV-A03",
+    )
+    valid_values = {
+        "assessment_run_id": "RUN-001",
+        "input_timestamp_utc": EVALUATED_AT_UTC,
+        "rule_profile_id": "POC_TERMINAL_V1",
+        "horizon_seconds": 120.0,
+        "assessments": (first, second),
+    }
+
+    with pytest.raises(TypeError, match="ConflictEvent"):
+        ConflictAssessmentRun(**(valid_values | {"assessments": ("event",)}))
+    with pytest.raises(ValueError, match="times must match"):
+        ConflictAssessmentRun(
+            **(
+                valid_values
+                | {
+                    "assessments": (
+                        _event(evaluated_at_utc=EVALUATED_AT_UTC + timedelta(seconds=1)),
+                    )
+                }
+            )
+        )
+    with pytest.raises(ValueError, match="run rule_profile_id"):
+        ConflictAssessmentRun(
+            **(valid_values | {"assessments": (_event(rule_profile_id="OTHER-RULE"),)})
+        )
+    with pytest.raises(ValueError, match="TCPA must not exceed"):
+        ConflictAssessmentRun(**(valid_values | {"horizon_seconds": 89.0}))
+    with pytest.raises(ValueError, match="conflict IDs must be unique"):
+        ConflictAssessmentRun(**(valid_values | {"assessments": (first, first)}))
+    with pytest.raises(ValueError, match="strictly ordered"):
+        ConflictAssessmentRun(**(valid_values | {"assessments": (second, first)}))
+    with pytest.raises(ValueError, match="greater than zero"):
+        ConflictAssessmentRun(**(valid_values | {"horizon_seconds": 0.0}))

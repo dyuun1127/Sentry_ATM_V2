@@ -116,11 +116,17 @@ snapshot = engine.tick()
 
 Engine의 `tick()`은 Clock을 진행한 뒤 Snapshot을 반환한다. Clock이 `READY` 또는 `PAUSED`라면 시간이 증가하지 않은 Snapshot을 반환한다.
 
-## 9. 현재 제한사항
+## 9. Rolling 계산 통합
+
+`TrafficSimulationEngine`은 Predictor나 Conflict Detector를 직접 호출하지 않는다. Phase 4-C의
+`RollingPredictionScheduler`와 Phase 6-D의 `RollingConflictScheduler`가 현재 Snapshot을 받아
+각자의 기본 5초 Simulation Time 구간에 독립적으로 실행된다. 이 구조로 Simulation 진행, 미래
+Trajectory 생성과 Conflict 판정을 분리한다.
+
+## 10. 현재 제한사항
 
 - 종료 시각과 `FINISHED` 상태는 아직 없다.
 - 재생 배속과 실제 화면 Frame Rate를 연결하지 않는다.
-- 5초 Rolling Prediction 갱신 스케줄은 Predictor 구현 단계에서 추가한다.
 - 기록 사이 위치·고도 보간은 아직 수행하지 않는다.
 - CSV와 OpenSky 원본 자료를 `AircraftState`로 변환하는 Adapter는 아직 없다.
 - Synthetic 운동은 Constant Speed, Constant Heading, Constant Vertical Rate만 지원한다.

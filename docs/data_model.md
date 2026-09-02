@@ -247,11 +247,14 @@ Repository 계약과 논리 Schema는 `docs/persistence.md`를 참조한다.
 - `SeparationMinimum`: 예측 최근접점의 수평분리 NM와 수직분리 ft
 - `SeparationRuleProfile`: 출처를 기록한 교체 가능한 수평·수직 판정 기준
 - `ConflictEvent`: 평가시각, 최근접 예상시각, 최소분리, Rule Profile ID와 판정 결과
+- `ConflictAssessmentRun`: 한 Snapshot의 실행 ID, Horizon, Rule과 전체 Pair 결과 Aggregate
 
 `ConflictEvent.tcpa_seconds`는 평가시각과 최근접 예상시각의 차이에서 계산하므로 중복된 시간 상태를
 저장하지 않는다. `POC_TERMINAL_V1`의 5 NM/1,000 ft는 `ASM-018`의 잠정 PoC 값이며 공식적인
 보편 분리기준이 아니다. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하고, Phase 6-C의
 Pairwise Detector가 전체 Assessment와 탐지 결과를 생성한다.
+Phase 6-D의 Rolling Scheduler는 `ConflictAssessmentRun`을 기본 5초 Simulation Time 구간마다
+최대 한 번 생성한다.
 
 ## 11. 의도적으로 제외한 모델
 

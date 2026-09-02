@@ -28,7 +28,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 6-A: Conflict Domain 및 Separation Rule Contract 구현 완료
 - Phase 6-B: Continuous Relative-Motion CPA/TCPA 구현 완료
 - Phase 6-C: Deterministic Pairwise Conflict Detector 구현 완료
-- Event Handler, Performance-aware Predictor, Rolling Conflict Integration, UI: 아직 구현하지 않음
+- Phase 6-D: Deterministic Rolling Conflict Integration 구현 완료
+- Event Handler, Performance-aware Predictor, Golden Conflict Calibration, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

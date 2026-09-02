@@ -3,6 +3,7 @@
 from sentry_atm.domain.aircraft import AircraftMetadata, AircraftState
 from sentry_atm.domain.conflict import (
     POC_TERMINAL_V1_RULE_PROFILE,
+    ConflictAssessmentRun,
     ConflictEvent,
     ConflictPair,
     SeparationMinimum,
@@ -31,6 +32,7 @@ __all__ = [
     "AircraftState",
     "AircraftType",
     "ConflictEvent",
+    "ConflictAssessmentRun",
     "ConflictPair",
     "ConflictStatus",
     "DataSource",

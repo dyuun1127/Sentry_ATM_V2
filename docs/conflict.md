@@ -90,7 +90,34 @@ Phase 6-C의 `PairwiseConflictDetector`는 입력을 Aircraft ID로 정렬한 �
 `SAFE` 결과도 보존할 수 있어 특정 Pair가 왜 탐지되지 않았는지 최소분리와 적용 Rule을 통해 설명할
 수 있다. Detector는 Risk 또는 Priority를 계산하지 않으며 Aircraft Runtime도 변경하지 않는다.
 
-### 5.3 후속 단계
+### 5.3 Phase 6-D Rolling Conflict Integration
 
-- Phase 6-D: Rolling Prediction Scheduler 연결
+`ConflictAssessmentService`는 `TrafficSnapshot`을 하나의 불변 `ConflictAssessmentRun`으로
+변환한다. Run은 다음 값을 보존한다.
+
+- 결정론적 Assessment Run ID
+- 입력 Snapshot UTC
+- CPA Look-ahead Horizon
+- 적용한 Separation Rule Profile ID
+- Pair 순서가 고정된 전체 `ConflictEvent`
+- `PREDICTED`만 반환하는 `predicted_events` 파생값
+
+Playback의 Zero-order Hold State는 기록시각이 Snapshot보다 과거일 수 있다. Service는 해당 State를
+Constant Speed·Heading·Vertical Rate로 Snapshot UTC까지 먼저 전파한다. Snapshot보다 미래인
+State는 입력 오류로 거부한다.
+
+`RollingConflictScheduler`는 기본 5초 Simulation Time 구간마다 최대 한 번 현재 Snapshot을
+평가한다.
+
+1. Clock이 `RUNNING`일 때만 실행한다.
+2. 동일 구간의 중복 호출은 `None`을 반환한다.
+3. Pause 중에는 실행하지 않고 Resume 후 아직 평가하지 않은 현재 구간을 실행한다.
+4. 큰 Tick 이동은 과거 Run을 소급 생성하지 않고 현재 Snapshot 한 건만 평가한다.
+5. Clock Reset을 인식해 T+0의 동일 Run ID와 결과를 재현한다.
+
+Scheduler와 Service는 Clock이나 Aircraft Runtime을 변경하지 않는다. Simulation Engine도 Conflict
+구현을 직접 참조하지 않으며 현재 Snapshot만 제공한다.
+
+### 5.4 후속 단계
+
 - Phase 6-E: Golden Demo의 `MIL-F01`/`CIV-A02` 미래 충돌 재현
