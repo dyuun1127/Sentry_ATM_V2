@@ -260,6 +260,10 @@
   고정한다. `NO_ACTION`은 실행 후보가 아닌 전후 비교 기준선으로 Batch마다 정확히 한 개 둔다.
   예상 비용은 지연 sec, 경로 연장 NM와 0~100 PoC Score로 표현하며 정밀 연료/운항비용으로 해석하지
   않는다.
+- Phase 9-B 결정: `POC_RESOLUTION_V1`은 우측 20도, 고도 1,000 ft, 속도 30 kt, Entry Delay
+  30초와 Sequence Position 1을 생성 입력으로 사용한다. Golden Template의 Cost Score는 A=10,
+  B=25, C=20, D=30이고 B의 Path Extension은 1.5 NM, C의 Delay는 30초인 잠정 비교값이다.
+  Callsign이나 군/민 Category가 아니라 명시적인 Preferred Target과 Pair 역할로 Template 대상을 정한다.
 - 제외: 자유형 3D 경로 생성과 강화학습 기반 명령
 - 검증: Phase 9 Candidate Domain 및 Generator 테스트
 

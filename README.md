@@ -37,7 +37,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 8-C: Exception Queue Read Model/API Contract 구현 완료
 - Phase 8-D: Minimal WSGI HTTP Adapter 구현 완료
 - Phase 9-A: Resolution Candidate Domain Contract 구현 완료
-- Candidate Generator, Safety Validation, Runtime Composition, UI: 아직 구현하지 않음
+- Phase 9-B: Deterministic Resolution Candidate Generator 구현 완료
+- Safety Validation, Recommendation, Runtime Composition, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

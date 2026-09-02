@@ -87,8 +87,54 @@ INEFFECTIVE 결과는 하드코딩하지 않는다.
 - 추천 순위는 검증 결과와 비용이 준비된 이후에만 계산한다.
 - 관제사의 Accept/Modify/Reject 이전에는 후보를 실제 State에 적용하지 않는다.
 
-## 7. 다음 단계
+## 7. Deterministic Candidate Generator
 
-Phase 9-B는 Conflict Exception, 해당 Pair의 Aircraft State와 Performance Profile을 입력받아 제한된
-Candidate와 `NO_ACTION` 기준선을 결정론적으로 생성한다. 안전 판정은 그 다음 Phase의 별도
-Validator가 수행한다.
+Phase 9-B의 `DeterministicResolutionCandidateGenerator`는 다음 입력만 사용한다.
+
+- 활성 `ConflictExceptionItem`
+- Conflict Pair 두 대의 같은 UTC 시각 `AircraftState`
+- Aircraft ID별 `AircraftPerformanceProfile`
+- Pair에 속하는 명시적인 Preferred Target Aircraft ID
+- 선택적인 Preferred Target Altitude Hint
+- 교체 가능한 `ResolutionCandidateGenerationProfile`
+
+Generator는 Callsign, 군/민 Category 또는 Scenario ID를 분기 조건으로 사용하지 않는다. Preferred
+Target은 진입 조건 이탈과 같은 상위 Application 판단에서 명시적으로 전달해야 한다. 입력 Iterable과
+Mapping 순서를 바꿔도 동일 Batch를 생성한다.
+
+### 7.1 `POC_RESOLUTION_V1` 생성 입력
+
+| 값 | 입력 |
+|---|---:|
+| 우측 Heading 변화 | 20 deg |
+| Altitude 변화 | 1,000 ft |
+| Speed 감소 | 30 kt |
+| Entry Delay | 30 sec |
+| Sequence Position | 1 |
+
+Golden Profile의 Template은 Preferred Altitude, Preferred Heading, Other Speed, Other Altitude 순서이며
+마지막에 `NO_ACTION`을 추가한다. Preferred Altitude Hint가 있으면 해당 절대 고도를 사용한다. Hint가
+없으면 Preferred는 1,000 ft 상승하되 Ceiling을 넘지 않고, Other Altitude 후보는 1,000 ft 하강하되
+0 ft 아래로 내려가지 않는다. Speed 후보는 Profile Min Speed보다 낮아지지 않는다.
+
+비용은 `ASM-027 POC GENERATION INPUTS`에 기록된 비교용 잠정값이며 실제 연료 또는 운항비용이
+아니다. 생성 Profile을 교체하면 Template, 기동 크기와 비용 입력을 함께 바꿀 수 있다.
+
+### 7.2 Golden Demo 계산 결과
+
+실제 Simulation T+70 HIGH Conflict와 T+75 State를 입력하면 다음 값이 계산된다.
+
+| ID | 계산 결과 |
+|---|---|
+| `CAND-A` | `MIL-F01`, Target Altitude 9,000 ft Hint |
+| `CAND-B` | `MIL-F01`, Heading 180° + 20° = 200° |
+| `CAND-C` | `CIV-A02`, Speed 250 − 30 = 220 kt |
+| `CAND-D` | `CIV-A02`, Altitude 8,125 − 1,000 = 7,125 ft |
+| `CAND-E` | `NO_ACTION` |
+
+이 결과는 후보 값만 계산한 것이며 Scenario 문서의 SAFE/UNSAFE/INEFFECTIVE 판정을 의미하지 않는다.
+
+## 8. 다음 단계
+
+Phase 9-C는 각 Candidate를 복제된 Simulation State에만 적용해 재예측하고 1차 Conflict 해소 여부,
+2차 Conflict, Performance Envelope와 잠정 Rule 위반을 별도 `Safety Validator`에서 평가한다.

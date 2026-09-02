@@ -303,11 +303,16 @@ Phase 8-C의 `ConflictExceptionReadModel`, `OperationalPriorityExceptionReadMode
 Candidate는 아직 안전성이나 실행 가능성이 검증되지 않은 제안이며 Aircraft State를 변경하지 않는다.
 자세한 계약은 `docs/resolution.md`를 참조한다.
 
+Phase 9-B의 `ResolutionCandidateGenerationProfile`은 Candidate Template, 기동 크기, 비용과 출처를
+보존한다. `DeterministicResolutionCandidateGenerator`는 활성 Conflict Exception과 Pair State를 이
+Profile에 적용해 Batch를 생성하지만 Domain Candidate에 Safety 결과를 추가하거나 Runtime을 변경하지
+않는다.
+
 ## 15. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Candidate Generator, Safety Validation과 Recommendation: Phase 9-B~11
+- Safety Validation과 Recommendation: Phase 9-C~11
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.
