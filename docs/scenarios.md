@@ -106,7 +106,7 @@
 | `MIL-F01` | 5.9289 / 22.6214 | 13,000 | 320 | 210 | -4,000 | DESCENT | `FAST-JET-POC-V1` |
 | `MIL-F02` | -20 / 18 | 12,000 | 300 | 135 | -500 | DESCENT | `FAST-JET-POC-V1` |
 | `MIL-T01` | 18 / -12 | 7,000 | 210 | 300 | 0 | LEVEL | `TRANSPORT-POC-V1` |
-| `MIL-T02` | 0 / 18 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
+| `MIL-T02` | -1 / 18 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
 
 모든 State는 `SYNTHETIC`이며 Scenario 시작시각 `2026-09-01T03:00:00Z`를 사용한다. 초기
 Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없다. 이는 공식 분리 판정이 아니라

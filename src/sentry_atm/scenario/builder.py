@@ -202,7 +202,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                 aircraft_type="SYN-TRANSPORT",
                 category=AircraftCategory.TRANSPORT,
                 performance_profile_id="TRANSPORT-POC-V1",
-                x_nm=0.0,
+                x_nm=-1.0,
                 y_nm=18.0,
                 altitude_ft=10_000.0,
                 ground_speed_kt=200.0,

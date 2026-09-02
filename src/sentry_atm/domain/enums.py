@@ -98,6 +98,21 @@ class PriorityReasonCode(StrEnum):
     AIRCRAFT_CONDITION = "AIRCRAFT_CONDITION"
 
 
+class ExceptionKind(StrEnum):
+    """Type-safe source category for one Exception Queue item."""
+
+    CONFLICT_RISK = "CONFLICT_RISK"
+    OPERATIONAL_PRIORITY = "OPERATIONAL_PRIORITY"
+
+
+class ExceptionStatus(StrEnum):
+    """Human-in-the-loop lifecycle state of an Exception item."""
+
+    OPEN = "OPEN"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESOLVED = "RESOLVED"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 

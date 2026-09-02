@@ -275,11 +275,21 @@ Risk와 Priority는 별도 결과이며 `ConflictEvent`도 변경하지 않는�
 `OperationalPriorityEvaluator`가 정책 Profile을 사용해 이 결과를 생성한다. 자세한 계약은
 `docs/risk_priority.md`를 참조한다.
 
-## 13. 의도적으로 제외한 모델
+## 13. Phase 8-A Exception Queue Domain
+
+- `ConflictExceptionItem`: 하나의 `ConflictRiskAssessment`를 참조하는 Pair Exception
+- `OperationalPriorityExceptionItem`: 하나의 `OperationalPriorityAssessment`를 참조하는 Aircraft Exception
+- `ExceptionQueuePolicy`: Risk/Priority 교차 Rank와 완전한 결정론적 정렬 키
+- `ExceptionQueueSnapshot`: 한 UTC 시각의 고유하고 정렬된 불변 Exception 집합
+
+Item은 `OPEN`, `ACKNOWLEDGED`, `RESOLVED` 수명주기 상태를 표현하지만 전이 자체는 아직 수행하지
+않는다. 상세 계약과 잠정 Rank는 `docs/exception_queue.md`를 참조한다.
+
+## 14. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Exception Queue: Phase 8
+- Exception 생성·갱신·종료 Service: Phase 8-B
 - ResolutionCandidate와 Recommendation: Phase 9~11
 - API DTO와 UI State: Phase 12
 

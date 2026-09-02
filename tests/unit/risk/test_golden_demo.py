@@ -9,6 +9,18 @@ from sentry_atm.risk import ConflictRiskEvaluator
 from sentry_atm.scenario import build_golden_demo_scenario, build_scenario_simulation
 
 
+def test_golden_t_plus_0_all_pair_risks_are_low() -> None:
+    states = build_golden_demo_scenario().initial_states
+
+    risks = tuple(
+        ConflictRiskEvaluator().evaluate(event)
+        for event in PairwiseConflictDetector().assess(states)
+    )
+
+    assert len(risks) == 28
+    assert all(risk.risk_level is RiskLevel.LOW for risk in risks)
+
+
 def test_golden_t_plus_70_conflict_is_high_and_entry_priority_is_attention() -> None:
     simulation = build_scenario_simulation(build_golden_demo_scenario())
     simulation.clock.play()

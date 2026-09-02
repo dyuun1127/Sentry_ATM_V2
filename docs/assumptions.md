@@ -210,7 +210,7 @@
   CPA/Pairwise/Rolling 계산 결과 T+0은 0건, T+60은 TCPA 100초, T+70은 TCPA 90초이며 두
   평가 모두 CPA 수평 2.3 NM·수직 500 ft로 `CIV-A02`/`MIL-F01` 한 Pair만 탐지한다. 현재
   수평분리는 T+60 약 6.16 NM, T+70 약 5.63 NM로 분리기준 밖이다. `MIL-T02` 초기 위치는
-  보정된 계획 궤적과의 무관한 초기 Conflict를 피하도록 0/18 NM로 조정했다.
+  보정된 계획 궤적과의 무관한 초기 Conflict 및 Medium Risk를 피하도록 -1/18 NM로 조정했다.
 - 금지: 목표 Conflict 결과를 코드에 하드코딩하는 것
 - 검증: Golden Demo 통합 테스트
 
@@ -319,6 +319,16 @@
 - 금지: 군용 Category 자체를 Priority 상승 조건으로 사용하는 것
 - 검증: Phase 7 Priority Evaluator 및 `VAL-EMERGENCY-PRIORITY`
 
+### ASM-036 - Exception Queue 교차 타입 순서
+
+- 상태: `POC_ASSUMPTION`
+- 내용: 초기 Queue Rank는 Emergency Priority, Critical Risk, Urgent Priority, High Risk,
+  Attention Priority, Medium Risk, Routine Priority, Low Risk 순서다.
+- Phase 8-A 결정: Resolved 여부, 교차 타입 Rank, Acknowledge 여부, TCPA 오름차순, Score 내림차순,
+  Exception ID 사전순으로 전체 정렬 키를 구성한다.
+- 주의: 관제사 화면의 잠정 표시 순서이며 자동 항공기 기동 또는 공식 관제 우선순위를 의미하지 않는다.
+- 검증: 입력 순서 변경, 동일 등급 TCPA 및 Stable ID Queue 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -330,6 +340,7 @@
 | Phase 4 | ASM-016, 022 |
 | Phase 6 | ASM-018, 019 |
 | Phase 7 | ASM-024, 035 |
+| Phase 8 | ASM-036 |
 | Phase 12 이후 | ASM-011, 021, 030, 032 |
 
 ## 6. 변경 규칙
