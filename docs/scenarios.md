@@ -116,6 +116,18 @@ Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없�
 
 시각은 재현 가능한 데모를 위한 기준값이다. Simulation Tick과 Prediction 갱신 주기는 `ASM-017`을 따르며, 후속 운동학 검증에서 이벤트 시각을 수 초 범위로 조정할 수 있다 (`ASM-022`).
 
+### 8.0 Phase 5-B Event Timeline 계약
+
+- 이벤트는 `event_id`, `event_type`, UTC 발생시각, 대상 Aircraft ID와 타입별 불변 Payload를 가진다.
+- Golden Demo 이벤트 순서는 T+60 `ENTRY_CONFORMANCE_DEVIATION`, T+240
+  `EMERGENCY_DECLARED`로 고정한다.
+- Timeline은 Simulation Clock이 `RUNNING`일 때 발생시각이 지난 이벤트를 선언 순서대로 한 번만
+  방출한다. 동일 시각 이벤트는 Scenario Definition에 기록된 순서를 유지한다.
+- `PAUSED` 또는 `READY` 상태에서는 이벤트를 방출하지 않으며, Clock `reset()` 후에는 처음부터
+  같은 이벤트를 재현한다.
+- Phase 5-B의 방출은 Aircraft Runtime을 직접 변경하지 않는다. State 적용과 후속 재평가는 별도
+  Event Handler 단계의 책임이다 (`ASM-028`).
+
 ### 8.1 T+0초 - 정상 혼합 교통
 
 시스템은 8대의 Traffic을 감시하지만 경고를 생성하지 않는다.

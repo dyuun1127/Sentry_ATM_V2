@@ -6,6 +6,7 @@ from datetime import datetime
 from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
+from sentry_atm.scenario.event import ScenarioEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,11 +35,12 @@ class ScenarioAircraft:
 
 @dataclass(frozen=True, slots=True)
 class ScenarioDefinition:
-    """A deterministic ordered set of aircraft sharing one UTC start time."""
+    """A deterministic ordered aircraft and event set sharing one UTC origin."""
 
     scenario_id: str
     start_time_utc: datetime
     aircraft: tuple[ScenarioAircraft, ...]
+    events: tuple[ScenarioEvent, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -61,6 +63,22 @@ class ScenarioDefinition:
             raise ValueError("scenario aircraft IDs must be unique")
         if any(item.initial_state.timestamp_utc != self.start_time_utc for item in self.aircraft):
             raise ValueError("all initial states must use the scenario start time")
+
+        object.__setattr__(self, "events", tuple(self.events))
+        if not all(isinstance(event, ScenarioEvent) for event in self.events):
+            raise TypeError("scenario events must contain only ScenarioEvent instances")
+        event_ids = tuple(event.event_id for event in self.events)
+        if len(set(event_ids)) != len(event_ids):
+            raise ValueError("scenario event IDs must be unique")
+        if any(event.target_aircraft_id not in aircraft_ids for event in self.events):
+            raise ValueError("scenario event targets must reference scenario aircraft")
+        if any(event.scheduled_time_utc < self.start_time_utc for event in self.events):
+            raise ValueError("scenario events must not precede the scenario start time")
+        if any(
+            current.scheduled_time_utc < previous.scheduled_time_utc
+            for previous, current in zip(self.events, self.events[1:], strict=False)
+        ):
+            raise ValueError("scenario events must be ordered by scheduled time")
 
     @property
     def aircraft_ids(self) -> tuple[str, ...]:

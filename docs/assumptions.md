@@ -177,6 +177,8 @@
 - 상태: `POC_ASSUMPTION`
 - 내용: 관제 이양 전체를 구현하지 않고 `Expected Entry State`와 `Actual Entry State`를 비교한다.
 - 비교값: 진입 지점, 고도, Heading, 예상 시각
+- Phase 5-B 결정: T+60 이벤트를 불변 `EntryConformanceDeviationPayload`로 정의하고,
+  Clock 기반 Timeline이 1회 방출한다. Runtime 반영은 후속 단계에서 수행한다.
 - 검증: `ENTRY_CONFORMANCE_DEVIATION` Scenario 테스트
 
 ### ASM-021 - Golden Demo 진입 지점 명칭
@@ -192,7 +194,8 @@
 - 내용: `MIL-F01`의 기대 9,000 ft, 실제 7,400 ft, 2.1 NM 이탈, 25초 지연 및 예상 최소 분리값은 Golden Demo 목표값이다.
 - 정책: Phase 4와 Phase 6에서 실제 운동학 계산으로 재현되도록 초기 상태를 조정한다.
 - Phase 5-A 결정: `docs/scenarios.md` 7.1의 8대 초기 State를 결정론적 Foundation으로 사용한다.
-  이 값에는 아직 T+60 진입 불일치와 T+240 비상 이벤트가 적용되지 않는다.
+- Phase 5-B 결정: T+60 진입 불일치와 T+240 비상 선언을 절대 UTC 시각의 타입화된 이벤트로
+  Scenario Definition에 포함한다. 이벤트 방출만으로 Aircraft State를 변경하지 않는다.
 - 금지: 목표 Conflict 결과를 코드에 하드코딩하는 것
 - 검증: Golden Demo 통합 테스트
 
@@ -213,6 +216,8 @@
 
 - 상태: `PROJECT_DECISION`
 - 내용: 비상은 `PRIORITY_RETURN`과 일반적인 `AIRCRAFT_CONDITION`으로 표현한다.
+- Phase 5-B 결정: `EmergencyDeclaredPayload`에서 비상 유형과 사유 범주를 별도 Enum으로
+  보존하고 T+240에 1회 방출한다.
 - 금지: 실제 작전, 실제 기체 결함 또는 민감한 비상절차를 모사하는 것
 - 검증: Scenario Event Payload 확인
 

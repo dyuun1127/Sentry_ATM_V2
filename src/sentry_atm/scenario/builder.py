@@ -1,16 +1,25 @@
 """Golden Demo definition and Synthetic simulation construction."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sentry_atm.domain import (
     AircraftCategory,
     AircraftMetadata,
     AircraftState,
     DataSource,
+    EmergencyType,
     FlightPhase,
 )
+from sentry_atm.scenario.event import (
+    EmergencyDeclaredPayload,
+    EmergencyReasonCategory,
+    EntryConformanceDeviationPayload,
+    ScenarioEvent,
+    ScenarioEventType,
+)
 from sentry_atm.scenario.model import ScenarioAircraft, ScenarioDefinition
+from sentry_atm.scenario.timeline import ScenarioEventTimeline
 from sentry_atm.simulation import (
     SimulationClock,
     SyntheticAircraftRuntime,
@@ -28,6 +37,7 @@ class ScenarioSimulation:
     definition: ScenarioDefinition
     clock: SimulationClock
     engine: TrafficSimulationEngine
+    timeline: ScenarioEventTimeline
 
 
 def _scenario_aircraft(
@@ -67,7 +77,7 @@ def _scenario_aircraft(
 
 
 def build_golden_demo_scenario() -> ScenarioDefinition:
-    """Return the Phase 5-A eight-aircraft Golden Demo foundation."""
+    """Return the eight-aircraft Golden Demo definition and event schedule."""
 
     return ScenarioDefinition(
         scenario_id=GOLDEN_DEMO_SCENARIO_ID,
@@ -178,6 +188,38 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                 flight_phase=FlightPhase.LEVEL,
             ),
         ),
+        events=build_golden_demo_events(),
+    )
+
+
+def build_golden_demo_events() -> tuple[ScenarioEvent, ...]:
+    """Return the ordered Phase 5-B events for the Golden Demo."""
+
+    return (
+        ScenarioEvent(
+            event_id="EVT-MIL-F01-ENTRY-DEVIATION",
+            event_type=ScenarioEventType.ENTRY_CONFORMANCE_DEVIATION,
+            scheduled_time_utc=GOLDEN_DEMO_START_UTC + timedelta(seconds=60),
+            target_aircraft_id="MIL-F01",
+            payload=EntryConformanceDeviationPayload(
+                expected_entry_point="ENTRY-A",
+                expected_altitude_ft=9_000.0,
+                expected_heading_deg=210.0,
+                actual_altitude_ft=7_400.0,
+                lateral_deviation_nm=2.1,
+                time_deviation_seconds=25.0,
+            ),
+        ),
+        ScenarioEvent(
+            event_id="EVT-MIL-T01-EMERGENCY",
+            event_type=ScenarioEventType.EMERGENCY_DECLARED,
+            scheduled_time_utc=GOLDEN_DEMO_START_UTC + timedelta(seconds=240),
+            target_aircraft_id="MIL-T01",
+            payload=EmergencyDeclaredPayload(
+                emergency_type=EmergencyType.PRIORITY_RETURN,
+                reason_category=EmergencyReasonCategory.AIRCRAFT_CONDITION,
+            ),
+        ),
     )
 
 
@@ -192,4 +234,10 @@ def build_scenario_simulation(definition: ScenarioDefinition) -> ScenarioSimulat
         for item in definition.aircraft
     )
     engine = TrafficSimulationEngine(clock=clock, runtimes=runtimes)
-    return ScenarioSimulation(definition=definition, clock=clock, engine=engine)
+    timeline = ScenarioEventTimeline(clock=clock, events=definition.events)
+    return ScenarioSimulation(
+        definition=definition,
+        clock=clock,
+        engine=engine,
+        timeline=timeline,
+    )

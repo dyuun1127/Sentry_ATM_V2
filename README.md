@@ -24,7 +24,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 4-C: Deterministic Rolling Prediction Scheduler 구현 완료
 - Phase 4-D: PredictionRun SQLite Persistence 구현 완료
 - Phase 5-A: Golden Demo Scenario Foundation 구현 완료
-- Scenario Builder, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
+- Phase 5-B: Deterministic Scenario Event Timeline 구현 완료
+- Event Handler, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

@@ -1,9 +1,10 @@
+from datetime import timedelta
 from itertools import combinations
 from math import hypot
 
 import pytest
 
-from sentry_atm.domain import AircraftCategory, DataSource
+from sentry_atm.domain import AircraftCategory, DataSource, EmergencyStatus, EmergencyType
 from sentry_atm.infrastructure.persistence.seed import (
     POC_AIRCRAFT_TYPES,
     POC_PERFORMANCE_PROFILES,
@@ -11,6 +12,10 @@ from sentry_atm.infrastructure.persistence.seed import (
 from sentry_atm.scenario import (
     GOLDEN_DEMO_SCENARIO_ID,
     GOLDEN_DEMO_START_UTC,
+    EmergencyDeclaredPayload,
+    EmergencyReasonCategory,
+    EntryConformanceDeviationPayload,
+    ScenarioEventType,
     build_golden_demo_scenario,
     build_scenario_simulation,
 )
@@ -103,6 +108,8 @@ def test_scenario_simulation_builds_shared_ordered_synthetic_runtimes() -> None:
     assert simulation.clock.state is ClockState.READY
     assert simulation.clock.current_time_utc == GOLDEN_DEMO_START_UTC
     assert simulation.engine.clock is simulation.clock
+    assert simulation.timeline.clock is simulation.clock
+    assert simulation.timeline.events == definition.events
     assert simulation.engine.aircraft_ids == EXPECTED_AIRCRAFT_IDS
     assert all(
         isinstance(runtime, SyntheticAircraftRuntime) for runtime in simulation.engine.runtimes
@@ -121,6 +128,58 @@ def test_repeated_scenario_builds_produce_identical_snapshots() -> None:
         simulation.clock.play()
         simulation.engine.tick(steps=10)
     assert first.engine.snapshot() == second.engine.snapshot()
+
+
+def test_golden_demo_contains_typed_t_plus_60_and_240_events() -> None:
+    events = build_golden_demo_scenario().events
+
+    assert tuple(event.event_type for event in events) == (
+        ScenarioEventType.ENTRY_CONFORMANCE_DEVIATION,
+        ScenarioEventType.EMERGENCY_DECLARED,
+    )
+    assert tuple(event.target_aircraft_id for event in events) == (
+        "MIL-F01",
+        "MIL-T01",
+    )
+    assert tuple(event.scheduled_time_utc for event in events) == (
+        GOLDEN_DEMO_START_UTC + timedelta(seconds=60),
+        GOLDEN_DEMO_START_UTC + timedelta(seconds=240),
+    )
+
+    entry_payload = events[0].payload
+    emergency_payload = events[1].payload
+    assert isinstance(entry_payload, EntryConformanceDeviationPayload)
+    assert entry_payload.expected_entry_point == "ENTRY-A"
+    assert entry_payload.expected_altitude_ft == 9_000.0
+    assert entry_payload.actual_altitude_ft == 7_400.0
+    assert entry_payload.lateral_deviation_nm == 2.1
+    assert entry_payload.time_deviation_seconds == 25.0
+    assert isinstance(emergency_payload, EmergencyDeclaredPayload)
+    assert emergency_payload.emergency_type is EmergencyType.PRIORITY_RETURN
+    assert emergency_payload.reason_category is EmergencyReasonCategory.AIRCRAFT_CONDITION
+
+
+def test_golden_timeline_is_deterministic_and_does_not_mutate_runtime() -> None:
+    first = build_scenario_simulation(build_golden_demo_scenario())
+    second = build_scenario_simulation(build_golden_demo_scenario())
+
+    for simulation in (first, second):
+        simulation.clock.play()
+        simulation.engine.tick(steps=60)
+
+    before_poll = first.engine.snapshot()
+    assert first.timeline.poll_due_events() == second.timeline.poll_due_events()
+    assert first.engine.snapshot() == before_poll
+    assert first.timeline.poll_due_events() == ()
+
+    first.clock.tick(steps=180)
+    emergency_event = first.timeline.poll_due_events()
+    mil_t01 = next(
+        state for state in first.engine.snapshot().states if state.aircraft_id == "MIL-T01"
+    )
+    assert emergency_event == (first.definition.events[1],)
+    assert mil_t01.emergency_status is EmergencyStatus.NONE
+    assert mil_t01.emergency_type is None
 
 
 def test_scenario_simulation_rejects_wrong_definition_type() -> None:

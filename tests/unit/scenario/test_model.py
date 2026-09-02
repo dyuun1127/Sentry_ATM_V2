@@ -3,7 +3,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
-from sentry_atm.scenario import ScenarioAircraft, ScenarioDefinition
+from sentry_atm.scenario import (
+    EntryConformanceDeviationPayload,
+    ScenarioAircraft,
+    ScenarioDefinition,
+    ScenarioEvent,
+    ScenarioEventType,
+)
 
 START_UTC = datetime(2026, 9, 2, 3, 0, tzinfo=UTC)
 
@@ -34,6 +40,28 @@ def _scenario_aircraft(aircraft_id: str = "CIV-A01") -> ScenarioAircraft:
             performance_class="AIRLINER-POC-V1",
         ),
         initial_state=_state(aircraft_id),
+    )
+
+
+def _event(
+    *,
+    event_id: str = "EVT-001",
+    target_aircraft_id: str = "CIV-A01",
+    scheduled_time_utc: datetime = START_UTC,
+) -> ScenarioEvent:
+    return ScenarioEvent(
+        event_id=event_id,
+        event_type=ScenarioEventType.ENTRY_CONFORMANCE_DEVIATION,
+        scheduled_time_utc=scheduled_time_utc,
+        target_aircraft_id=target_aircraft_id,
+        payload=EntryConformanceDeviationPayload(
+            expected_entry_point="ENTRY-A",
+            expected_altitude_ft=9_000.0,
+            expected_heading_deg=210.0,
+            actual_altitude_ft=7_400.0,
+            lateral_deviation_nm=2.1,
+            time_deviation_seconds=25.0,
+        ),
     )
 
 
@@ -124,4 +152,58 @@ def test_scenario_definition_rejects_empty_invalid_duplicate_or_wrong_time() -> 
             scenario_id="WRONG-TIME",
             start_time_utc=START_UTC,
             aircraft=(later_aircraft,),
+        )
+
+
+def test_scenario_definition_materializes_and_validates_events() -> None:
+    first = _event()
+    second = _event(
+        event_id="EVT-002",
+        scheduled_time_utc=START_UTC + timedelta(seconds=1),
+    )
+    source = [first, second]
+
+    definition = ScenarioDefinition(
+        scenario_id="WITH-EVENTS",
+        start_time_utc=START_UTC,
+        aircraft=(_scenario_aircraft(),),
+        events=source,
+    )
+    source.clear()
+    assert definition.events == (first, second)
+
+    with pytest.raises(TypeError, match="ScenarioEvent"):
+        ScenarioDefinition(
+            scenario_id="INVALID-EVENT",
+            start_time_utc=START_UTC,
+            aircraft=(_scenario_aircraft(),),
+            events=("event",),  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="IDs must be unique"):
+        ScenarioDefinition(
+            scenario_id="DUPLICATE-EVENT",
+            start_time_utc=START_UTC,
+            aircraft=(_scenario_aircraft(),),
+            events=(first, first),
+        )
+    with pytest.raises(ValueError, match="reference scenario aircraft"):
+        ScenarioDefinition(
+            scenario_id="WRONG-TARGET",
+            start_time_utc=START_UTC,
+            aircraft=(_scenario_aircraft(),),
+            events=(_event(target_aircraft_id="MIL-F01"),),
+        )
+    with pytest.raises(ValueError, match="precede"):
+        ScenarioDefinition(
+            scenario_id="EARLY-EVENT",
+            start_time_utc=START_UTC,
+            aircraft=(_scenario_aircraft(),),
+            events=(_event(scheduled_time_utc=START_UTC - timedelta(seconds=1)),),
+        )
+    with pytest.raises(ValueError, match="ordered"):
+        ScenarioDefinition(
+            scenario_id="UNORDERED-EVENT",
+            start_time_utc=START_UTC,
+            aircraft=(_scenario_aircraft(),),
+            events=(second, first),
         )
