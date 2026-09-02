@@ -353,11 +353,15 @@ Maneuver의 재검증이 필수이고 `REJECT`는 적용을 허가하지 않는�
 `docs/controller_decision.md`를 참조한다. Phase 11-B Service는 성공한 Decision에만 Revision을 할당하고
 동일 Set의 중복 최종 결정을 원자적으로 거부한다.
 
+Phase 11-C의 Command/API DTO는 Domain이나 Persistence 모델이 아니다. 입력은 ID, Decision Type,
+timezone-aware UTC 및 고정 Maneuver Schema로 제한하고, 출력은 Audit Identity와 Human-in-the-loop
+상태를 JSON 호환 Read Model로 표현한다.
+
 ## 17. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Controller Decision Command/API와 승인 명령 적용: Phase 11-C 이후
+- Controller Decision HTTP Adapter와 승인 명령 적용: Phase 11-D 이후
 - HTTP Runtime Composition과 UI State: 핵심 추천·검증 흐름 완성 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

@@ -92,8 +92,26 @@ Recommendation ID를 입력받아 다음을 원자적으로 수행한다.
 Service의 메모리 상태는 현재 프로세스 범위의 최소 구현이다. Persistence, HTTP Command Adapter,
 인증·인가, Runtime 적용은 포함하지 않는다.
 
-## 7. 다음 단계
+## 7. Phase 11-C Controller Decision Command/API Contract
 
-Phase 11-C는 Controller Decision Command/API 계약을 정의한다. `ACCEPT` 이후의 실제 Runtime 적용은
-별도 Application 단계에서 수행하고, `MODIFY`는 새 Candidate로 조립한 뒤 Safety Validation을 다시
-통과해야 한다.
+`SubmitControllerDecisionRequest`는 Recommendation Set/Recommendation ID, Decision Type, UTC,
+Controller Position, Rationale와 선택적 변경 Maneuver를 운송 계층과 독립적으로 검증한다. 변경 Maneuver는
+nullable 고정 Schema를 사용하며 Domain Action Maneuver로 명시적으로 변환된다.
+
+`InProcessControllerDecisionApi`는 `RecommendationSetLookup`에서 요청된 불변 Set을 조회하고 Phase
+11-B Service에 결정을 위임한다. 응답은 `ControllerDecisionAuditLogReadModel`로 변환되며 다음 정보를
+포함한다.
+
+- Audit Log ID, Revision, 생성 UTC, 최신 Decision ID
+- Decision/Recommendation/Candidate Identity
+- `ACCEPT`, `MODIFY`, `REJECT`, Rationale와 Controller Position
+- 변경 Maneuver, `authorizes_application`, `requires_revalidation`
+
+응답은 JSON 호환 Primitive만 노출한다. API 계약은 Recommendation 객체, Aircraft Runtime 또는
+Service 내부 상태를 클라이언트에 노출하지 않는다.
+
+## 8. 다음 단계
+
+Phase 11-D는 Controller Decision Command를 HTTP로 수신하는 최소 WSGI Adapter를 구현한다. 인증·인가와
+실제 Runtime 적용은 포함하지 않으며, `MODIFY`는 새 Candidate 조립 및 Safety 재검증 단계로 연결해야
+한다.
