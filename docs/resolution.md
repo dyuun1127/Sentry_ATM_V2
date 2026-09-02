@@ -128,7 +128,7 @@ Golden Profile의 Template은 Preferred Altitude, Preferred Heading, Other Speed
 | `CAND-A` | `MIL-F01`, Target Altitude 9,000 ft Hint |
 | `CAND-B` | `MIL-F01`, Heading 180° + 20° = 200° |
 | `CAND-C` | `CIV-A02`, Speed 250 − 30 = 220 kt |
-| `CAND-D` | `CIV-A02`, Altitude 8,125 − 1,000 = 7,125 ft |
+| `CAND-D` | `CIV-A02`, Altitude 8,200 − 1,000 = 7,200 ft |
 | `CAND-E` | `NO_ACTION` |
 
 이 결과는 후보 값만 계산한 것이며 Scenario 문서의 SAFE/UNSAFE/INEFFECTIVE 판정을 의미하지 않는다.
@@ -216,16 +216,16 @@ T+70 Conflict, T+75 Candidate와 전체 8대 Traffic State를 입력하면 현�
 | Candidate | 계산 판정 | 핵심 증거 |
 |---|---|---|
 | `CAND-A` | `SAFE` | 1차 Conflict 해소, 추가 실패 없음 |
-| `CAND-B` | `INEFFECTIVE` | 현재 즉시 목표 침로 모델에서는 1차 Conflict 지속 |
+| `CAND-B` | `UNSAFE` | 1차 Conflict 해소 후 `MIL-F02`와 2차 Conflict 발생 |
 | `CAND-C` | `INEFFECTIVE` | 감속 후에도 1차 Conflict 지속 |
-| `CAND-D` | `UNSAFE` | 7,125 ft 목표가 잠정 최저고도 Rule 위반 |
+| `CAND-D` | `UNSAFE` | 7,200 ft 목표가 잠정 최저고도 Rule 위반 |
 | `CAND-E` | `UNSAFE` | 조작 없음 기준선에서 1차 Conflict 지속 |
 
-Scenario Contract는 `CAND-B`가 1차 Conflict를 해소한 뒤 `MIL-F02`와 2차 근접을 만드는 것을 목표로
-한다. 현재 결과는 이를 아직 재현하지 못하므로 판정을 하드코딩하지 않고, 후속 Golden Resolution
-Calibration에서 Aircraft 초기조건 또는 기동 실행 모델을 조정한다.
+Phase 9-E는 `ASM-022`의 Synthetic 초기조건을 보정해 `CAND-B`의 1차 Conflict 수직분리를
+1,016.25 ft로 회복하고, `MIL-F02`와 수평 약 3.99 NM·수직 약 407 ft의 2차 Conflict를 실제 CPA
+계산으로 재현한다. Scenario ID나 Candidate ID를 Validator 분기 조건으로 사용하지 않는다.
 
 ## 10. 다음 단계
 
-Golden Resolution Calibration으로 Scenario Contract와 계산 결과를 정합시킨 뒤, 안전한 Candidate만
-대상으로 결정론적 Recommendation 순위를 계산한다.
+안전한 Candidate만 대상으로 비용과 검증 근거를 함께 사용하는 결정론적 Recommendation 순위를
+계산한다.

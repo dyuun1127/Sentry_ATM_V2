@@ -100,18 +100,19 @@
 | Aircraft | x/y NM | 고도 ft | 속도 kt | Heading | 수직속도 ft/min | Phase | Profile |
 |---|---:|---:|---:|---:|---:|---|---|
 | `CIV-A01` | -3 / -4 | 3,000 | 170 | 0 | 0 | APPROACH | `AIRLINER-POC-V1` |
-| `CIV-A02` | 10 / 14 | 9,000 | 250 | 220 | -700 | DESCENT | `AIRLINER-POC-V1` |
+| `CIV-A02` | 10 / 14 | 9,075 | 250 | 220 | -700 | DESCENT | `AIRLINER-POC-V1` |
 | `CIV-A03` | -14 / 12 | 11,000 | 240 | 140 | -500 | DESCENT | `AIRLINER-POC-V1` |
 | `CIV-D01` | -16 / -14 | 5,000 | 220 | 60 | +1,000 | CLIMB | `AIRLINER-POC-V1` |
 | `MIL-F01` | 5.9289 / 22.6214 | 13,000 | 320 | 210 | -4,000 | DESCENT | `FAST-JET-POC-V1` |
-| `MIL-F02` | -20 / 18 | 12,000 | 300 | 135 | -500 | DESCENT | `FAST-JET-POC-V1` |
+| `MIL-F02` | -11.3194 / 20.3194 | 6,946.25 | 300 | 135 | +400 | CLIMB | `FAST-JET-POC-V1` |
 | `MIL-T01` | 18 / -12 | 7,000 | 210 | 300 | 0 | LEVEL | `TRANSPORT-POC-V1` |
 | `MIL-T02` | -1 / 18 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
 
 모든 State는 `SYNTHETIC`이며 Scenario 시작시각 `2026-09-01T03:00:00Z`를 사용한다. 초기
 Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없다. 이는 공식 분리 판정이 아니라
 초기 배치 검증이다. `MIL-F01`의 계획 운동은 T+60에 9,000 ft로 `ENTRY-A`를 통과하도록
-보정되며, 실제 진입 상태는 별도의 Scenario State Anchor로 표현한다.
+보정되며, 실제 진입 상태는 별도의 Scenario State Anchor로 표현한다. `CIV-A02`와 `MIL-F02`의
+값에는 Phase 9-E의 Candidate 재계산 보정도 포함된다 (`ASM-022`).
 
 ## 8. 시나리오 진행
 

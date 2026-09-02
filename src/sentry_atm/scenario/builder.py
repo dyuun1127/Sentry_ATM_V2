@@ -36,6 +36,16 @@ _MIL_F01_INITIAL_Y_NM = 22.62140027743578
 _MIL_F01_ACTUAL_X_NM = 4.29424619131654
 _MIL_F01_ACTUAL_Y_NM = 16.173656419930605
 
+# Phase 9-E calibration: preserve the Phase 6-E primary CPA while making the
+# 20-degree CAND-B heading change resolve that pair vertically and create one
+# calculated secondary conflict with MIL-F02.
+_CIV_A02_INITIAL_ALTITUDE_FT = 9_075.0
+_MIL_F01_ACTUAL_VERTICAL_SPEED_FPM = 185.0
+_MIL_F02_INITIAL_X_NM = -11.319417382415922
+_MIL_F02_INITIAL_Y_NM = 20.31941738241592
+_MIL_F02_INITIAL_ALTITUDE_FT = 6_946.25
+_MIL_F02_VERTICAL_SPEED_FPM = 400.0
+
 
 @dataclass(frozen=True, slots=True)
 class ScenarioSimulation:
@@ -112,7 +122,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                 performance_profile_id="AIRLINER-POC-V1",
                 x_nm=10.0,
                 y_nm=14.0,
-                altitude_ft=9_000.0,
+                altitude_ft=_CIV_A02_INITIAL_ALTITUDE_FT,
                 ground_speed_kt=250.0,
                 heading_deg=220.0,
                 vertical_speed_fpm=-700.0,
@@ -165,9 +175,9 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                         altitude_ft=7_400.0,
                         ground_speed_kt=320.0,
                         heading_deg=180.0,
-                        vertical_speed_fpm=-460.0,
+                        vertical_speed_fpm=_MIL_F01_ACTUAL_VERTICAL_SPEED_FPM,
                         source=DataSource.SYNTHETIC,
-                        flight_phase=FlightPhase.DESCENT,
+                        flight_phase=FlightPhase.CLIMB,
                     ),
                 ),
             ),
@@ -176,13 +186,13 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                 aircraft_type="SYN-FAST-JET",
                 category=AircraftCategory.FAST_JET,
                 performance_profile_id="FAST-JET-POC-V1",
-                x_nm=-20.0,
-                y_nm=18.0,
-                altitude_ft=12_000.0,
+                x_nm=_MIL_F02_INITIAL_X_NM,
+                y_nm=_MIL_F02_INITIAL_Y_NM,
+                altitude_ft=_MIL_F02_INITIAL_ALTITUDE_FT,
                 ground_speed_kt=300.0,
                 heading_deg=135.0,
-                vertical_speed_fpm=-500.0,
-                flight_phase=FlightPhase.DESCENT,
+                vertical_speed_fpm=_MIL_F02_VERTICAL_SPEED_FPM,
+                flight_phase=FlightPhase.CLIMB,
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-T01",

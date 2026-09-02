@@ -4,7 +4,13 @@ from math import hypot
 
 import pytest
 
-from sentry_atm.domain import AircraftCategory, DataSource, EmergencyStatus, EmergencyType
+from sentry_atm.domain import (
+    AircraftCategory,
+    DataSource,
+    EmergencyStatus,
+    EmergencyType,
+    FlightPhase,
+)
 from sentry_atm.infrastructure.persistence.seed import (
     POC_AIRCRAFT_TYPES,
     POC_PERFORMANCE_PROFILES,
@@ -69,6 +75,19 @@ def test_initial_states_use_synthetic_source_and_provisional_area_envelope() -> 
         assert state.timestamp_utc == GOLDEN_DEMO_START_UTC
         assert hypot(state.x_nm, state.y_nm) <= 30.0
         assert 0.0 <= state.altitude_ft <= 20_000.0
+
+
+def test_phase_9_e_calibrated_initial_states_are_explicit() -> None:
+    state_by_id = {
+        state.aircraft_id: state for state in build_golden_demo_scenario().initial_states
+    }
+
+    assert state_by_id["CIV-A02"].altitude_ft == 9_075.0
+    assert state_by_id["MIL-F02"].x_nm == pytest.approx(-11.319417382415922)
+    assert state_by_id["MIL-F02"].y_nm == pytest.approx(20.31941738241592)
+    assert state_by_id["MIL-F02"].altitude_ft == 6_946.25
+    assert state_by_id["MIL-F02"].vertical_speed_fpm == 400.0
+    assert state_by_id["MIL-F02"].flight_phase is FlightPhase.CLIMB
 
 
 def test_metadata_links_seeded_type_and_performance_profile() -> None:

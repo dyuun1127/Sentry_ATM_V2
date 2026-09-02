@@ -8,7 +8,7 @@ from sentry_atm.conflict import (
     PairwiseConflictDetector,
     RollingConflictScheduler,
 )
-from sentry_atm.domain import ConflictStatus
+from sentry_atm.domain import ConflictStatus, FlightPhase
 from sentry_atm.scenario import (
     GOLDEN_DEMO_START_UTC,
     build_golden_demo_scenario,
@@ -45,6 +45,8 @@ def test_t_plus_60_actual_state_matches_entry_deviation_contract() -> None:
     assert planned_state.heading_deg == pytest.approx(210.0)
     assert actual_state.altitude_ft == pytest.approx(7_400.0)
     assert actual_state.heading_deg == pytest.approx(180.0)
+    assert actual_state.vertical_speed_fpm == pytest.approx(185.0)
+    assert actual_state.flight_phase is FlightPhase.CLIMB
     assert hypot(
         actual_state.x_nm - planned_state.x_nm,
         actual_state.y_nm - planned_state.y_nm,

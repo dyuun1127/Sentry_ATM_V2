@@ -325,7 +325,7 @@ def test_generator_builds_golden_a_to_e_from_actual_t_plus_75_state() -> None:
     assert isinstance(candidate_c.maneuver, SpeedManeuver)
     assert candidate_c.maneuver.target_ground_speed_kt == 220.0
     assert isinstance(candidate_d.maneuver, AltitudeManeuver)
-    assert candidate_d.maneuver.target_altitude_ft == 7_125.0
+    assert candidate_d.maneuver.target_altitude_ft == 7_200.0
     assert isinstance(candidate_e.maneuver, NoActionManeuver)
 
 

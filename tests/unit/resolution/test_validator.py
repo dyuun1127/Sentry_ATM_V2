@@ -246,7 +246,17 @@ def test_golden_candidates_are_calculated_without_mutating_runtime_states() -> N
     assert run.horizon_seconds == 120.0
     assert result_by_id["CAND-A"].verdict is ResolutionValidationVerdict.SAFE
     assert result_by_id["CAND-A"].primary_resolved
-    assert result_by_id["CAND-B"].verdict is ResolutionValidationVerdict.INEFFECTIVE
+    candidate_b = result_by_id["CAND-B"]
+    assert candidate_b.verdict is ResolutionValidationVerdict.UNSAFE
+    assert candidate_b.primary_resolved
+    assert candidate_b.primary_conflict.minimum_separation.vertical_ft == pytest.approx(1_016.25)
+    assert tuple(conflict.pair.aircraft_ids for conflict in candidate_b.secondary_conflicts) == (
+        ("MIL-F01", "MIL-F02"),
+    )
+    secondary = candidate_b.secondary_conflicts[0]
+    assert secondary.minimum_separation.horizontal_nm == pytest.approx(3.994, abs=0.001)
+    assert secondary.minimum_separation.vertical_ft == pytest.approx(406.51, abs=0.01)
+    assert ResolutionValidationReasonCode.SECONDARY_CONFLICT_DETECTED in candidate_b.reason_codes
     assert result_by_id["CAND-C"].verdict is ResolutionValidationVerdict.INEFFECTIVE
     assert result_by_id["CAND-D"].verdict is ResolutionValidationVerdict.UNSAFE
     assert result_by_id["CAND-D"].rule_violations[0].rule_id == (
@@ -255,6 +265,7 @@ def test_golden_candidates_are_calculated_without_mutating_runtime_states() -> N
     assert ResolutionValidationReasonCode.RULE_VIOLATION in result_by_id["CAND-D"].reason_codes
     assert result_by_id["CAND-E"].verdict is ResolutionValidationVerdict.UNSAFE
     assert ResolutionValidationReasonCode.NO_ACTION_BASELINE in result_by_id["CAND-E"].reason_codes
+    assert validator.validate(batch, reversed(states), profiles) == run
 
 
 def test_validator_detects_secondary_conflicts_across_all_traffic() -> None:

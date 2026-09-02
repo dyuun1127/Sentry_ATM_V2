@@ -40,6 +40,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 9-B: Deterministic Resolution Candidate Generator 구현 완료
 - Phase 9-C: Resolution Safety Validation Domain 구현 완료
 - Phase 9-D: Isolated Resolution Safety Validator 구현 완료
+- Phase 9-E: Golden Resolution Calibration 구현 완료
 - Recommendation, Runtime Composition, UI: 아직 구현하지 않음
 
 ## 핵심 문서
