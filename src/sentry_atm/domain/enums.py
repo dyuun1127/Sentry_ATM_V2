@@ -179,6 +179,14 @@ class RecommendationReasonCode(StrEnum):
     NO_RULE_VIOLATION = "NO_RULE_VIOLATION"
 
 
+class ControllerDecisionType(StrEnum):
+    """Explicit Human-in-the-loop response to one Recommendation."""
+
+    ACCEPT = "ACCEPT"
+    MODIFY = "MODIFY"
+    REJECT = "REJECT"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 

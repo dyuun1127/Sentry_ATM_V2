@@ -377,6 +377,17 @@
   변경하지 않는다. 관제사 결정과 승인된 기동 적용은 별도 Domain/Application 단계다.
 - 검증: Phase 10 Recommendation Domain 및 Ranking Service 테스트
 
+### ASM-039 - Controller Decision Audit 경계
+
+- 상태: `PROJECT_DECISION`
+- 내용: `ACCEPT`만 원본 SAFE Candidate의 후속 적용을 허가한다. `MODIFY`는 Rationale과 실제로
+  달라진 Action Maneuver를 기록하고 반드시 재검증하며, `REJECT`는 Rationale을 남기고 적용하지 않는다.
+- Audit: Recommendation Set마다 최대 하나의 최종 Decision을 허용하고 Decision/Recommendation
+  Identity, UTC, 비개인 Controller Position ID를 보존한다.
+- Human-in-the-loop: Decision Audit Entry 생성과 실제 Aircraft Runtime 적용을 분리한다.
+- 보안: Controller Position ID는 역할·석 식별자이며 실제 개인 이름이나 군 내부 식별자를 사용하지 않는다.
+- 검증: Phase 11 Controller Decision Domain 및 Service 테스트
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -391,6 +402,7 @@
 | Phase 8 | ASM-036 |
 | Phase 9 | ASM-027, 028, 037 |
 | Phase 10 | ASM-028, 038 |
+| Phase 11 | ASM-028, 033, 039 |
 | Phase 12 이후 | ASM-011, 021, 030, 032 |
 
 ## 6. 변경 규칙

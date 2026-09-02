@@ -9,9 +9,14 @@ from sentry_atm.domain.conflict import (
     SeparationMinimum,
     SeparationRuleProfile,
 )
+from sentry_atm.domain.controller_decision import (
+    ControllerDecisionAuditEntry,
+    ControllerDecisionAuditLog,
+)
 from sentry_atm.domain.enums import (
     AircraftCategory,
     ConflictStatus,
+    ControllerDecisionType,
     DataSource,
     EmergencyStatus,
     EmergencyType,
@@ -91,6 +96,9 @@ __all__ = [
     "ConflictPair",
     "ConflictRiskAssessment",
     "ConflictStatus",
+    "ControllerDecisionAuditEntry",
+    "ControllerDecisionAuditLog",
+    "ControllerDecisionType",
     "DataSource",
     "EmergencyStatus",
     "EmergencyType",

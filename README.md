@@ -45,7 +45,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 10-B: Deterministic Recommendation Ranking Service 구현 완료
 - Phase 10-C: Recommendation Read Model/API Contract 구현 완료
 - Phase 10-D: Minimal Recommendation WSGI HTTP Adapter 구현 완료
-- Controller Decision, Runtime Composition, UI: 아직 구현하지 않음
+- Phase 11-A: Controller Decision Audit Domain 구현 완료
+- Controller Decision Service, Runtime Composition, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -61,6 +62,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Deterministic Exception Queue Contract](docs/exception_queue.md)
 - [Resolution Candidate Contract](docs/resolution.md)
 - [Resolution Recommendation Contract](docs/recommendation.md)
+- [Controller Decision Audit Contract](docs/controller_decision.md)
 
 ## 요구 환경
 

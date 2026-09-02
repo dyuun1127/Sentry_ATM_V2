@@ -165,5 +165,5 @@ Read Model에서 같은 Byte 결과를 만든다. Adapter는 요청 본문, Cand
 
 ## 9. 다음 단계
 
-Phase 11-A는 Recommendation에 대한 관제사의 `ACCEPT`, `MODIFY`, `REJECT` 결정을 타입 안전한 Audit
-Domain으로 정의한다. 승인만으로 즉시 Runtime을 바꾸지 않고, 승인된 명령 적용은 별도 단계로 둔다.
+Phase 11-A의 관제사 `ACCEPT`, `MODIFY`, `REJECT`와 Audit 불변조건은
+`docs/controller_decision.md`에 정의한다. 승인된 명령 적용과 재검증은 별도 단계다.
