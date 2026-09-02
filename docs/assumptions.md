@@ -219,13 +219,19 @@
 - 상태: `PROJECT_DECISION`
 - 내용: Conflict Risk와 운항 Priority는 서로 다른 평가 결과다.
 - 예시: `MIL-T01`은 현재 Conflict Risk가 낮아도 Emergency Priority가 가장 높을 수 있다.
+- Phase 7-A 결정: Risk는 `ConflictPair`, Priority는 개별 Aircraft를 대상으로 별도 Assessment ID,
+  Score, Level, Reason Code와 Policy Profile ID를 보존한다. 두 Score를 하나로 합치지 않는다.
 - 검증: Phase 7 단위 테스트
 
 ### ASM-024 - Risk Level
 
 - 상태: `POC_ASSUMPTION`
 - 내용: 초기 Risk Level은 `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` 네 단계로 표현한다.
-- 검증: Phase 7 Risk Feature와 Threshold 설계 시 확정
+- Phase 7-A 결정: `POC_RISK_V1` 시작값은 Critical TCPA 30초, High TCPA 120초 및 Medium
+  수평·수직 비율 1.25다. LOW/MEDIUM/HIGH/CRITICAL Score는 0/40/75/100이며 실제 Level
+  판정은 Phase 7-B에서 구현한다.
+- 주의: 공식적이거나 보편적인 Risk 기준이 아닌 Golden Demo용 잠정 입력이다.
+- 검증: Phase 7 Risk Evaluator 및 Golden Demo 테스트
 
 ### ASM-025 - 비상상황 추상화
 
@@ -298,6 +304,16 @@
 - 주의: WGS84 타원체 기반 공식 측지 변환이나 실제 감시체계 좌표변환을 대체하지 않는다.
 - 검증: 원점, 축 방향, 30 NM Envelope 왕복 변환 테스트
 
+### ASM-035 - Operational Priority Level
+
+- 상태: `POC_ASSUMPTION`
+- 내용: 초기 Level은 `ROUTINE`, `ATTENTION`, `URGENT`, `EMERGENCY`로 표현한다.
+- Phase 7-A 결정: `POC_OPERATIONAL_PRIORITY_V1`에서 정상 운항은 0/`ROUTINE`, 진입 조건
+  불일치는 40/`ATTENTION`, 비상 선언은 100/`EMERGENCY`로 매핑한다. `URGENT`는 후속 검증된
+  비상 외 운항 규칙을 위해 예약한다.
+- 금지: 군용 Category 자체를 Priority 상승 조건으로 사용하는 것
+- 검증: Phase 7 Priority Evaluator 및 `VAL-EMERGENCY-PRIORITY`
+
 ## 5. Phase별 확정 시점
 
 | Phase | 반드시 확정할 Assumption |
@@ -308,7 +324,7 @@
 | Phase 3 | ASM-010, 013, 015 |
 | Phase 4 | ASM-016, 022 |
 | Phase 6 | ASM-018, 019 |
-| Phase 7 | ASM-024 |
+| Phase 7 | ASM-024, 035 |
 | Phase 12 이후 | ASM-011, 021, 030, 032 |
 
 ## 6. 변경 규칙

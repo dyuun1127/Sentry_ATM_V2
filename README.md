@@ -30,7 +30,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 6-C: Deterministic Pairwise Conflict Detector 구현 완료
 - Phase 6-D: Deterministic Rolling Conflict Integration 구현 완료
 - Phase 6-E: Golden Demo Conflict Calibration 구현 완료
-- 범용 Event Handler, Performance-aware Predictor, Risk/Priority, UI: 아직 구현하지 않음
+- Phase 7-A: Risk & Operational Priority Domain Contract 구현 완료
+- Risk/Priority Evaluator, Exception Queue, Resolution, UI: 아직 구현하지 않음
 
 ## 핵심 문서
 
@@ -42,6 +43,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [SQLite Persistence Contract](docs/persistence.md)
 - [Baseline Trajectory Predictor](docs/prediction.md)
 - [Predictive Conflict Contract](docs/conflict.md)
+- [Risk and Operational Priority Contract](docs/risk_priority.md)
 
 ## 요구 환경
 

@@ -263,11 +263,21 @@ Pairwise Detector가 전체 Assessment와 탐지 결과를 생성한다.
 Phase 6-D의 Rolling Scheduler는 `ConflictAssessmentRun`을 기본 5초 Simulation Time 구간마다
 최대 한 번 생성한다.
 
-## 12. 의도적으로 제외한 모델
+## 12. Phase 7-A Risk와 Operational Priority Domain
+
+- `RiskPolicyProfile`: TCPA와 분리비율의 잠정 Risk 입력 및 출처
+- `ConflictRiskAssessment`: Pair 단위 Risk Score, Level, 비율, 이유와 정책 ID
+- `OperationalPriorityPolicyProfile`: Scenario Event별 Priority Score와 Level 매핑
+- `OperationalPriorityAssessment`: Aircraft 단위 Priority Score, Level, 이유와 Source Event ID
+
+Risk와 Priority는 별도 결과이며 `ConflictEvent`도 변경하지 않는다. Score는 0~100 범위로 제한하고
+모든 평가시각은 UTC로 정규화한다. 자세한 계약은 `docs/risk_priority.md`를 참조한다.
+
+## 13. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Risk와 Priority: Phase 7
+- Risk와 Priority 계산 서비스 및 Exception Queue: Phase 7-B 이후
 - ResolutionCandidate와 Recommendation: Phase 9~11
 - API DTO와 UI State: Phase 12
 

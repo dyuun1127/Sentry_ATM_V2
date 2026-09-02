@@ -140,4 +140,4 @@ T+60의 현재 수평분리는 약 6.16 NM, T+70은 약 5.63 NM이므로 두 평
 
 ### 5.5 후속 단계
 
-- Phase 7-A: Conflict Risk와 운항 Priority Domain 계약
+- Phase 7-B: Conflict Risk와 운항 Priority의 결정론적 Evaluator

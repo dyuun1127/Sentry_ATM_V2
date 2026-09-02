@@ -59,6 +59,45 @@ class ConflictStatus(StrEnum):
     PREDICTED = "PREDICTED"
 
 
+class RiskLevel(StrEnum):
+    """Explainable severity band for one conflict risk assessment."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class RiskReasonCode(StrEnum):
+    """Stable reason codes supporting a conflict risk decision."""
+
+    NO_PREDICTED_CONFLICT = "NO_PREDICTED_CONFLICT"
+    NEAR_SEPARATION_THRESHOLD = "NEAR_SEPARATION_THRESHOLD"
+    PREDICTED_SEPARATION_LOSS = "PREDICTED_SEPARATION_LOSS"
+    HORIZONTAL_THRESHOLD_BREACH = "HORIZONTAL_THRESHOLD_BREACH"
+    VERTICAL_THRESHOLD_BREACH = "VERTICAL_THRESHOLD_BREACH"
+    SHORT_TCPA = "SHORT_TCPA"
+    IMMEDIATE_SEPARATION_LOSS = "IMMEDIATE_SEPARATION_LOSS"
+
+
+class OperationalPriorityLevel(StrEnum):
+    """Operational handling priority independent from conflict risk."""
+
+    ROUTINE = "ROUTINE"
+    ATTENTION = "ATTENTION"
+    URGENT = "URGENT"
+    EMERGENCY = "EMERGENCY"
+
+
+class PriorityReasonCode(StrEnum):
+    """Stable reason codes supporting an operational priority decision."""
+
+    ROUTINE_OPERATION = "ROUTINE_OPERATION"
+    ENTRY_CONFORMANCE_DEVIATION = "ENTRY_CONFORMANCE_DEVIATION"
+    EMERGENCY_DECLARED = "EMERGENCY_DECLARED"
+    AIRCRAFT_CONDITION = "AIRCRAFT_CONDITION"
+
+
 class PerformanceDataSource(StrEnum):
     """Provenance category for non-sensitive performance profiles."""
 
