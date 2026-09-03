@@ -33,6 +33,13 @@ def test_server_handles_real_loopback_get_and_command_requests() -> None:
     try:
         assert server.server_address[0] == "127.0.0.1"
 
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        ui = response.read()
+        assert response.status == 200
+        assert response.getheader("Content-Type") == "text/html; charset=utf-8"
+        assert b"SENTRY ATM" in ui
+
         connection.request("GET", "/api/v1/golden-demo/session")
         response = connection.getresponse()
         ready = json.loads(response.read())

@@ -88,7 +88,8 @@ WSGI App까지 함께 조립한다.
 
 ## 7. Phase 13-D Local Golden Demo HTTP Server
 
-다음 명령은 새로운 process-local Session Runtime 하나를 만들고 WSGI App을 실행한다.
+다음 명령은 새로운 process-local Session Runtime 하나를 만들고 WSGI App을 실행한다. Phase 14-A부터
+Root Route는 Golden Demo Web UI Shell을 제공한다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http
@@ -112,5 +113,4 @@ Runtime Dependency가 없다. `Ctrl+C`로 종료하면 Listening Socket을 닫�
 
 ## 9. 다음 단계
 
-Phase 14-A는 같은 Local Server에서 제공되고 Session API를 사용하는 최소 Golden Demo Web UI Shell을
-추가한다.
+Phase 14-B는 현재 Read-only UI에 고정 Session Command Control과 단계별 화면 상태를 연결한다.

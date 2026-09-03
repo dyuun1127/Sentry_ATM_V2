@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from wsgiref.simple_server import WSGIServer, make_server
 
+from sentry_atm.infrastructure.http.web import GoldenDemoWebWsgiApp
 from sentry_atm.runtime import build_golden_demo_session_runtime
 
 _LOOPBACK_HOST = "127.0.0.1"
@@ -33,7 +34,8 @@ def create_local_golden_demo_server(
 
     resolved = settings or LocalGoldenDemoServerSettings()
     runtime = build_golden_demo_session_runtime()
-    return make_server(resolved.host, resolved.port, runtime.http_app)
+    web_app = GoldenDemoWebWsgiApp(runtime.http_app)
+    return make_server(resolved.host, resolved.port, web_app)
 
 
 def run_local_golden_demo_server(

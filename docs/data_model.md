@@ -410,11 +410,14 @@ Domain Model이나 별도 Session State를 만들지 않는다.
 Phase 13-D의 `LocalGoldenDemoServerSettings`는 process-local Infrastructure Configuration이다. 고정
 Loopback Host와 TCP Port만 가지며 Domain Model이나 영속 데이터가 아니다.
 
+Phase 14-A의 HTML Element, CSS Class와 JavaScript View State는 Presentation 표현이다. JSON Session
+Read Model을 화면에 투영하지만 별도 Domain State를 만들거나 backend evidence를 수정하지 않는다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- UI State와 화면 구현: Phase 14 이후
+- Command Control State와 사용자 입력 모델: Phase 14-B 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08110f" />
+    <title>SENTRY ATM · Golden Demo</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">본문으로 이동</a>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="SENTRY ATM 홈">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span class="brand-copy">
+          <strong>SENTRY ATM</strong>
+          <small>PREDICTIVE AIRSPACE CONTROL</small>
+        </span>
+      </a>
+      <div class="topbar-context">
+        <div class="facility">
+          <span>CONTROL SECTOR</span>
+          <strong>RKTU · TERMINAL AREA</strong>
+        </div>
+        <div class="connection" data-connection-status="loading">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span data-connection-label>연결 중</span>
+        </div>
+        <div class="clock-block">
+          <span>SIMULATION UTC</span>
+          <time data-simulation-time>--:--:--</time>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="workspace">
+      <section class="mission-strip" aria-labelledby="mission-title">
+        <div>
+          <p class="eyebrow">GOLDEN DEMO / RUN <span data-run-number>00</span></p>
+          <h1 id="mission-title">미래 충돌을 먼저 보고, 판단은 관제사에게.</h1>
+        </div>
+        <div class="mission-status">
+          <span class="status-label">SESSION STATE</span>
+          <strong class="stage-badge" data-session-stage>READY</strong>
+          <button class="icon-button" type="button" data-refresh aria-label="세션 새로고침">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="현재 운영 지표">
+        <article class="metric-card">
+          <span class="metric-index">01</span>
+          <div>
+            <p>TRACKED AIRCRAFT</p>
+            <strong data-traffic-count>--</strong><span class="metric-unit">AC</span>
+          </div>
+          <span class="metric-state">SYNTHETIC FEED</span>
+        </article>
+        <article class="metric-card metric-alert">
+          <span class="metric-index">02</span>
+          <div>
+            <p>ACTIVE EXCEPTIONS</p>
+            <strong data-exception-count>--</strong><span class="metric-unit">ITEMS</span>
+          </div>
+          <span class="metric-state">RULE MONITORED</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-index">03</span>
+          <div>
+            <p>ELAPSED TIME</p>
+            <strong data-elapsed-time>--</strong><span class="metric-unit">SEC</span>
+          </div>
+          <span class="metric-state" data-clock-state>READY</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-index">04</span>
+          <div>
+            <p>DECISION MODE</p>
+            <strong class="metric-word">HITL</strong>
+          </div>
+          <span class="metric-state">CONTROLLER AUTHORITY</span>
+        </article>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel tactical-panel" aria-labelledby="tactical-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">LIVE SITUATION</p>
+              <h2 id="tactical-title">Terminal Tactical View</h2>
+            </div>
+            <div class="map-legend" aria-label="항공기 분류 범례">
+              <span><i class="legend-dot civil"></i>CIVIL</span>
+              <span><i class="legend-dot military"></i>MILITARY</span>
+              <span><i class="legend-line"></i>20 NM RANGE</span>
+            </div>
+          </header>
+          <div class="radar" role="img" aria-label="RKTU ARP 중심 항공기 상대 위치">
+            <div class="radar-grid" aria-hidden="true"></div>
+            <div class="range-ring ring-outer" aria-hidden="true"></div>
+            <div class="range-ring ring-middle" aria-hidden="true"></div>
+            <div class="range-ring ring-inner" aria-hidden="true"></div>
+            <div class="axis axis-x" aria-hidden="true"></div>
+            <div class="axis axis-y" aria-hidden="true"></div>
+            <div class="runway" aria-label="RKTU 활주로">
+              <span>06R</span><i></i><span>24L</span>
+            </div>
+            <div class="north-mark" aria-hidden="true">N</div>
+            <div class="range-label range-10" aria-hidden="true">10 NM</div>
+            <div class="range-label range-20" aria-hidden="true">20 NM</div>
+            <div class="aircraft-layer" data-aircraft-layer></div>
+            <div class="map-coordinate">ARP 36°43′01″N / 127°29′56″E</div>
+          </div>
+        </section>
+
+        <aside class="panel exception-panel" aria-labelledby="exception-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">MANAGEMENT BY EXCEPTION</p>
+              <h2 id="exception-title">Exception Queue</h2>
+            </div>
+            <span class="queue-count" data-queue-count>00</span>
+          </header>
+          <div class="empty-state" data-exception-empty>
+            <div class="empty-radar" aria-hidden="true"><span></span></div>
+            <strong>감시 상태 정상</strong>
+            <p>현재 관제사의 확인이 필요한 예외가 없습니다.</p>
+          </div>
+          <div class="queue-list" data-exception-list hidden></div>
+          <footer class="panel-footer">
+            <span>PRIORITY SORT</span>
+            <strong>RISK · OPERATIONAL</strong>
+          </footer>
+        </aside>
+
+        <section class="panel traffic-panel" aria-labelledby="traffic-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">CURRENT TRAFFIC</p>
+              <h2 id="traffic-title">Aircraft State</h2>
+            </div>
+            <span class="read-only-tag">READ ONLY</span>
+          </header>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">CALLSIGN</th>
+                  <th scope="col">TYPE</th>
+                  <th scope="col">PHASE</th>
+                  <th scope="col">ALTITUDE</th>
+                  <th scope="col">SPEED</th>
+                  <th scope="col">HEADING</th>
+                  <th scope="col">V/S</th>
+                </tr>
+              </thead>
+              <tbody data-traffic-body>
+                <tr class="loading-row"><td colspan="7">SESSION DATA LOADING</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel decision-panel" aria-labelledby="decision-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">HUMAN-IN-THE-LOOP</p>
+              <h2 id="decision-title">Decision Support</h2>
+            </div>
+            <span class="shield-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" /></svg>
+            </span>
+          </header>
+          <div class="decision-empty">
+            <span class="decision-code">AWAITING PREDICTION CYCLE</span>
+            <strong>추천 후보는 아직 생성되지 않았습니다.</strong>
+            <p>시뮬레이션 진행 후 충돌 탐지와 안전성 검증 결과가 이 영역에 표시됩니다.</p>
+          </div>
+          <div class="authority-note">
+            <span>AUTHORITY</span>
+            <p>시스템 추천은 관제사의 승인 전까지 항공기 상태를 변경하지 않습니다.</p>
+          </div>
+        </section>
+      </div>
+
+      <section class="timeline-panel" aria-labelledby="timeline-title">
+        <div class="timeline-heading">
+          <p class="eyebrow">DETERMINISTIC RUN</p>
+          <h2 id="timeline-title">Scenario Timeline</h2>
+        </div>
+        <ol class="stage-rail" data-stage-rail>
+          <li data-stage-key="READY"><span>00</span><div><strong>Ready</strong><small>T+00</small></div></li>
+          <li data-stage-key="MONITORING"><span>01</span><div><strong>Monitoring</strong><small>T+00</small></div></li>
+          <li data-stage-key="CONFLICT_DETECTED"><span>02</span><div><strong>Conflict</strong><small>T+70</small></div></li>
+          <li data-stage-key="RECOMMENDATION_AVAILABLE"><span>03</span><div><strong>Recommend</strong><small>T+75</small></div></li>
+          <li data-stage-key="DECISION_ACCEPTED"><span>04</span><div><strong>Approve</strong><small>T+90</small></div></li>
+          <li data-stage-key="CONFLICT_RESOLVED"><span>05</span><div><strong>Resolved</strong><small>T+90</small></div></li>
+        </ol>
+        <div class="timeline-action">
+          <span>NEXT ACTION</span>
+          <strong>COMMAND CONTROL</strong>
+          <small>Phase 14-B에서 활성화</small>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>SENTRY ATM / TEAM SEJONG</span>
+      <span data-session-id>SESSION —</span>
+      <span>POC · NOT FOR OPERATIONAL USE</span>
+    </footer>
+
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

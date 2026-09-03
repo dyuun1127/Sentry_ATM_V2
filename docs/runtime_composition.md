@@ -149,5 +149,6 @@ Decision과 Revalidation을 JSON 호환 응답으로 제공한다. Phase 13-B의
 Command Service는 Orchestrator Chain을 고정 Checkpoint 순서로만 실행한다. Phase 13-C는 같은 Session
 Source의 Read/Command를 최소 WSGI HTTP Adapter로 노출하고 Factory가 HTTP App까지 조립한다.
 Phase 13-D는 매 실행마다 새 Session Runtime을 만들고 HTTP App을 IPv4 Loopback Port에 Bind한다.
-서버는 Domain이나 Orchestrator를 직접 조립하지 않으며 종료 시 Listening Socket을 닫는다. 다음 Phase
-14는 같은 Origin에서 이 API를 사용하는 최소 Golden Demo Web UI를 추가한다.
+서버는 Domain이나 Orchestrator를 직접 조립하지 않으며 종료 시 Listening Socket을 닫는다. Phase
+14-A의 `GoldenDemoWebWsgiApp`은 정적 UI Route만 소유하고 나머지 Route를 동일 Session HTTP App에
+위임한다. 다음 Phase 14-B는 고정 Command를 화면 Control과 연결한다.

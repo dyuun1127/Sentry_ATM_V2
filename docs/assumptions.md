@@ -431,6 +431,8 @@
   `{"command":"<고정값>"}` JSON Object로 제한한다. 모든 응답은 `Cache-Control: no-store`다.
 - Local Server: Phase 13-D는 Python 표준 라이브러리 WSGI Server를 IPv4 Loopback
   `127.0.0.1:8000`에만 Bind한다. CLI는 Port만 변경할 수 있고 외부 Interface Bind는 허용하지 않는다.
+- Web UI: Phase 14-A는 별도 Frontend Build Tool 없이 동일 Origin의 정적 HTML/CSS/JavaScript를
+  제공한다. UI는 Session GET 결과만 읽으며 Command 실행과 Runtime 변경 기능은 포함하지 않는다.
 - 검증: 모든 단계의 JSON 직렬화, Reset 격리 및 동일 실행 결정론 테스트
 
 ## 5. Phase별 확정 시점
