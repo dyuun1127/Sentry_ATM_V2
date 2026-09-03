@@ -56,9 +56,9 @@ JSON-ready 구조로 제공한다.
 
 ## 6. Phase 경계
 
-- Phase 17-A: Playback Contract와 Storyboard — 현재 단계
+- Phase 17-A: Playback Contract와 Storyboard — 구현 완료
 - Phase 17-B: 결정론적 1초 Aircraft Frame 생성 및 Read API — 구현 완료
-- Phase 17-C: Radar Marker/Trail의 연속 브라우저 애니메이션
+- Phase 17-C: Radar Marker/Trail의 연속 브라우저 애니메이션 — 구현 완료
 - Phase 17-D: PLAY/PAUSE, 배속, Timeline, 자동 일시정지 제어
 
 Phase 17-A 완료만으로 현재 Dashboard가 움직이지는 않는다. 애니메이션이 사용자에게 보이는 완료
@@ -77,3 +77,15 @@ GET /api/v1/golden-demo/playback
 응답은 `contract`, `frame_count`, `aircraft_count`, `frames`를 포함하며 동일 프로세스에서는 생성된
 불변 Read Model을 재사용한다. Playback 조회는 활성 Session의 Clock, Traffic, Decision 또는 Audit을
 변경하지 않는다. 브라우저는 Phase 17-C에서 이 1초 Frame 사이의 화면 좌표만 보간한다.
+
+## 8. Radar Marker와 Trail 렌더링
+
+Phase 17-C는 Playback API를 화면 최초 진입 시 한 번 조회하고 `requestAnimationFrame`으로 인접한
+1초 Frame 사이의 위치·고도·속도·침로를 선형 보간한다. 침로는 0/360도 경계를 최단 방향으로
+보간하며, 충돌·Risk·추천 판단은 브라우저에서 다시 계산하지 않는다.
+
+각 항공기 Marker DOM과 SVG Polyline은 최초 한 번 생성한 뒤 위치와 최근 30초 좌표만 갱신한다.
+따라서 매 Render마다 Marker 전체를 다시 만드는 깜빡임을 피하고, Civil/Military/Conflict 색상도
+기존 관제 화면 규칙과 동일하게 유지한다. `READY`에서는 T+0 Frame을 표시하고 `START` 후에는 계약의
+기본 속도로 연속 재생한다. Checkpoint 명령으로 단계가 바뀌면 해당 Session 시각에 맞춰 즉시
+동기화한다. PLAY/PAUSE·배속·Timeline·Cue 자동 정지는 Phase 17-D에서 추가한다.

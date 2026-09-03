@@ -2,6 +2,8 @@
 
 const SESSION_ENDPOINT = "/api/v1/golden-demo/session";
 const COMMAND_ENDPOINT = "/api/v1/golden-demo/session/commands";
+const PLAYBACK_ENDPOINT = "/api/v1/golden-demo/playback";
+const TRAIL_WINDOW_SECONDS = 30;
 const STAGE_ORDER = [
   "READY",
   "MONITORING",
@@ -82,6 +84,8 @@ const elements = {
   deviationLateral: document.querySelector("[data-deviation-lateral]"),
   deviationTime: document.querySelector("[data-deviation-time]"),
   aircraftLayer: document.querySelector("[data-aircraft-layer]"),
+  trailLayer: document.querySelector("[data-trail-layer]"),
+  playbackOffset: document.querySelector("[data-playback-offset]"),
   conflictOverlay: document.querySelector("[data-conflict-overlay]"),
   conflictLine: document.querySelector("[data-conflict-line]"),
   conflictPointA: document.querySelector("[data-conflict-point-a]"),
@@ -158,6 +162,12 @@ const elements = {
 let currentSession = null;
 let requestBusy = false;
 let decisionMode = null;
+let playback = null;
+let playbackAnimationId = null;
+let playbackStartTime = null;
+let playbackStartOffset = 0;
+const animatedTracks = new Map();
+const animatedTrails = new Map();
 
 function setConnection(status, label) {
   elements.connection.dataset.connectionStatus = status;
@@ -234,7 +244,10 @@ function renderConflictOverlay(traffic) {
 }
 
 function renderAircraftMap(traffic) {
+  animatedTracks.clear();
+  animatedTrails.clear();
   elements.aircraftLayer.replaceChildren();
+  elements.trailLayer.replaceChildren();
   const conflictIds = currentSession?.primary_conflict?.aircraft_ids ?? [];
   for (const aircraft of traffic) {
     const track = document.createElement("div");
@@ -259,6 +272,199 @@ function renderAircraftMap(traffic) {
     elements.aircraftLayer.append(track);
   }
   renderConflictOverlay(traffic);
+}
+
+function interpolateNumber(start, end, fraction) {
+  return Number(start) + (Number(end) - Number(start)) * fraction;
+}
+
+function interpolateHeading(start, end, fraction) {
+  const initial = Number(start);
+  const delta = ((Number(end) - initial + 540) % 360) - 180;
+  return (initial + delta * fraction + 360) % 360;
+}
+
+function interpolateAircraft(current, next, fraction) {
+  return {
+    ...current,
+    x_nm: interpolateNumber(current.x_nm, next.x_nm, fraction),
+    y_nm: interpolateNumber(current.y_nm, next.y_nm, fraction),
+    altitude_ft: interpolateNumber(current.altitude_ft, next.altitude_ft, fraction),
+    ground_speed_kt: interpolateNumber(
+      current.ground_speed_kt,
+      next.ground_speed_kt,
+      fraction,
+    ),
+    heading_deg: interpolateHeading(current.heading_deg, next.heading_deg, fraction),
+    vertical_speed_fpm: interpolateNumber(
+      current.vertical_speed_fpm,
+      next.vertical_speed_fpm,
+      fraction,
+    ),
+  };
+}
+
+function ensureAnimatedTrack(aircraft) {
+  let parts = animatedTracks.get(aircraft.aircraft_id);
+  if (parts) {
+    return parts;
+  }
+  const track = document.createElement("div");
+  track.className = `aircraft-track${isMilitary(aircraft) ? " military" : ""}`;
+  track.dataset.aircraftId = aircraft.aircraft_id;
+
+  const symbol = document.createElement("span");
+  symbol.className = "track-symbol";
+  const label = document.createElement("span");
+  label.className = "track-label";
+  const callsign = document.createElement("strong");
+  callsign.textContent = aircraft.aircraft_id;
+  const detail = document.createElement("span");
+  label.append(callsign, detail);
+  track.append(symbol, label);
+  elements.aircraftLayer.append(track);
+  parts = { track, symbol, detail };
+  animatedTracks.set(aircraft.aircraft_id, parts);
+  return parts;
+}
+
+function ensureAnimatedTrail(aircraft) {
+  let trail = animatedTrails.get(aircraft.aircraft_id);
+  if (trail) {
+    return trail;
+  }
+  trail = document.createElementNS(elements.trailLayer.namespaceURI, "polyline");
+  trail.setAttribute(
+    "class",
+    `aircraft-trail${isMilitary(aircraft) ? " military" : ""}`,
+  );
+  trail.dataset.aircraftId = aircraft.aircraft_id;
+  elements.trailLayer.append(trail);
+  animatedTrails.set(aircraft.aircraft_id, trail);
+  return trail;
+}
+
+function updateAnimatedTrail(aircraft, frameIndex) {
+  const trail = ensureAnimatedTrail(aircraft);
+  const firstIndex = Math.max(0, frameIndex - TRAIL_WINDOW_SECONDS);
+  const points = [];
+  for (let index = firstIndex; index <= frameIndex; index += 1) {
+    const state = playback.frames[index].aircraft.find(
+      (item) => item.aircraft_id === aircraft.aircraft_id,
+    );
+    if (state) {
+      const position = mapPosition(state);
+      points.push(`${position.left.toFixed(3)},${position.top.toFixed(3)}`);
+    }
+  }
+  const currentPosition = mapPosition(aircraft);
+  points.push(`${currentPosition.left.toFixed(3)},${currentPosition.top.toFixed(3)}`);
+  trail.setAttribute("points", points.join(" "));
+}
+
+function renderPlaybackOffset(offsetSeconds) {
+  const clamped = Math.max(0, Number(offsetSeconds));
+  elements.playbackOffset.textContent = `T+${clamped.toFixed(1).padStart(5, "0")}`;
+}
+
+function renderPlaybackFrame(offsetSeconds) {
+  if (!playback) {
+    return;
+  }
+  const duration = Number(playback.contract.duration_seconds);
+  const interval = Number(playback.contract.frame_interval_seconds);
+  const offset = Math.max(0, Math.min(duration, Number(offsetSeconds)));
+  const frameIndex = Math.min(
+    playback.frames.length - 1,
+    Math.floor(offset / interval),
+  );
+  const nextIndex = Math.min(playback.frames.length - 1, frameIndex + 1);
+  const fraction = nextIndex === frameIndex
+    ? 0
+    : (offset - playback.frames[frameIndex].offset_seconds) / interval;
+  const currentFrame = playback.frames[frameIndex];
+  const nextById = new Map(
+    playback.frames[nextIndex].aircraft.map((aircraft) => [aircraft.aircraft_id, aircraft]),
+  );
+  const traffic = currentFrame.aircraft.map((aircraft) =>
+    interpolateAircraft(aircraft, nextById.get(aircraft.aircraft_id) ?? aircraft, fraction),
+  );
+  const conflictIds = currentSession?.primary_conflict?.aircraft_ids ?? [];
+
+  for (const aircraft of traffic) {
+    const { track, symbol, detail } = ensureAnimatedTrack(aircraft);
+    const position = mapPosition(aircraft);
+    track.style.left = `${position.left}%`;
+    track.style.top = `${position.top}%`;
+    track.classList.toggle("conflict-focus", conflictIds.includes(aircraft.aircraft_id));
+    track.setAttribute(
+      "aria-label",
+      `${aircraft.aircraft_id}, ${formatNumber(aircraft.altitude_ft)} feet, ${formatNumber(
+        aircraft.ground_speed_kt,
+      )} knots`,
+    );
+    symbol.style.setProperty("--heading", `${Number(aircraft.heading_deg) - 90}deg`);
+    detail.textContent = `${formatNumber(aircraft.altitude_ft)}FT · ${formatNumber(
+      aircraft.ground_speed_kt,
+    )}KT`;
+    updateAnimatedTrail(aircraft, frameIndex);
+    animatedTrails.get(aircraft.aircraft_id).classList.toggle(
+      "conflict-focus",
+      conflictIds.includes(aircraft.aircraft_id),
+    );
+  }
+  renderConflictOverlay(traffic);
+  renderPlaybackOffset(offset);
+}
+
+function stopPlaybackAnimation() {
+  if (playbackAnimationId !== null) {
+    cancelAnimationFrame(playbackAnimationId);
+  }
+  playbackAnimationId = null;
+  playbackStartTime = null;
+}
+
+function startPlaybackAnimation(offsetSeconds = 0) {
+  if (!playback || playbackAnimationId !== null) {
+    return;
+  }
+  playbackStartOffset = Number(offsetSeconds);
+  playbackStartTime = null;
+  const duration = Number(playback.contract.duration_seconds);
+  const rate = Number(playback.contract.default_rate);
+
+  function animate(timestamp) {
+    if (playbackStartTime === null) {
+      playbackStartTime = timestamp;
+    }
+    const elapsed = playbackStartOffset + ((timestamp - playbackStartTime) / 1000) * rate;
+    renderPlaybackFrame(elapsed);
+    if (elapsed >= duration) {
+      stopPlaybackAnimation();
+      return;
+    }
+    playbackAnimationId = requestAnimationFrame(animate);
+  }
+
+  playbackAnimationId = requestAnimationFrame(animate);
+}
+
+function synchronizePlayback(session) {
+  if (!playback) {
+    return;
+  }
+  const offset = Number(session.elapsed_seconds ?? 0);
+  const stage = String(session.stage ?? "READY");
+  if (stage === "MONITORING" || stage === "DEVIATION_DETECTED") {
+    if (playbackAnimationId === null) {
+      renderPlaybackFrame(offset);
+      startPlaybackAnimation(offset);
+    }
+    return;
+  }
+  stopPlaybackAnimation();
+  renderPlaybackFrame(offset);
 }
 
 function cell(text, className = "") {
@@ -762,7 +968,11 @@ function renderSession(session) {
   elements.elapsedTime.textContent = formatNumber(session.elapsed_seconds);
   elements.clockState.textContent = String(session.clock_state ?? "UNKNOWN");
   elements.sessionId.textContent = `SESSION ${session.session_id ?? "—"}`;
-  renderAircraftMap(traffic);
+  if (playback) {
+    synchronizePlayback(session);
+  } else {
+    renderAircraftMap(traffic);
+  }
   renderTrafficTable(traffic);
   renderDeviation(session.deviation);
   renderStage(String(session.stage ?? "READY"));
@@ -788,6 +998,38 @@ async function requestSession() {
     throw new Error(`HTTP ${response.status}`);
   }
   return response.json();
+}
+
+async function requestPlayback() {
+  const response = await fetch(PLAYBACK_ENDPOINT, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function loadPlayback() {
+  try {
+    const payload = await requestPlayback();
+    if (!Array.isArray(payload.frames) || payload.frames.length < 2) {
+      throw new Error("재생 Frame이 충분하지 않습니다.");
+    }
+    playback = payload;
+    animatedTracks.clear();
+    animatedTrails.clear();
+    elements.aircraftLayer.replaceChildren();
+    elements.trailLayer.replaceChildren();
+    if (currentSession) {
+      synchronizePlayback(currentSession);
+    } else {
+      renderPlaybackFrame(0);
+    }
+  } catch (error) {
+    showToast(`연속 재생 데이터를 불러오지 못했습니다: ${error.message}`);
+  }
 }
 
 async function loadSession() {
@@ -886,3 +1128,4 @@ elements.decisionForm.addEventListener("submit", (event) => {
 elements.resetCommand.addEventListener("click", () => executeCommand("RESET"));
 updateManeuverInput();
 loadSession();
+loadPlayback();

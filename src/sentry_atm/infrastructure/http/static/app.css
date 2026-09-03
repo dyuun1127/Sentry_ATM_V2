@@ -866,15 +866,69 @@ h1 {
 .range-20 { top: calc(50% - 150px); left: calc(50% + 7px); }
 .map-coordinate { right: 15px; bottom: 12px; }
 
+.playback-readout {
+  position: absolute;
+  z-index: 6;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid rgba(113, 227, 172, 0.2);
+  background: rgba(4, 10, 9, 0.72);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.playback-readout strong {
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 600;
+}
+
 .aircraft-layer {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.trail-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aircraft-trail {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 0.24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.38;
+  vector-effect: non-scaling-stroke;
+}
+
+.aircraft-trail.military {
+  stroke: var(--green);
+}
+
+.aircraft-trail.conflict-focus {
+  stroke: var(--red);
+  stroke-width: 0.34;
+  opacity: 0.62;
 }
 
 .conflict-overlay {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -903,6 +957,7 @@ h1 {
   gap: 7px;
   color: var(--cyan);
   transform: translate(-8px, -8px);
+  will-change: left, top;
 }
 
 .aircraft-track.military {

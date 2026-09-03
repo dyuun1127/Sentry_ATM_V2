@@ -58,6 +58,8 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b"data-decision-card" in body
     assert b"data-conflict-explainability" in body
     assert b"data-conflict-overlay" in body
+    assert b"data-trail-layer" in body
+    assert b"data-playback-offset" in body
     assert b"data-deviation-panel" in body
     assert b"data-candidate-panel" in body
     assert b"data-decision-actions" in body
@@ -123,6 +125,23 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
     assert b"function renderDecisionWorkflow(session, latestDecision)" in script
     assert b"session.modified_revalidation" in script
     assert b"COMMAND_BY_STAGE.BLOCKED_MODIFICATION" in script
+
+
+def test_ui_assets_animate_playback_frames_with_interpolated_markers_and_trails() -> None:
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+    _, _, stylesheet = _request(app, path="/assets/app.css")
+
+    assert b'const PLAYBACK_ENDPOINT = "/api/v1/golden-demo/playback"' in script
+    assert b"function interpolateAircraft(current, next, fraction)" in script
+    assert b"function renderPlaybackFrame(offsetSeconds)" in script
+    assert b"requestAnimationFrame(animate)" in script
+    assert b"cancelAnimationFrame(playbackAnimationId)" in script
+    assert b"TRAIL_WINDOW_SECONDS = 30" in script
+    assert b"setInterval" not in script
+    assert b".aircraft-trail" in stylesheet
+    assert b"will-change: left, top" in stylesheet
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:
