@@ -71,5 +71,7 @@ Reason Code를 함께 제시한다. Tactical View에서는 해당 두 항공기�
 
 ## 6. 다음 단계
 
-다음 단계는 Golden Demo 전 구간의 브라우저 회귀 검증을 자동화하고, 발표 환경 실행 절차와 장애 시
-복구 절차를 정리하는 것이다.
+Phase 14-D는 `python -m sentry_atm.infrastructure.http --check` 명령으로 임시 loopback Server에서 UI
+자산과 전체 Session Command 흐름을 검증한다. 실제 브라우저의 반응형 Layout과 화면 배율은
+[`demo_runbook.md`](demo_runbook.md)의 발표 전 육안 점검표로 확인한다. 별도 Browser Automation
+Dependency는 Runtime에 추가하지 않는다.

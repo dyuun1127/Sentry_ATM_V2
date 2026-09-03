@@ -5,11 +5,17 @@ from threading import Thread
 
 import pytest
 
+from sentry_atm.infrastructure.http import demo_check as demo_check_module
 from sentry_atm.infrastructure.http import server as server_module
+from sentry_atm.infrastructure.http.demo_check import (
+    GoldenDemoRegressionFailure,
+    GoldenDemoRegressionReport,
+)
 from sentry_atm.infrastructure.http.server import (
     LocalGoldenDemoServerSettings,
     create_local_golden_demo_server,
     main,
+    run_local_golden_demo_check,
     run_local_golden_demo_server,
 )
 
@@ -129,6 +135,41 @@ def test_cli_accepts_only_valid_tcp_port(monkeypatch) -> None:
     with pytest.raises(SystemExit) as out_of_range:
         main(["--port", "0"])
     assert out_of_range.value.code == 2
+
+
+def test_cli_check_mode_runs_readiness_check_instead_of_server(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(server_module, "run_local_golden_demo_check", lambda: calls.append(1) or 0)
+    monkeypatch.setattr(
+        server_module,
+        "run_local_golden_demo_server",
+        lambda settings: pytest.fail(f"unexpected server run: {settings}"),
+    )
+
+    assert main(["--check"]) == 0
+    assert calls == [1]
+
+
+def test_readiness_check_cli_reports_success_and_failure(monkeypatch, capsys) -> None:
+    report = GoldenDemoRegressionReport("RUN-0", "RUN-1", ())
+    printed = []
+    monkeypatch.setattr(demo_check_module, "run_golden_demo_regression", lambda: report)
+    monkeypatch.setattr(
+        demo_check_module,
+        "print_golden_demo_regression_report",
+        printed.append,
+    )
+
+    assert run_local_golden_demo_check() == 0
+    assert printed == [report]
+
+    def fail():
+        raise GoldenDemoRegressionFailure("broken checkpoint")
+
+    monkeypatch.setattr(demo_check_module, "run_golden_demo_regression", fail)
+
+    assert run_local_golden_demo_check() == 1
+    assert "[FAIL] broken checkpoint" in capsys.readouterr().out
 
 
 def test_module_entrypoint_exits_with_main_result(monkeypatch) -> None:

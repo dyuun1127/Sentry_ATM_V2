@@ -61,6 +61,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 14-A: Golden Demo Web UI Shell 구현 완료
 - Phase 14-B: Deterministic Demo Command Controls 구현 완료
 - Phase 14-C: Conflict & Resolution Explainability Visualization 구현 완료
+- Phase 14-D: Demo Runbook & End-to-End Regression 구현 완료
 - Modify/Reject Decision UI: 아직 구현하지 않음
 
 ## 핵심 문서
@@ -81,6 +82,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Golden Demo Runtime Composition](docs/runtime_composition.md)
 - [Golden Demo Session Read API](docs/session_api.md)
 - [Golden Demo Web UI](docs/web_ui.md)
+- [Golden Demo 실행 Runbook](docs/demo_runbook.md)
 
 ## 요구 환경
 
@@ -123,6 +125,12 @@ python -m venv .venv
 ## Golden Demo API 실행
 
 별도 Web Framework 없이 Python 표준 라이브러리 서버를 로컬 Loopback에 실행한다.
+
+발표 전 전체 Golden Demo 계약을 먼저 자동 점검한다.
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
+```
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http

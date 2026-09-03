@@ -64,8 +64,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=_cli_port,
         help=f"loopback TCP port (default: {_DEFAULT_PORT})",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="run the deterministic end-to-end demo readiness check and exit",
+    )
     arguments = parser.parse_args(argv)
+    if arguments.check:
+        return run_local_golden_demo_check()
     return run_local_golden_demo_server(LocalGoldenDemoServerSettings(port=arguments.port))
+
+
+def run_local_golden_demo_check() -> int:
+    """Run the optional readiness check without loading it for normal serving."""
+
+    from sentry_atm.infrastructure.http.demo_check import (
+        GoldenDemoRegressionFailure,
+        print_golden_demo_regression_report,
+        run_golden_demo_regression,
+    )
+
+    try:
+        report = run_golden_demo_regression()
+    except (GoldenDemoRegressionFailure, OSError) as error:
+        print(f"[FAIL] {error}")
+        return 1
+    print_golden_demo_regression_report(report)
+    return 0
 
 
 def _cli_port(value: str) -> int:
