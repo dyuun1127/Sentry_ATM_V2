@@ -66,6 +66,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 15-B: Accept/Modify/Reject Operator Workflow 구현 완료
 - Phase 15-C: Modified Maneuver Isolated Revalidation 구현 완료
 - Phase 15-D: Validated Modified Maneuver Application 구현 완료
+- Phase 15-E: Multi-Path Golden Demo Regression 구현 완료
 
 ## 핵심 문서
 

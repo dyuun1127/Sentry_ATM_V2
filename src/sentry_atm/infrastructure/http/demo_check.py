@@ -183,6 +183,190 @@ def run_golden_demo_regression(
         reset_session_id = _text(reset, "session_id")
         _require(reset_session_id != initial_session_id, "reset must create a new Session ID")
         checkpoints.append(_checkpoint("RESET", reset, "new clean Run ready"))
+
+        _run_to_recommendation(connection)
+        modified = _post_command(
+            connection,
+            "MODIFY_RECOMMENDATION",
+            fields={
+                "rationale": "Golden Demo safe modified path",
+                "modified_maneuver": _altitude_maneuver_payload(8_800.0),
+            },
+        )
+        _require_session(modified, expected_stage="DECISION_MODIFIED", expected_elapsed=90.0)
+        modified_entry = _latest_decision_entry(modified)
+        _require(modified_entry.get("decision_type") == "MODIFY", "safe path must audit MODIFY")
+        _require(
+            modified_entry.get("authorizes_application") is False,
+            "MODIFY Audit must not directly authorize application",
+        )
+        modified_before_altitude = _aircraft_altitude(modified, "MIL-F01")
+
+        modified_safe = _post_command(connection, "REVALIDATE_MODIFIED_MANEUVER")
+        _require_session(
+            modified_safe,
+            expected_stage="MODIFICATION_REVALIDATED",
+            expected_elapsed=90.0,
+        )
+        safe_evidence = _mapping(modified_safe, "modified_revalidation")
+        _require(safe_evidence.get("verdict") == "SAFE", "8,800 ft modification must be SAFE")
+        _require(
+            safe_evidence.get("safe_to_apply") is True,
+            "SAFE modification must open the application gate",
+        )
+        _require(
+            _aircraft_altitude(modified_safe, "MIL-F01") == modified_before_altitude,
+            "isolated modified validation must not change Aircraft Runtime",
+        )
+
+        modified_applied = _post_command(
+            connection,
+            "APPLY_VALIDATED_MODIFIED_MANEUVER",
+        )
+        _require_session(
+            modified_applied,
+            expected_stage="CONFLICT_RESOLVED",
+            expected_elapsed=90.0,
+        )
+        modified_post_action = _mapping(modified_applied, "revalidation")
+        _require(
+            modified_post_action.get("application_source") == "REVALIDATED_MODIFICATION",
+            "post-action evidence must identify the modified application source",
+        )
+        _require(
+            modified_post_action.get("source_modified_revalidation_step_id")
+            == safe_evidence.get("revalidation_step_id"),
+            "modified application must reference its exact Revalidation",
+        )
+        _require(
+            bool(modified_post_action.get("authorization_id")),
+            "modified application must include an Authorization ID",
+        )
+        _require(
+            modified_post_action.get("resolved") is True,
+            "safe modified application must resolve the primary conflict",
+        )
+        _require(
+            modified_post_action.get("conflict_status") == "SAFE"
+            and modified_post_action.get("risk_level") == "LOW"
+            and modified_post_action.get("source_exception_status") == "RESOLVED",
+            "safe modified post-action evidence must be SAFE / LOW / RESOLVED",
+        )
+        _require(
+            abs(
+                float(_number(modified_post_action, "horizontal_separation_nm"))
+                - 2.3
+            )
+            < 1e-9
+            and abs(
+                float(_number(modified_post_action, "vertical_separation_ft"))
+                - 1_591.6666666667
+            )
+            < 1e-9,
+            "safe modified post-action CPA must match the Golden calibration",
+        )
+        _require(
+            _aircraft_altitude(modified_applied, "MIL-F01") == 8_800.0,
+            "authorized modified altitude must be applied",
+        )
+        _require(
+            _latest_decision_entry(modified_applied).get("decision_type") == "MODIFY",
+            "modified application must preserve the original Audit decision",
+        )
+        checkpoints.append(
+            _checkpoint(
+                "MODIFY_SAFE",
+                modified_applied,
+                "8,800 ft | isolated SAFE | authorized | SAFE / LOW / RESOLVED",
+            )
+        )
+
+        reset = _post_command(connection, "RESET")
+        _require_clean_reset(reset, expected_run_number=2)
+        _run_to_recommendation(connection)
+        _post_command(
+            connection,
+            "MODIFY_RECOMMENDATION",
+            fields={
+                "rationale": "Golden Demo unsafe modified path",
+                "modified_maneuver": _altitude_maneuver_payload(7_200.0),
+            },
+        )
+        modified_unsafe = _post_command(connection, "REVALIDATE_MODIFIED_MANEUVER")
+        _require_session(
+            modified_unsafe,
+            expected_stage="MODIFICATION_REVALIDATED",
+            expected_elapsed=90.0,
+        )
+        unsafe_evidence = _mapping(modified_unsafe, "modified_revalidation")
+        _require(
+            unsafe_evidence.get("verdict") == "UNSAFE",
+            "7,200 ft modification must be UNSAFE",
+        )
+        _require(
+            unsafe_evidence.get("safe_to_apply") is False,
+            "UNSAFE modification must keep the application gate closed",
+        )
+        _require(
+            unsafe_evidence.get("rule_violation_ids")
+            == ["POC-MINIMUM-CANDIDATE-ALTITUDE-V1"],
+            "unsafe modification must preserve minimum-altitude Rule evidence",
+        )
+        unsafe_before_altitude = _aircraft_altitude(modified_unsafe, "MIL-F01")
+        blocked = _post_command(
+            connection,
+            "APPLY_VALIDATED_MODIFIED_MANEUVER",
+            expected_status=409,
+        )
+        blocked_error = _mapping(blocked, "error")
+        _require(
+            blocked_error.get("code") == "SESSION_STATE_CONFLICT",
+            "unsafe application must return SESSION_STATE_CONFLICT",
+        )
+        unchanged = _get_json(connection, _SESSION_PATH)
+        _require_session(
+            unchanged,
+            expected_stage="MODIFICATION_REVALIDATED",
+            expected_elapsed=90.0,
+        )
+        _require(unchanged.get("application_step_id") is None, "blocked path must not apply")
+        _require(
+            _aircraft_altitude(unchanged, "MIL-F01") == unsafe_before_altitude,
+            "blocked modified application must not change Aircraft Runtime",
+        )
+        checkpoints.append(
+            _checkpoint(
+                "MODIFY_BLOCKED",
+                unchanged,
+                "7,200 ft | minimum-altitude Rule | HTTP 409 | runtime unchanged",
+            )
+        )
+
+        reset = _post_command(connection, "RESET")
+        _require_clean_reset(reset, expected_run_number=3)
+        _run_to_recommendation(connection)
+        rejected = _post_command(
+            connection,
+            "REJECT_RECOMMENDATION",
+            fields={"rationale": "Golden Demo explicit rejection path"},
+        )
+        _require_session(rejected, expected_stage="DECISION_REJECTED", expected_elapsed=90.0)
+        rejected_entry = _latest_decision_entry(rejected)
+        _require(rejected_entry.get("decision_type") == "REJECT", "path must audit REJECT")
+        _require(
+            rejected_entry.get("authorizes_application") is False,
+            "REJECT must not authorize application",
+        )
+        _require(rejected.get("application_step_id") is None, "REJECT path must not apply")
+        _require(rejected.get("modified_revalidation") is None, "REJECT must not revalidate")
+        _require(rejected.get("revalidation") is None, "REJECT must not recalculate traffic")
+        checkpoints.append(
+            _checkpoint("REJECT", rejected, "REJECT audited | no validation or application")
+        )
+
+        final_reset = _post_command(connection, "RESET")
+        _require_clean_reset(final_reset, expected_run_number=4)
+        reset_session_id = _text(final_reset, "session_id")
         return GoldenDemoRegressionReport(
             initial_session_id=initial_session_id,
             reset_session_id=reset_session_id,
@@ -243,6 +427,53 @@ def _verify_ui_assets(connection: HTTPConnection) -> None:
     )
 
 
+def _run_to_recommendation(connection: HTTPConnection) -> dict[str, object]:
+    monitoring = _post_command(connection, "START")
+    _require_session(monitoring, expected_stage="MONITORING", expected_elapsed=0.0)
+    conflict = _post_command(connection, "ADVANCE_TO_CONFLICT")
+    _require_session(conflict, expected_stage="CONFLICT_DETECTED", expected_elapsed=70.0)
+    recommended = _post_command(connection, "GENERATE_RECOMMENDATION")
+    _require_session(
+        recommended,
+        expected_stage="RECOMMENDATION_AVAILABLE",
+        expected_elapsed=75.0,
+    )
+    return recommended
+
+
+def _altitude_maneuver_payload(target_altitude_ft: float) -> dict[str, object]:
+    return {
+        "maneuver_type": "ALTITUDE",
+        "target_heading_deg": None,
+        "target_altitude_ft": target_altitude_ft,
+        "target_ground_speed_kt": None,
+        "delay_seconds": None,
+        "target_sequence_position": None,
+    }
+
+
+def _latest_decision_entry(payload: dict[str, object]) -> dict[str, object]:
+    entries = _list(_mapping(payload, "controller_decision"), "entries")
+    _require(bool(entries), "controller decision audit entry is required")
+    return _mapping_value(entries[-1])
+
+
+def _require_clean_reset(payload: dict[str, object], *, expected_run_number: int) -> None:
+    _require_session(payload, expected_stage="READY", expected_elapsed=0.0)
+    _require(
+        payload.get("run_number") == expected_run_number,
+        f"reset must increment Run number to {expected_run_number}",
+    )
+    for key in (
+        "primary_conflict",
+        "controller_decision",
+        "modified_revalidation",
+        "revalidation",
+    ):
+        _require(payload.get(key) is None, f"reset must clear {key}")
+    _require(payload.get("application_step_id") is None, "reset must clear application")
+
+
 def _get_bytes(
     connection: HTTPConnection,
     path: str,
@@ -265,8 +496,17 @@ def _get_json(connection: HTTPConnection, path: str) -> dict[str, object]:
     return _read_json_response(connection, operation=f"GET {path}")
 
 
-def _post_command(connection: HTTPConnection, command: str) -> dict[str, object]:
-    body = json.dumps({"command": command}, separators=(",", ":")).encode()
+def _post_command(
+    connection: HTTPConnection,
+    command: str,
+    *,
+    fields: dict[str, object] | None = None,
+    expected_status: int = 200,
+) -> dict[str, object]:
+    body = json.dumps(
+        {"command": command, **(fields or {})},
+        separators=(",", ":"),
+    ).encode()
     connection.request(
         "POST",
         _COMMAND_PATH,
@@ -277,17 +517,25 @@ def _post_command(connection: HTTPConnection, command: str) -> dict[str, object]
             "Content-Length": str(len(body)),
         },
     )
-    return _read_json_response(connection, operation=f"command {command}")
+    return _read_json_response(
+        connection,
+        operation=f"command {command}",
+        expected_status=expected_status,
+    )
 
 
 def _read_json_response(
     connection: HTTPConnection,
     *,
     operation: str,
+    expected_status: int = 200,
 ) -> dict[str, object]:
     response = connection.getresponse()
     body = response.read()
-    _require(response.status == 200, f"{operation} returned HTTP {response.status}")
+    _require(
+        response.status == expected_status,
+        f"{operation} returned HTTP {response.status}; expected {expected_status}",
+    )
     try:
         payload = json.loads(body)
     except (UnicodeDecodeError, json.JSONDecodeError) as error:

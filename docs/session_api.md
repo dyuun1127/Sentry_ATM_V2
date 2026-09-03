@@ -175,3 +175,17 @@ Priority와 Exception Queue를 다시 계산한다. UNSAFE 또는 INEFFECTIVE �
 `application_source=REVALIDATED_MODIFICATION`, 적용 기동 종류, Authorization 시각과 ID, 적용 전후 고도,
 Post-action Run ID 및 원 충돌 해소 증거를 제공한다. 기본 8,800 ft 수정안 적용 후 원 충돌은 수평
 약 2.30 NM·수직 약 1,591.67 ft로 SAFE/LOW/RESOLVED다.
+
+## 14. Phase 15-E Multi-Path Golden Demo Regression
+
+`python -m sentry_atm.infrastructure.http --check`는 실제 임시 Loopback Socket과 하나의 process-local
+Session을 사용해 네 가지 Human-in-the-loop 경로를 독립 Reset Run으로 검증한다.
+
+- ACCEPT → 9,000 ft 적용 → SAFE/LOW/RESOLVED
+- MODIFY 8,800 ft → 격리 SAFE → 명시적 재승인·적용 → SAFE/LOW/RESOLVED
+- MODIFY 7,200 ft → 최저고도 Rule 위반 → 적용 HTTP 409 및 Runtime 불변
+- REJECT → Audit만 기록하고 재검증·적용 없음
+
+회귀 검사는 UI 자산, 고정 Stage/시각, Decision Audit, Validation 및 Authorization 연결, 적용 전후
+Aircraft State와 마지막 Clean Reset까지 확인한다. 각 경로가 앞 경로의 Runtime Anchor나 파생 증거를
+공유하지 않도록 Run 번호가 0부터 4까지 증가한다.

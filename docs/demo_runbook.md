@@ -14,8 +14,8 @@ process-local 단일 Session이며 외부 네트워크, Docker, PostgreSQL/PostG
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
 ```
 
-이 명령은 운영 서버와 별도의 임시 loopback Port를 사용하고 자동으로 종료한다. 실제 HTTP를 통해 다음
-계약을 순서대로 검증한다.
+이 명령은 운영 서버와 별도의 임시 loopback Port를 사용하고 자동으로 종료한다. 실제 HTTP와 독립된
+Reset Run을 통해 다음 계약을 순서대로 검증한다.
 
 1. UI HTML/CSS/JavaScript와 Explainability 자산 응답
 2. `READY`에서 8대 초기 Traffic
@@ -25,6 +25,10 @@ process-local 단일 Session이며 외부 네트워크, Docker, PostgreSQL/PostG
 6. T+90 관제사 `ACCEPT` Audit 기록과 적용 전 Runtime 불변
 7. 승인 기동 적용 후 SAFE/LOW/RESOLVED 및 원 충돌 증거 보존
 8. Reset 후 새 Run ID와 빈 증거 상태
+9. SAFE 8,800 ft MODIFY의 격리 검증, 재승인, 실제 적용과 SAFE/LOW/RESOLVED
+10. UNSAFE 7,200 ft MODIFY의 최저고도 Rule, HTTP 409, Runtime 불변
+11. REJECT Audit과 재검증·적용 부재
+12. 마지막 Reset 후 Run 4의 깨끗한 `READY` 상태
 
 T+70 Checkpoint에서는 `MIL-F01`의 진입 고도·침로·수평·시간 편차도 확인하고, T+75 Checkpoint에서는
 CAND-A~E 전체 판정 행렬이 Golden Scenario Contract와 일치하는지 검증한다.
@@ -32,7 +36,7 @@ CAND-A~E 전체 판정 행렬이 Golden Scenario Contract와 일치하는지 검
 정상 종료 기준은 마지막 줄이다.
 
 ```text
-SENTRY ATM DEMO CHECK PASSED (7 checkpoints)
+SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
 ```
 
 `[FAIL]`이 한 줄이라도 있으면 발표 서버를 시작하지 말고 5절의 복구 절차를 따른다.
@@ -102,7 +106,7 @@ Host를 변경하는 기능은 제공하지 않는다.
 ## 6. 발표 직전 체크리스트
 
 - 최신 발표 대상 Commit인지 `git status --short --branch`로 확인했다.
-- 자동 점검 7개 Checkpoint가 모두 통과했다.
+- 자동 점검 10개 Checkpoint와 마지막 Clean Reset이 모두 통과했다.
 - Wi-Fi를 끈 상태에서도 화면이 정상적으로 열린다.
 - 브라우저 Zoom 100%와 발표 해상도에서 핵심 Panel이 읽힌다.
 - Golden Demo를 Reset부터 최종 Revalidation까지 한 번 실행했다.

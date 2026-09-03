@@ -12,7 +12,7 @@ def test_real_loopback_regression_verifies_complete_golden_demo() -> None:
     report = run_golden_demo_regression()
 
     assert report.initial_session_id == "RKTU_GOLDEN_DEMO_V1-RUN-000000"
-    assert report.reset_session_id == "RKTU_GOLDEN_DEMO_V1-RUN-000001"
+    assert report.reset_session_id == "RKTU_GOLDEN_DEMO_V1-RUN-000004"
     assert tuple(item.code for item in report.checkpoints) == (
         "UI_READY",
         "MONITORING",
@@ -21,6 +21,9 @@ def test_real_loopback_regression_verifies_complete_golden_demo() -> None:
         "DECISION",
         "REVALIDATION",
         "RESET",
+        "MODIFY_SAFE",
+        "MODIFY_BLOCKED",
+        "REJECT",
     )
     assert tuple(item.stage for item in report.checkpoints) == (
         "READY",
@@ -30,8 +33,14 @@ def test_real_loopback_regression_verifies_complete_golden_demo() -> None:
         "DECISION_ACCEPTED",
         "CONFLICT_RESOLVED",
         "READY",
+        "CONFLICT_RESOLVED",
+        "MODIFICATION_REVALIDATED",
+        "DECISION_REJECTED",
     )
-    assert report.checkpoints[-2].detail == "applied 9,000 ft | SAFE / LOW / RESOLVED"
+    assert report.checkpoints[5].detail == "applied 9,000 ft | SAFE / LOW / RESOLVED"
+    assert report.checkpoints[-3].detail.startswith("8,800 ft | isolated SAFE")
+    assert "HTTP 409" in report.checkpoints[-2].detail
+    assert report.checkpoints[-1].detail == "REJECT audited | no validation or application"
 
 
 @pytest.mark.parametrize("value", [0, -1, -0.5])

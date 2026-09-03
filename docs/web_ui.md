@@ -102,7 +102,7 @@ Gate는 적용 버튼 없이 Reset만 제공한다.
 
 ## 6. 다음 단계
 
-Phase 14-D는 `python -m sentry_atm.infrastructure.http --check` 명령으로 임시 loopback Server에서 UI
-자산과 전체 Session Command 흐름을 검증한다. 실제 브라우저의 반응형 Layout과 화면 배율은
-[`demo_runbook.md`](demo_runbook.md)의 발표 전 육안 점검표로 확인한다. 별도 Browser Automation
-Dependency는 Runtime에 추가하지 않는다.
+Phase 15-E의 `python -m sentry_atm.infrastructure.http --check`는 임시 Loopback Server에서 UI 자산과
+ACCEPT, SAFE MODIFY 적용, UNSAFE MODIFY 차단, REJECT 흐름을 모두 검증한다. 실제 브라우저의 반응형
+Layout과 화면 배율은 [`demo_runbook.md`](demo_runbook.md)의 발표 전 육안 점검표로 확인한다. 별도
+Browser Automation Dependency는 Runtime에 추가하지 않는다.
