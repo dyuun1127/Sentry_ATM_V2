@@ -82,7 +82,9 @@ state = runtime.current_state
 
 ## 7. Synthetic Aircraft Runtime
 
-`SyntheticAircraftRuntime`은 초기 `source=SYNTHETIC` 상태의 속도, Heading 및 수직속도가 유지된다는 기초 운동 가정으로 Clock 현재 시각의 상태를 계산한다.
+`SyntheticAircraftRuntime`은 초기 `source=SYNTHETIC` 상태와 선택적인 미래 상태 Anchor를 사용해
+Clock 현재 시각의 상태를 계산한다. 각 Anchor 사이에서는 속도, Heading 및 수직속도가 유지되는
+구간별 Constant Motion을 적용한다.
 
 ```text
 distance_nm = ground_speed_kt × elapsed_seconds / 3600
@@ -91,7 +93,16 @@ y = initial_y + distance_nm × cos(heading)
 altitude = initial_altitude + vertical_speed_fpm × elapsed_seconds / 60
 ```
 
-Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. Runtime은 이전 Tick 결과를 누적하지 않고 초기 상태와 Clock 시각으로 매번 다시 계산하므로 Reset과 반복 실행 결과가 동일하다.
+Heading은 Domain 정책과 동일하게 `0°=North`, `90°=East`다. 현재 시각 이전의 가장 최신 Anchor를
+선택하고 그 Anchor와 Clock 시각으로 매번 다시 계산하므로 Reset과 반복 실행 결과가 동일하다.
+Anchor는 같은 Aircraft ID와 `SYNTHETIC` Source를 사용하며 초기 State 뒤에 엄격한 시간순으로
+배치해야 한다.
+
+Phase 12-E부터 `apply_state_anchor()`는 현재 `RUNNING` Clock 시각과 일치하는 승인 State를 현재 Run의
+동적 Anchor로 한 번 추가할 수 있다. ID와 Source가 Runtime과 같아야 하며 기존 Scenario/승인 Anchor와
+같은 시각을 덮어쓸 수 없다. 동적 Anchor는 Clock Reset 시 제거되고 사전 Scenario Anchor는 유지된다.
+이 저수준 Runtime 명령 자체는 승인 권한을 판단하지 않으며, Application Orchestrator가 감사된
+`ACCEPT`를 먼저 검증한다.
 
 초기 상태 시각 이전에는 `None`을 반환하며, 정확히 초기 시각이면 원래 상태를 반환한다. 이후 상태는 기존 식별자, 운동 값, 비행단계 및 비상 상태를 보존한다.
 
@@ -116,16 +127,23 @@ snapshot = engine.tick()
 
 Engine의 `tick()`은 Clock을 진행한 뒤 Snapshot을 반환한다. Clock이 `READY` 또는 `PAUSED`라면 시간이 증가하지 않은 Snapshot을 반환한다.
 
-## 9. 현재 제한사항
+## 9. Rolling 계산 통합
+
+`TrafficSimulationEngine`은 Predictor나 Conflict Detector를 직접 호출하지 않는다. Phase 4-C의
+`RollingPredictionScheduler`와 Phase 6-D의 `RollingConflictScheduler`가 현재 Snapshot을 받아
+각자의 기본 5초 Simulation Time 구간에 독립적으로 실행된다. 이 구조로 Simulation 진행, 미래
+Trajectory 생성과 Conflict 판정을 분리한다.
+
+## 10. 현재 제한사항
 
 - 종료 시각과 `FINISHED` 상태는 아직 없다.
 - 재생 배속과 실제 화면 Frame Rate를 연결하지 않는다.
-- 5초 Rolling Prediction 갱신 스케줄은 Predictor 구현 단계에서 추가한다.
 - 기록 사이 위치·고도 보간은 아직 수행하지 않는다.
 - CSV와 OpenSky 원본 자료를 `AircraftState`로 변환하는 Adapter는 아직 없다.
-- Synthetic 운동은 Constant Speed, Constant Heading, Constant Vertical Rate만 지원한다.
+- Synthetic 운동은 각 State Anchor 사이에서만 Constant Speed, Constant Heading, Constant Vertical Rate를 지원한다.
 - 선회율, 가감속, 목표 고도 Capture 및 Aircraft Performance 제한은 아직 없다.
-- 관제 명령 적용과 운동 상태 변경은 후속 Phase에서 구현한다.
+- 범용 관제 명령 적용은 아직 없다. 동적 State Anchor 적용은 Golden Demo의 감사된 Altitude
+  `ACCEPT` 한 건으로 제한한다.
 - Runtime 동적 추가·제거는 아직 지원하지 않는다.
-- Scenario 파일에서 Runtime을 구성하는 Builder는 아직 없다.
+- 외부 Scenario 파일 Loader는 아직 없으며, 현재는 코드 기반 Golden Scenario Builder만 제공한다.
 - Engine은 Predictor, Conflict Detector 또는 Rule Engine을 직접 호출하지 않는다.

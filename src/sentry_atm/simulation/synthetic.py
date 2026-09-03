@@ -1,5 +1,6 @@
-"""Deterministic constant-motion runtime for synthetic aircraft."""
+"""Deterministic piecewise constant-motion runtime for synthetic aircraft."""
 
+from collections.abc import Iterable
 from math import cos, radians, sin
 
 from sentry_atm.domain.aircraft import AircraftState
@@ -9,15 +10,22 @@ from sentry_atm.simulation.clock import SimulationClock
 
 
 class SyntheticAircraftRuntime:
-    """Calculate a synthetic aircraft state at the simulation clock time."""
+    """Calculate a synthetic aircraft state from deterministic motion anchors."""
 
-    __slots__ = ("_clock", "_initial_state")
+    __slots__ = (
+        "_applied_states",
+        "_clock",
+        "_initial_state",
+        "_observed_reset_count",
+        "_scheduled_states",
+    )
 
     def __init__(
         self,
         *,
         clock: SimulationClock,
         initial_state: AircraftState,
+        scheduled_states: Iterable[AircraftState] = (),
     ) -> None:
         if not isinstance(clock, SimulationClock):
             raise TypeError("clock must be a SimulationClock")
@@ -26,8 +34,33 @@ class SyntheticAircraftRuntime:
         if initial_state.source is not DataSource.SYNTHETIC:
             raise ValueError("initial_state must use the SYNTHETIC source")
 
+        if isinstance(scheduled_states, (str, bytes)):
+            raise TypeError("scheduled_states must be an iterable of AircraftState instances")
+        try:
+            materialized_states = tuple(scheduled_states)
+        except TypeError:
+            raise TypeError(
+                "scheduled_states must be an iterable of AircraftState instances"
+            ) from None
+        if not all(isinstance(state, AircraftState) for state in materialized_states):
+            raise TypeError("scheduled_states must contain only AircraftState instances")
+        if any(state.aircraft_id != initial_state.aircraft_id for state in materialized_states):
+            raise ValueError("scheduled_states must use the initial_state aircraft ID")
+        if any(state.source is not DataSource.SYNTHETIC for state in materialized_states):
+            raise ValueError("scheduled_states must use the SYNTHETIC source")
+
+        motion_anchors = (initial_state, *materialized_states)
+        if any(
+            current.timestamp_utc <= previous.timestamp_utc
+            for previous, current in zip(motion_anchors, motion_anchors[1:], strict=False)
+        ):
+            raise ValueError("scheduled_states must be strictly ordered after initial_state")
+
         self._clock = clock
         self._initial_state = initial_state
+        self._scheduled_states = materialized_states
+        self._observed_reset_count = clock.reset_count
+        self._applied_states: tuple[AircraftState, ...] = ()
 
     @property
     def aircraft_id(self) -> str:
@@ -48,33 +81,88 @@ class SyntheticAircraftRuntime:
         return self._initial_state
 
     @property
+    def scheduled_states(self) -> tuple[AircraftState, ...]:
+        """Return future deterministic motion anchors in activation order."""
+
+        return self._scheduled_states
+
+    @property
+    def applied_states(self) -> tuple[AircraftState, ...]:
+        """Return controller-approved anchors added during the current Clock run."""
+
+        self._synchronize_reset()
+        return self._applied_states
+
+    def apply_state_anchor(self, state: AircraftState) -> None:
+        """Append one validated current-time state anchor for this Clock run."""
+
+        self._synchronize_reset()
+        if not isinstance(state, AircraftState):
+            raise TypeError("state must be an AircraftState")
+        if not self._clock.is_running:
+            raise ValueError("Clock must be RUNNING to apply a state anchor")
+        if state.aircraft_id != self.aircraft_id:
+            raise ValueError("state must use the Runtime aircraft ID")
+        if state.source is not DataSource.SYNTHETIC:
+            raise ValueError("state must use the SYNTHETIC source")
+        if state.timestamp_utc != self._clock.current_time_utc:
+            raise ValueError("state timestamp must match the Runtime Clock")
+        anchor_times = {
+            self._initial_state.timestamp_utc,
+            *(item.timestamp_utc for item in self._scheduled_states),
+            *(item.timestamp_utc for item in self._applied_states),
+        }
+        if state.timestamp_utc in anchor_times:
+            raise ValueError("a state anchor already exists at this timestamp")
+        self._applied_states = (*self._applied_states, state)
+
+    @property
     def current_state(self) -> AircraftState | None:
-        """Return constant-motion state at current simulation time."""
+        """Return piecewise constant-motion state at current simulation time."""
 
+        self._synchronize_reset()
         current_time_utc = self._clock.current_time_utc
-        elapsed_seconds = (current_time_utc - self._initial_state.timestamp_utc).total_seconds()
-        if elapsed_seconds < 0.0:
+        motion_anchor = self._initial_state
+        if current_time_utc < motion_anchor.timestamp_utc:
             return None
-        if elapsed_seconds == 0.0:
-            return self._initial_state
+        later_anchors = tuple(
+            sorted(
+                (*self._scheduled_states, *self._applied_states),
+                key=lambda item: item.timestamp_utc,
+            )
+        )
+        for state_anchor in later_anchors:
+            if state_anchor.timestamp_utc > current_time_utc:
+                break
+            motion_anchor = state_anchor
 
-        heading_rad = radians(self._initial_state.heading_deg)
-        distance_nm = knots_to_nm_per_second(self._initial_state.ground_speed_kt) * elapsed_seconds
+        elapsed_seconds = (current_time_utc - motion_anchor.timestamp_utc).total_seconds()
+        if elapsed_seconds == 0.0:
+            return motion_anchor
+
+        heading_rad = radians(motion_anchor.heading_deg)
+        distance_nm = knots_to_nm_per_second(motion_anchor.ground_speed_kt) * elapsed_seconds
         altitude_change_ft = (
-            fpm_to_ft_per_second(self._initial_state.vertical_speed_fpm) * elapsed_seconds
+            fpm_to_ft_per_second(motion_anchor.vertical_speed_fpm) * elapsed_seconds
         )
 
         return AircraftState(
-            aircraft_id=self._initial_state.aircraft_id,
+            aircraft_id=motion_anchor.aircraft_id,
             timestamp_utc=current_time_utc,
-            x_nm=self._initial_state.x_nm + distance_nm * sin(heading_rad),
-            y_nm=self._initial_state.y_nm + distance_nm * cos(heading_rad),
-            altitude_ft=self._initial_state.altitude_ft + altitude_change_ft,
-            ground_speed_kt=self._initial_state.ground_speed_kt,
-            heading_deg=self._initial_state.heading_deg,
-            vertical_speed_fpm=self._initial_state.vertical_speed_fpm,
-            source=self._initial_state.source,
-            flight_phase=self._initial_state.flight_phase,
-            emergency_status=self._initial_state.emergency_status,
-            emergency_type=self._initial_state.emergency_type,
+            x_nm=motion_anchor.x_nm + distance_nm * sin(heading_rad),
+            y_nm=motion_anchor.y_nm + distance_nm * cos(heading_rad),
+            altitude_ft=motion_anchor.altitude_ft + altitude_change_ft,
+            ground_speed_kt=motion_anchor.ground_speed_kt,
+            heading_deg=motion_anchor.heading_deg,
+            vertical_speed_fpm=motion_anchor.vertical_speed_fpm,
+            source=motion_anchor.source,
+            flight_phase=motion_anchor.flight_phase,
+            emergency_status=motion_anchor.emergency_status,
+            emergency_type=motion_anchor.emergency_type,
         )
+
+    def _synchronize_reset(self) -> None:
+        if self._clock.reset_count == self._observed_reset_count:
+            return
+        self._observed_reset_count = self._clock.reset_count
+        self._applied_states = ()

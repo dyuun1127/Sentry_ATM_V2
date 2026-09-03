@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from math import sqrt
 
@@ -178,6 +179,103 @@ def test_runtime_follows_clock_pause_resume_and_reset() -> None:
     assert runtime.current_state is runtime.initial_state
 
 
+def test_scheduled_state_becomes_new_motion_anchor_and_replays_after_reset() -> None:
+    scheduled = _state(
+        timestamp_offset_seconds=5,
+        x_nm=20.0,
+        y_nm=1.0,
+        altitude_ft=7_400.0,
+        heading_deg=180.0,
+        vertical_speed_fpm=-600.0,
+    )
+    clock = SimulationClock(start_time_utc=START_UTC)
+    runtime = SyntheticAircraftRuntime(
+        clock=clock,
+        initial_state=_state(),
+        scheduled_states=(scheduled,),
+    )
+    clock.play()
+
+    clock.tick(steps=4)
+    assert runtime.current_state is not scheduled
+    clock.tick()
+    assert runtime.current_state is scheduled
+    clock.tick(steps=5)
+    current = runtime.current_state
+    assert current is not None
+    assert current.x_nm == pytest.approx(20.0)
+    assert current.y_nm == pytest.approx(0.5)
+    assert current.altitude_ft == pytest.approx(7_350.0)
+
+    clock.reset()
+    assert runtime.current_state is runtime.initial_state
+    clock.play()
+    clock.tick(steps=5)
+    assert runtime.current_state is scheduled
+
+
+def test_runtime_materializes_and_validates_scheduled_states() -> None:
+    clock = SimulationClock(start_time_utc=START_UTC)
+    scheduled = _state(timestamp_offset_seconds=5)
+    source = [scheduled]
+    runtime = SyntheticAircraftRuntime(
+        clock=clock,
+        initial_state=_state(),
+        scheduled_states=source,
+    )
+    source.clear()
+    assert runtime.scheduled_states == (scheduled,)
+
+    with pytest.raises(TypeError, match="iterable"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states="state",  # type: ignore[arg-type]
+        )
+    with pytest.raises(TypeError, match="iterable"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states=None,  # type: ignore[arg-type]
+        )
+    with pytest.raises(TypeError, match="AircraftState"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states=("state",),  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="aircraft ID"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states=(
+                AircraftState(
+                    aircraft_id="CIV-A01",
+                    timestamp_utc=START_UTC + timedelta(seconds=5),
+                    x_nm=0.0,
+                    y_nm=0.0,
+                    altitude_ft=8_000.0,
+                    ground_speed_kt=200.0,
+                    heading_deg=0.0,
+                    vertical_speed_fpm=0.0,
+                    source=DataSource.SYNTHETIC,
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="strictly ordered"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states=(_state(),),
+        )
+    with pytest.raises(ValueError, match="SYNTHETIC"):
+        SyntheticAircraftRuntime(
+            clock=clock,
+            initial_state=_state(),
+            scheduled_states=(_state(timestamp_offset_seconds=5, source=DataSource.OPENSKY),),
+        )
+
+
 def test_fractional_tick_duration_is_reflected_in_motion() -> None:
     clock = SimulationClock(start_time_utc=START_UTC, tick_seconds=0.5)
     runtime = SyntheticAircraftRuntime(clock=clock, initial_state=_state())
@@ -226,3 +324,70 @@ def test_runtime_rejects_opensky_initial_state() -> None:
             clock=clock,
             initial_state=_state(source=DataSource.OPENSKY),
         )
+
+
+def test_applied_state_anchor_changes_motion_and_clears_on_clock_reset() -> None:
+    clock, runtime = _runtime()
+    clock.play()
+    clock.tick(steps=10)
+    before = runtime.current_state
+    assert before is not None
+    applied = replace(
+        before,
+        altitude_ft=9_000.0,
+        heading_deg=0.0,
+        vertical_speed_fpm=0.0,
+    )
+
+    runtime.apply_state_anchor(applied)
+
+    assert runtime.applied_states == (applied,)
+    assert runtime.current_state is applied
+    clock.tick(steps=10)
+    current = runtime.current_state
+    assert current is not None
+    assert current.x_nm == pytest.approx(applied.x_nm)
+    assert current.y_nm == pytest.approx(applied.y_nm + 1.0)
+    assert current.altitude_ft == 9_000.0
+
+    clock.reset()
+    assert runtime.applied_states == ()
+    assert runtime.current_state is runtime.initial_state
+
+
+def test_apply_state_anchor_validates_runtime_identity_source_time_and_duplicates() -> None:
+    clock, runtime = _runtime()
+    with pytest.raises(ValueError, match="RUNNING"):
+        runtime.apply_state_anchor(_state())
+
+    clock.play()
+    clock.tick(steps=10)
+    current = runtime.current_state
+    assert current is not None
+    with pytest.raises(TypeError, match="AircraftState"):
+        runtime.apply_state_anchor("state")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="Runtime aircraft ID"):
+        runtime.apply_state_anchor(replace(current, aircraft_id="CIV-A01"))
+    with pytest.raises(ValueError, match="SYNTHETIC"):
+        runtime.apply_state_anchor(replace(current, source=DataSource.OPENSKY))
+    with pytest.raises(ValueError, match="Runtime Clock"):
+        runtime.apply_state_anchor(replace(current, timestamp_utc=START_UTC + timedelta(seconds=9)))
+
+    runtime.apply_state_anchor(current)
+    with pytest.raises(ValueError, match="already exists"):
+        runtime.apply_state_anchor(current)
+
+
+def test_applied_anchor_cannot_replace_a_scheduled_anchor_at_same_time() -> None:
+    clock = SimulationClock(start_time_utc=START_UTC)
+    scheduled = _state(timestamp_offset_seconds=10)
+    runtime = SyntheticAircraftRuntime(
+        clock=clock,
+        initial_state=_state(),
+        scheduled_states=(scheduled,),
+    )
+    clock.play()
+    clock.tick(steps=10)
+
+    with pytest.raises(ValueError, match="already exists"):
+        runtime.apply_state_anchor(scheduled)

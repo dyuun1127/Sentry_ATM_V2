@@ -11,10 +11,11 @@ from sentry_atm.scenario.event import ScenarioEvent
 
 @dataclass(frozen=True, slots=True)
 class ScenarioAircraft:
-    """Bind stable metadata to one Synthetic scenario initial state."""
+    """Bind metadata to one initial state and optional future state anchors."""
 
     metadata: AircraftMetadata
     initial_state: AircraftState
+    scheduled_states: tuple[AircraftState, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.metadata, AircraftMetadata):
@@ -27,6 +28,28 @@ class ScenarioAircraft:
             raise ValueError("scenario initial_state must use the SYNTHETIC source")
         if self.metadata.performance_class is None:
             raise ValueError("scenario metadata must reference a performance profile")
+
+        if isinstance(self.scheduled_states, (str, bytes)):
+            raise TypeError("scheduled_states must be an iterable of AircraftState instances")
+        try:
+            materialized_states = tuple(self.scheduled_states)
+        except TypeError:
+            raise TypeError(
+                "scheduled_states must be an iterable of AircraftState instances"
+            ) from None
+        object.__setattr__(self, "scheduled_states", materialized_states)
+        if not all(isinstance(state, AircraftState) for state in self.scheduled_states):
+            raise TypeError("scheduled_states must contain only AircraftState instances")
+        if any(state.aircraft_id != self.aircraft_id for state in self.scheduled_states):
+            raise ValueError("scheduled_states must use the scenario aircraft ID")
+        if any(state.source is not DataSource.SYNTHETIC for state in self.scheduled_states):
+            raise ValueError("scheduled_states must use the SYNTHETIC source")
+        motion_anchors = (self.initial_state, *self.scheduled_states)
+        if any(
+            current.timestamp_utc <= previous.timestamp_utc
+            for previous, current in zip(motion_anchors, motion_anchors[1:], strict=False)
+        ):
+            raise ValueError("scheduled_states must be strictly ordered after initial_state")
 
     @property
     def aircraft_id(self) -> str:

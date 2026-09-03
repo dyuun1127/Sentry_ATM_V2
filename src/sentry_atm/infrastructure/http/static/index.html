@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08110f" />
+    <title>SENTRY ATM · Golden Demo</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">본문으로 이동</a>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="SENTRY ATM 홈">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span class="brand-copy">
+          <strong>SENTRY ATM</strong>
+          <small>PREDICTIVE AIRSPACE CONTROL</small>
+        </span>
+      </a>
+      <div class="topbar-context">
+        <div class="facility">
+          <span>CONTROL SECTOR</span>
+          <strong>RKTU · TERMINAL AREA</strong>
+        </div>
+        <div class="connection" data-connection-status="loading">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span data-connection-label>연결 중</span>
+        </div>
+        <div class="clock-block">
+          <span>SIMULATION UTC</span>
+          <time data-simulation-time>--:--:--</time>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="workspace">
+      <section class="mission-strip" aria-labelledby="mission-title">
+        <div>
+          <p class="eyebrow">GOLDEN DEMO / RUN <span data-run-number>00</span></p>
+          <h1 id="mission-title">미래 충돌을 먼저 보고, 판단은 관제사에게.</h1>
+        </div>
+        <div class="mission-status">
+          <span class="status-label">SESSION STATE</span>
+          <strong class="stage-badge" data-session-stage>READY</strong>
+          <button class="reset-button" type="button" data-reset-command hidden>RESET RUN</button>
+          <button class="icon-button" type="button" data-refresh aria-label="세션 새로고침">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="현재 운영 지표">
+        <article class="metric-card">
+          <span class="metric-index">01</span>
+          <div>
+            <p>TRACKED AIRCRAFT</p>
+            <strong data-traffic-count>--</strong><span class="metric-unit">AC</span>
+          </div>
+          <span class="metric-state">SYNTHETIC FEED</span>
+        </article>
+        <article class="metric-card metric-alert">
+          <span class="metric-index">02</span>
+          <div>
+            <p>ACTIVE EXCEPTIONS</p>
+            <strong data-exception-count>--</strong><span class="metric-unit">ITEMS</span>
+          </div>
+          <span class="metric-state">RULE MONITORED</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-index">03</span>
+          <div>
+            <p>ELAPSED TIME</p>
+            <strong data-elapsed-time>--</strong><span class="metric-unit">SEC</span>
+          </div>
+          <span class="metric-state" data-clock-state>READY</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-index">04</span>
+          <div>
+            <p>DECISION MODE</p>
+            <strong class="metric-word">HITL</strong>
+          </div>
+          <span class="metric-state">CONTROLLER AUTHORITY</span>
+        </article>
+      </section>
+
+      <section class="deviation-panel" data-deviation-panel hidden aria-labelledby="deviation-title">
+        <header>
+          <div>
+            <p class="eyebrow">PLANNED VS ACTUAL</p>
+            <h2 id="deviation-title"><span data-deviation-aircraft>—</span> Entry Conformance</h2>
+          </div>
+          <strong class="deviation-badge">DEVIATION DETECTED</strong>
+        </header>
+        <div class="deviation-grid">
+          <article>
+            <span>ENTRY POINT</span>
+            <strong data-deviation-entry>—</strong>
+            <small>EXPECTED</small>
+          </article>
+          <article>
+            <span>ALTITUDE</span>
+            <strong><b data-deviation-actual-altitude>—</b> / <b data-deviation-expected-altitude>—</b> FT</strong>
+            <small>ACTUAL / EXPECTED · <em data-deviation-vertical>—</em> FT</small>
+          </article>
+          <article>
+            <span>HEADING</span>
+            <strong><b data-deviation-actual-heading>—</b>° / <b data-deviation-expected-heading>—</b>°</strong>
+            <small>ACTUAL / EXPECTED · <em data-deviation-heading>—</em>°</small>
+          </article>
+          <article>
+            <span>LATERAL</span>
+            <strong><b data-deviation-lateral>—</b> NM</strong>
+            <small>ENTRY PATH OFFSET</small>
+          </article>
+          <article>
+            <span>TIME</span>
+            <strong><b data-deviation-time>—</b> SEC</strong>
+            <small>SCHEDULE OFFSET</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="conflict-explainability" data-conflict-explainability hidden aria-labelledby="conflict-explainability-title">
+        <header class="explainability-header">
+          <div>
+            <p class="eyebrow">EXPLAINABLE CONFLICT EVIDENCE</p>
+            <h2 id="conflict-explainability-title">
+              <span data-conflict-pair>— / —</span>
+              <small data-conflict-status>PREDICTED</small>
+            </h2>
+          </div>
+          <div class="risk-score-block">
+            <span>RISK SCORE</span>
+            <strong data-conflict-risk-score>--</strong><small>/100</small>
+          </div>
+        </header>
+        <div class="explainability-body">
+          <div class="conflict-facts">
+            <div><span>RISK LEVEL</span><strong data-conflict-risk-level>—</strong></div>
+            <div><span>TIME TO CPA</span><strong><b data-conflict-tcpa>—</b> SEC</strong></div>
+            <div><span>RULE PROFILE</span><strong data-conflict-rule>—</strong></div>
+          </div>
+          <div class="separation-evidence">
+            <div class="separation-row">
+              <div><span>HORIZONTAL CPA</span><strong><b data-conflict-horizontal>—</b> / <b data-conflict-horizontal-threshold>—</b> NM</strong></div>
+              <div class="ratio-track"><i data-conflict-horizontal-ratio></i><em>LIMIT</em></div>
+            </div>
+            <div class="separation-row">
+              <div><span>VERTICAL CPA</span><strong><b data-conflict-vertical>—</b> / <b data-conflict-vertical-threshold>—</b> FT</strong></div>
+              <div class="ratio-track"><i data-conflict-vertical-ratio></i><em>LIMIT</em></div>
+            </div>
+          </div>
+          <div class="evidence-reasons">
+            <span>WHY FLAGGED</span>
+            <p data-conflict-reasons>—</p>
+          </div>
+          <div class="outcome-comparison">
+            <article>
+              <span>BEFORE · PREDICTED CPA</span>
+              <strong data-before-outcome>LOSS OF SEPARATION</strong>
+              <small data-before-separation>—</small>
+            </article>
+            <i aria-hidden="true">→</i>
+            <article data-after-card>
+              <span data-after-label>AFTER · AWAITING ACTION</span>
+              <strong data-after-outcome>NOT YET VALIDATED</strong>
+              <small data-after-separation>추천 후보 생성 대기</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel tactical-panel" aria-labelledby="tactical-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">LIVE SITUATION</p>
+              <h2 id="tactical-title">Terminal Tactical View</h2>
+            </div>
+            <div class="map-legend" aria-label="항공기 분류 범례">
+              <span><i class="legend-dot civil"></i>CIVIL</span>
+              <span><i class="legend-dot military"></i>MILITARY</span>
+              <span><i class="legend-line"></i>20 NM RANGE</span>
+            </div>
+          </header>
+          <div class="radar" role="img" aria-label="RKTU ARP 중심 항공기 상대 위치">
+            <div class="radar-grid" aria-hidden="true"></div>
+            <div class="range-ring ring-outer" aria-hidden="true"></div>
+            <div class="range-ring ring-middle" aria-hidden="true"></div>
+            <div class="range-ring ring-inner" aria-hidden="true"></div>
+            <div class="axis axis-x" aria-hidden="true"></div>
+            <div class="axis axis-y" aria-hidden="true"></div>
+            <div class="runway" aria-label="RKTU 활주로">
+              <span>06R</span><i></i><span>24L</span>
+            </div>
+            <div class="north-mark" aria-hidden="true">N</div>
+            <div class="range-label range-10" aria-hidden="true">10 NM</div>
+            <div class="range-label range-20" aria-hidden="true">20 NM</div>
+            <svg class="conflict-overlay" data-conflict-overlay viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden>
+              <line data-conflict-line x1="0" y1="0" x2="0" y2="0"></line>
+              <circle data-conflict-point-a cx="0" cy="0" r="1.2"></circle>
+              <circle data-conflict-point-b cx="0" cy="0" r="1.2"></circle>
+            </svg>
+            <div class="aircraft-layer" data-aircraft-layer></div>
+            <div class="map-coordinate">ARP 36°43′01″N / 127°29′56″E</div>
+          </div>
+        </section>
+
+        <aside class="panel exception-panel" aria-labelledby="exception-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">MANAGEMENT BY EXCEPTION</p>
+              <h2 id="exception-title">Exception Queue</h2>
+            </div>
+            <span class="queue-count" data-queue-count>00</span>
+          </header>
+          <div class="empty-state" data-exception-empty>
+            <div class="empty-radar" aria-hidden="true"><span></span></div>
+            <strong>감시 상태 정상</strong>
+            <p>현재 관제사의 확인이 필요한 예외가 없습니다.</p>
+          </div>
+          <div class="queue-list" data-exception-list hidden></div>
+          <footer class="panel-footer">
+            <span>PRIORITY SORT</span>
+            <strong>RISK · OPERATIONAL</strong>
+          </footer>
+        </aside>
+
+        <section class="panel traffic-panel" aria-labelledby="traffic-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">CURRENT TRAFFIC</p>
+              <h2 id="traffic-title">Aircraft State</h2>
+            </div>
+            <span class="read-only-tag">READ ONLY</span>
+          </header>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">CALLSIGN</th>
+                  <th scope="col">TYPE</th>
+                  <th scope="col">PHASE</th>
+                  <th scope="col">ALTITUDE</th>
+                  <th scope="col">SPEED</th>
+                  <th scope="col">HEADING</th>
+                  <th scope="col">V/S</th>
+                </tr>
+              </thead>
+              <tbody data-traffic-body>
+                <tr class="loading-row"><td colspan="7">SESSION DATA LOADING</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel decision-panel" aria-labelledby="decision-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">HUMAN-IN-THE-LOOP</p>
+              <h2 id="decision-title">Decision Support</h2>
+            </div>
+            <span class="shield-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" /></svg>
+            </span>
+          </header>
+          <div class="decision-empty" data-decision-empty>
+            <span class="decision-code">AWAITING PREDICTION CYCLE</span>
+            <strong>추천 후보는 아직 생성되지 않았습니다.</strong>
+            <p>시뮬레이션 진행 후 충돌 탐지와 안전성 검증 결과가 이 영역에 표시됩니다.</p>
+          </div>
+          <div class="decision-card" data-decision-card hidden>
+            <div class="decision-card-topline">
+              <span data-decision-status>VALIDATED SAFE</span>
+              <span data-decision-rank>RANK 01</span>
+            </div>
+            <div class="maneuver-summary">
+              <span data-decision-target>MIL-F01</span>
+              <strong data-decision-maneuver>ALTITUDE 9,000 FT</strong>
+            </div>
+            <dl class="safety-evidence">
+              <div><dt>VERDICT</dt><dd data-safety-verdict>SAFE</dd></div>
+              <div><dt>HORIZONTAL</dt><dd data-safety-horizontal>2.30 NM</dd></div>
+              <div><dt>VERTICAL</dt><dd data-safety-vertical>1,792 FT</dd></div>
+              <div><dt>DECISION</dt><dd data-decision-audit>PENDING</dd></div>
+            </dl>
+            <p class="decision-explanation" data-decision-explanation></p>
+            <div class="decision-audit-detail" data-decision-audit-detail hidden>
+              <span>OPERATOR RECORD</span>
+              <strong data-decision-audit-summary>—</strong>
+              <p data-decision-rationale>—</p>
+            </div>
+            <div class="modified-revalidation" data-modified-revalidation hidden>
+              <div>
+                <span>ISOLATED MODIFICATION CHECK</span>
+                <strong data-modified-verdict>—</strong>
+              </div>
+              <dl>
+                <div><dt>PRIMARY CPA</dt><dd data-modified-separation>—</dd></div>
+                <div><dt>APPLY GATE</dt><dd data-modified-apply-gate>BLOCKED</dd></div>
+              </dl>
+              <p data-modified-evidence>—</p>
+            </div>
+            <div class="decision-actions" data-decision-actions hidden>
+              <button type="button" class="decision-action accept" data-decision-action="ACCEPT">
+                <small>ACCEPT</small><strong>추천안 승인</strong>
+              </button>
+              <button type="button" class="decision-action modify" data-decision-action="MODIFY">
+                <small>MODIFY</small><strong>기동 수정</strong>
+              </button>
+              <button type="button" class="decision-action reject" data-decision-action="REJECT">
+                <small>REJECT</small><strong>추천안 거절</strong>
+              </button>
+            </div>
+            <form class="decision-form" data-decision-form hidden>
+              <div class="decision-form-heading">
+                <div>
+                  <span>CONTROLLER INPUT</span>
+                  <strong data-decision-form-title>추천 기동 수정</strong>
+                </div>
+                <button type="button" class="form-cancel" data-decision-cancel>취소</button>
+              </div>
+              <div class="modified-fields" data-modified-fields>
+                <label>
+                  <span>MANEUVER TYPE</span>
+                  <select data-modified-type>
+                    <option value="ALTITUDE">ALTITUDE</option>
+                    <option value="HEADING">HEADING</option>
+                    <option value="SPEED">SPEED</option>
+                    <option value="ENTRY_DELAY">ENTRY DELAY</option>
+                    <option value="SEQUENCE_CHANGE">SEQUENCE CHANGE</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-modified-value-label>TARGET ALTITUDE</span>
+                  <span class="value-input">
+                    <input type="number" data-modified-value required />
+                    <b data-modified-unit>FT</b>
+                  </span>
+                </label>
+              </div>
+              <label class="rationale-field">
+                <span>RATIONALE</span>
+                <textarea data-decision-rationale-input required maxlength="240" rows="2" placeholder="판단 근거를 입력하세요."></textarea>
+              </label>
+              <button type="submit" class="decision-submit" data-decision-submit>수정 결정 기록</button>
+            </form>
+            <div class="revalidation-result" data-revalidation hidden>
+              <span data-revalidation-source>POST-ACTION REVALIDATION</span>
+              <strong data-revalidation-result>RESOLVED</strong>
+            </div>
+          </div>
+          <div class="authority-note">
+            <span>AUTHORITY</span>
+            <p>시스템 추천은 관제사의 승인 전까지 항공기 상태를 변경하지 않습니다.</p>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel candidate-panel" data-candidate-panel hidden aria-labelledby="candidate-title">
+        <header class="panel-header">
+          <div>
+            <p class="eyebrow">ISOLATED SAFETY VALIDATION</p>
+            <h2 id="candidate-title">Resolution Candidate Comparison</h2>
+          </div>
+          <span class="read-only-tag">ALL CANDIDATES</span>
+        </header>
+        <div class="table-scroll">
+          <table class="candidate-table">
+            <thead>
+              <tr>
+                <th scope="col">CANDIDATE</th>
+                <th scope="col">TARGET</th>
+                <th scope="col">MANEUVER</th>
+                <th scope="col">PRIMARY CPA</th>
+                <th scope="col">SECONDARY / RULE</th>
+                <th scope="col">COST</th>
+                <th scope="col">VERDICT</th>
+              </tr>
+            </thead>
+            <tbody data-candidate-body></tbody>
+          </table>
+        </div>
+        <footer class="candidate-note">
+          <span>VALIDATION BOUNDARY</span>
+          <p>각 후보는 원 Traffic을 변경하지 않는 격리된 재시뮬레이션에서 동일 기준으로 검증됩니다.</p>
+        </footer>
+      </section>
+
+      <section class="timeline-panel" aria-labelledby="timeline-title">
+        <div class="timeline-heading">
+          <p class="eyebrow">DETERMINISTIC RUN</p>
+          <h2 id="timeline-title">Scenario Timeline</h2>
+        </div>
+        <ol class="stage-rail" data-stage-rail>
+          <li data-stage-key="READY"><span>00</span><div><strong>Ready</strong><small>T+00</small></div></li>
+          <li data-stage-key="MONITORING"><span>01</span><div><strong>Monitoring</strong><small>T+00</small></div></li>
+          <li data-stage-key="CONFLICT_DETECTED"><span>02</span><div><strong>Conflict</strong><small>T+70</small></div></li>
+          <li data-stage-key="RECOMMENDATION_AVAILABLE"><span>03</span><div><strong>Recommend</strong><small>T+75</small></div></li>
+          <li data-stage-key="DECISION_ACCEPTED"><span>04</span><div><strong>Decision</strong><small>T+90</small></div></li>
+          <li data-stage-key="CONFLICT_RESOLVED"><span>05</span><div><strong>Resolved</strong><small>T+90</small></div></li>
+        </ol>
+        <div class="timeline-action">
+          <span>NEXT AUTHORIZED ACTION</span>
+          <button class="command-button" type="button" data-primary-command>
+            <small data-command-code>START · T+00</small>
+            <strong data-command-label>감시 시작</strong>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>SENTRY ATM / TEAM SEJONG</span>
+      <span data-session-id>SESSION —</span>
+      <span>POC · NOT FOR OPERATIONAL USE</span>
+    </footer>
+
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

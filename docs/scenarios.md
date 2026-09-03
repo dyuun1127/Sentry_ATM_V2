@@ -100,17 +100,19 @@
 | Aircraft | x/y NM | 고도 ft | 속도 kt | Heading | 수직속도 ft/min | Phase | Profile |
 |---|---:|---:|---:|---:|---:|---|---|
 | `CIV-A01` | -3 / -4 | 3,000 | 170 | 0 | 0 | APPROACH | `AIRLINER-POC-V1` |
-| `CIV-A02` | 10 / 14 | 9,000 | 250 | 220 | -700 | DESCENT | `AIRLINER-POC-V1` |
+| `CIV-A02` | 10 / 14 | 9,075 | 250 | 220 | -700 | DESCENT | `AIRLINER-POC-V1` |
 | `CIV-A03` | -14 / 12 | 11,000 | 240 | 140 | -500 | DESCENT | `AIRLINER-POC-V1` |
 | `CIV-D01` | -16 / -14 | 5,000 | 220 | 60 | +1,000 | CLIMB | `AIRLINER-POC-V1` |
-| `MIL-F01` | 18 / 18 | 9,000 | 320 | 210 | 0 | LEVEL | `FAST-JET-POC-V1` |
-| `MIL-F02` | -20 / 18 | 12,000 | 300 | 135 | -500 | DESCENT | `FAST-JET-POC-V1` |
+| `MIL-F01` | 5.9289 / 22.6214 | 13,000 | 320 | 210 | -4,000 | DESCENT | `FAST-JET-POC-V1` |
+| `MIL-F02` | -11.3194 / 20.3194 | 6,946.25 | 300 | 135 | +400 | CLIMB | `FAST-JET-POC-V1` |
 | `MIL-T01` | 18 / -12 | 7,000 | 210 | 300 | 0 | LEVEL | `TRANSPORT-POC-V1` |
-| `MIL-T02` | 2 / 20 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
+| `MIL-T02` | -1 / 18 | 10,000 | 200 | 100 | 0 | LEVEL | `TRANSPORT-POC-V1` |
 
 모든 State는 `SYNTHETIC`이며 Scenario 시작시각 `2026-09-01T03:00:00Z`를 사용한다. 초기
 Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없다. 이는 공식 분리 판정이 아니라
-초기 배치 검증이며, 미래 Conflict와 이벤트 재현은 후속 Scenario Event 단계에서 조정한다.
+초기 배치 검증이다. `MIL-F01`의 계획 운동은 T+60에 9,000 ft로 `ENTRY-A`를 통과하도록
+보정되며, 실제 진입 상태는 별도의 Scenario State Anchor로 표현한다. `CIV-A02`와 `MIL-F02`의
+값에는 Phase 9-E의 Candidate 재계산 보정도 포함된다 (`ASM-022`).
 
 ## 8. 시나리오 진행
 
@@ -125,8 +127,9 @@ Snapshot에는 `ASM-018`의 검토 시작값 기준 현재 분리 위반이 없�
   방출한다. 동일 시각 이벤트는 Scenario Definition에 기록된 순서를 유지한다.
 - `PAUSED` 또는 `READY` 상태에서는 이벤트를 방출하지 않으며, Clock `reset()` 후에는 처음부터
   같은 이벤트를 재현한다.
-- Phase 5-B의 방출은 Aircraft Runtime을 직접 변경하지 않는다. State 적용과 후속 재평가는 별도
-  Event Handler 단계의 책임이다 (`ASM-028`).
+- Timeline의 이벤트 방출 자체는 Aircraft Runtime을 변경하지 않는다. Phase 6-E Golden Demo는
+  같은 T+60 시각의 실제 State Anchor를 Scenario Definition에 미리 포함하며 Runtime은 Clock으로
+  이를 선택한다. 범용 Event Handler나 관제 명령 적용과는 구분한다 (`ASM-028`).
 
 ### 8.1 T+0초 - 정상 혼합 교통
 
@@ -154,7 +157,10 @@ Expected time: T+60 sec
 실제 진입 상태는 다음과 같다.
 
 ```text
+Actual local position: x=4.2942 NM, y=16.1737 NM
 Actual altitude: 7,400 ft
+Actual heading: 180 deg
+Actual vertical speed: -460 ft/min
 Lateral deviation: 2.1 NM
 Time deviation: +25 sec
 ```
@@ -183,7 +189,12 @@ Risk level: HIGH
 - 상승 또는 강하 항적 수렴
 - 높은 Closing Speed
 
-정확한 분리 수치는 후속 Phase에서 검증하지만 (`ASM-022`), 현재는 안전하고 예측 Horizon 안에서만 위험하다는 관계는 유지해야 한다. Conflict 판정은 교체 가능한 Rule Profile을 사용하며 단일 임계값을 공식 보편 기준으로 하드코딩하지 않는다 (`ASM-018`).
+Phase 6-E에서 위 Actual State와 `CIV-A02`의 상태를 기존 연속시간 CPA 계산에 입력해 T+70 기준
+현재 수평분리 5.63 NM로 안전하지만, TCPA 90초에는 수평 최소분리 2.3 NM와 같은 시각의 수직분리
+500 ft가 됨을 재현한다 (`ASM-022`). T+0에는 예측 Conflict가 없고 T+60 상태 전환 후에만 해당
+Pair가 `PREDICTED`가 된다. Conflict 판정은
+교체 가능한 Rule Profile을 사용하며 시나리오 Pair나 목표 결과를 Detector에 하드코딩하지 않는다
+(`ASM-018`).
 
 ### 8.4 T+75초 - 대응 후보 생성
 
@@ -237,6 +248,12 @@ Expected result: Horizontal or vertical separation restored
 ```text
 HIGH -> MONITORING -> RESOLVED
 ```
+
+Phase 12-E의 즉시 적용·재검증에서는 T+90 `MIL-F01`을 9,000 ft/0 ft/min 승인 Anchor로 바꾼 뒤
+8대 전체 28 Pair를 다시 계산한다. 원 Pair의 CPA는 수평 약 2.3 NM, 수직 약 1,791.67 ft로
+`SAFE`, Risk `LOW(0)`가 되며 기존 Conflict Exception은 `RESOLVED`로 전이한다. `MONITORING`은 UI
+표시 단계이고 별도 Domain Risk Level이 아니다. 이 즉시 목표값 적용은 PoC 단순화이며 실제 명령
+전달 또는 고도 Capture 동역학을 구현한 것이 아니다.
 
 ### 8.8 T+240초 - MIL-T01 비상 우선 복귀
 

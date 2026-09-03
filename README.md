@@ -25,7 +25,50 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 4-D: PredictionRun SQLite Persistence 구현 완료
 - Phase 5-A: Golden Demo Scenario Foundation 구현 완료
 - Phase 5-B: Deterministic Scenario Event Timeline 구현 완료
-- Event Handler, Performance-aware Predictor, Conflict, UI: 아직 구현하지 않음
+- Phase 6-A: Conflict Domain 및 Separation Rule Contract 구현 완료
+- Phase 6-B: Continuous Relative-Motion CPA/TCPA 구현 완료
+- Phase 6-C: Deterministic Pairwise Conflict Detector 구현 완료
+- Phase 6-D: Deterministic Rolling Conflict Integration 구현 완료
+- Phase 6-E: Golden Demo Conflict Calibration 구현 완료
+- Phase 7-A: Risk & Operational Priority Domain Contract 구현 완료
+- Phase 7-B: Deterministic Risk & Priority Evaluators 구현 완료
+- Phase 8-A: Deterministic Exception Queue Domain 구현 완료
+- Phase 8-B: Deterministic Exception Queue Lifecycle Service 구현 완료
+- Phase 8-C: Exception Queue Read Model/API Contract 구현 완료
+- Phase 8-D: Minimal WSGI HTTP Adapter 구현 완료
+- Phase 9-A: Resolution Candidate Domain Contract 구현 완료
+- Phase 9-B: Deterministic Resolution Candidate Generator 구현 완료
+- Phase 9-C: Resolution Safety Validation Domain 구현 완료
+- Phase 9-D: Isolated Resolution Safety Validator 구현 완료
+- Phase 9-E: Golden Resolution Calibration 구현 완료
+- Phase 10-A: Resolution Recommendation Domain Contract 구현 완료
+- Phase 10-B: Deterministic Recommendation Ranking Service 구현 완료
+- Phase 10-C: Recommendation Read Model/API Contract 구현 완료
+- Phase 10-D: Minimal Recommendation WSGI HTTP Adapter 구현 완료
+- Phase 11-A: Controller Decision Audit Domain 구현 완료
+- Phase 11-B: Deterministic Controller Decision Service 구현 완료
+- Phase 11-C: Controller Decision Command/API Contract 구현 완료
+- Phase 11-D: Minimal Controller Decision WSGI HTTP Adapter 구현 완료
+- Phase 12-A: Golden Demo Runtime Composition Foundation 구현 완료
+- Phase 12-B: Deterministic Golden Demo Step Orchestrator 구현 완료
+- Phase 12-C: Deterministic Golden Demo Resolution Step 구현 완료
+- Phase 12-D: Deterministic Golden Demo Controller Decision Step 구현 완료
+- Phase 12-E: Approved Maneuver Application & Post-action Revalidation 구현 완료
+- Phase 13-A: Golden Demo Session Read Model/API 구현 완료
+- Phase 13-B: Deterministic Golden Demo Session Command Service 구현 완료
+- Phase 13-C: Minimal Golden Demo Session WSGI HTTP Adapter 구현 완료
+- Phase 13-D: Loopback-only Local Golden Demo HTTP Server 구현 완료
+- Phase 14-A: Golden Demo Web UI Shell 구현 완료
+- Phase 14-B: Deterministic Demo Command Controls 구현 완료
+- Phase 14-C: Conflict & Resolution Explainability Visualization 구현 완료
+- Phase 14-D: Demo Runbook & End-to-End Regression 구현 완료
+- Phase 15-A: Planned-vs-Actual Deviation & Candidate Comparison UI 구현 완료
+- Phase 15-B: Accept/Modify/Reject Operator Workflow 구현 완료
+- Phase 15-C: Modified Maneuver Isolated Revalidation 구현 완료
+- Phase 15-D: Validated Modified Maneuver Application 구현 완료
+- Phase 15-E: Multi-Path Golden Demo Regression 구현 완료
+- Phase 16-A: Demo Release Preflight 구현 완료
+- Phase 16-B: Release Documentation & Main Merge Readiness 구현 완료
 
 ## 핵심 문서
 
@@ -36,6 +79,18 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Deterministic Simulation Clock](docs/simulation.md)
 - [SQLite Persistence Contract](docs/persistence.md)
 - [Baseline Trajectory Predictor](docs/prediction.md)
+- [Predictive Conflict Contract](docs/conflict.md)
+- [Risk and Operational Priority Contract](docs/risk_priority.md)
+- [Deterministic Exception Queue Contract](docs/exception_queue.md)
+- [Resolution Candidate Contract](docs/resolution.md)
+- [Resolution Recommendation Contract](docs/recommendation.md)
+- [Controller Decision Audit Contract](docs/controller_decision.md)
+- [Golden Demo Runtime Composition](docs/runtime_composition.md)
+- [Golden Demo Session Read API](docs/session_api.md)
+- [Golden Demo Web UI](docs/web_ui.md)
+- [Golden Demo 실행 Runbook](docs/demo_runbook.md)
+- [Golden Demo Release Readiness](docs/release_readiness.md)
+- [Final Release & Main Merge Checklist](docs/final_release.md)
 
 ## 요구 환경
 
@@ -74,6 +129,24 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence seed
 ```
+
+## Golden Demo API 실행
+
+별도 Web Framework 없이 Python 표준 라이브러리 서버를 로컬 Loopback에 실행한다.
+
+발표 전 전체 Golden Demo 계약을 먼저 자동 점검한다.
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http
+```
+
+브라우저에서 `http://127.0.0.1:8000`을 열면 Golden Demo Dashboard가 표시된다. 다른 로컬 Port가
+필요하면 `--port 8123`처럼 지정한다.
+서버를 종료하려면 `Ctrl+C`를 누른다. 외부 장치에서 접속할 수 있도록 Bind하는 기능은 제공하지 않는다.
 
 ## 테스트 및 정적 검사
 
