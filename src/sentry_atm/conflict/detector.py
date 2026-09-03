@@ -78,7 +78,11 @@ class PairwiseConflictDetector:
         second: AircraftState,
     ) -> ConflictEvent:
         closest_approach = self._calculator.calculate(first, second)
-        status = self._rule_profile.classify(closest_approach.minimum_separation)
+        # 분리 최저치가 쌍에 따라 달라질 수 있으므로 두 항적을 함께 넘긴다
+        # (고시 5-5-4 차의 중량등급 조건, 5-5-8 편대 추가분리 등).
+        status = self._rule_profile.classify(
+            closest_approach.minimum_separation, first, second
+        )
         pair = closest_approach.pair
         timestamp_token = closest_approach.evaluated_at_utc.strftime("%Y%m%dT%H%M%S%fZ")
         return ConflictEvent(

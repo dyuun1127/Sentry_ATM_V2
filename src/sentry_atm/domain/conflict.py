@@ -105,15 +105,32 @@ class SeparationRuleProfile:
             ),
         )
 
-    def classify(self, minimum: SeparationMinimum) -> ConflictStatus:
-        """Classify a minimum using the profile's conjunctive PoC rule."""
+    def thresholds_for(
+        self,
+        first: object | None = None,
+        second: object | None = None,
+    ) -> tuple[float, float]:
+        """Return the (horizontal_nm, vertical_ft) minima that apply to one pair.
+
+        A fixed profile ignores the pair. Subclasses that derive minima from a
+        regulation may vary them per pair, which is why the detector passes both
+        aircraft down rather than only the closest-approach minimum.
+        """
+
+        return self.horizontal_threshold_nm, self.vertical_threshold_ft
+
+    def classify(
+        self,
+        minimum: SeparationMinimum,
+        first: object | None = None,
+        second: object | None = None,
+    ) -> ConflictStatus:
+        """Classify a minimum using the profile's conjunctive rule."""
 
         if not isinstance(minimum, SeparationMinimum):
             raise TypeError("minimum must be a SeparationMinimum")
-        if (
-            minimum.horizontal_nm < self.horizontal_threshold_nm
-            and minimum.vertical_ft < self.vertical_threshold_ft
-        ):
+        horizontal_nm, vertical_ft = self.thresholds_for(first, second)
+        if minimum.horizontal_nm < horizontal_nm and minimum.vertical_ft < vertical_ft:
             return ConflictStatus.PREDICTED
         return ConflictStatus.SAFE
 

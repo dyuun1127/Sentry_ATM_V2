@@ -40,6 +40,15 @@ class AircraftState:
     actype: str = ""
     wake_cat: str = "중형"
     emergency: bool = False
+
+    is_formation: bool = False
+    """편대비행 여부. 고시 5-5-8 의 추가분리가 걸린다.
+
+    필드로 두기 전에는 `RuleBook` 이 `getattr(a, "is_formation", False)` 로 읽었는데,
+    상태에 그 이름의 속성이 없어 **항상 False 였다** — 편대 조항이 정상 생성 경로에서
+    도달할 수 없는 코드였다. `emergency` 와 같은 층위의 운항 상태이므로 함께 둔다.
+    """
+
     t_s: float = 0.0
 
     target_alt_ft: float | None = None
