@@ -59,10 +59,9 @@ JSON-ready 구조로 제공한다.
 - Phase 17-A: Playback Contract와 Storyboard — 구현 완료
 - Phase 17-B: 결정론적 1초 Aircraft Frame 생성 및 Read API — 구현 완료
 - Phase 17-C: Radar Marker/Trail의 연속 브라우저 애니메이션 — 구현 완료
-- Phase 17-D: PLAY/PAUSE, 배속, Timeline, 자동 일시정지 제어
+- Phase 17-D: PLAY/PAUSE, 배속, Timeline, 자동 일시정지 제어 — 구현 완료
 
-Phase 17-A 완료만으로 현재 Dashboard가 움직이지는 않는다. 애니메이션이 사용자에게 보이는 완료
-시점은 Phase 17-C이며 전체 조작 계약 완료 시점은 Phase 17-D다.
+Phase 17-C에서 Radar 애니메이션이 연결되었고 Phase 17-D에서 전체 조작 계약이 완성되었다.
 
 ## 7. Playback Read API
 
@@ -88,4 +87,17 @@ Phase 17-C는 Playback API를 화면 최초 진입 시 한 번 조회하고 `req
 따라서 매 Render마다 Marker 전체를 다시 만드는 깜빡임을 피하고, Civil/Military/Conflict 색상도
 기존 관제 화면 규칙과 동일하게 유지한다. `READY`에서는 T+0 Frame을 표시하고 `START` 후에는 계약의
 기본 속도로 연속 재생한다. Checkpoint 명령으로 단계가 바뀌면 해당 Session 시각에 맞춰 즉시
-동기화한다. PLAY/PAUSE·배속·Timeline·Cue 자동 정지는 Phase 17-D에서 추가한다.
+동기화한다. PLAY/PAUSE·배속·Timeline·Cue 자동 정지는 Phase 17-D에서 제공한다.
+
+## 9. Playback Control과 Cue 자동 정지
+
+Phase 17-D는 API 계약의 `duration_seconds`, `default_rate`, `supported_rates`, `cues`를 그대로 읽어
+PLAY/PAUSE, 1x·2x·4x 배속, T+0~T+300 Scrubber와 Cue Marker를 구성한다. Scrubber 또는 Cue Marker를
+선택하면 실제 Session Runtime은 변경하지 않고 Radar Frame만 미리 보며, 다음 Session 명령 결과가
+도착하면 권위 있는 Session 시각으로 다시 동기화한다.
+
+재생이 `auto_pause=true` Cue를 통과하면 반드시 Cue의 정확한 시각을 먼저 렌더링한 후 정지한다.
+T+70과 T+75는 각각 기존 `ADVANCE_TO_CONFLICT`, `GENERATE_RECOMMENDATION` 명령과 자동 연결되어
+화면의 Conflict/Recommendation Evidence도 같은 시각으로 갱신된다. T+75의 관제사 결정 지점에서는
+Accept/Modify/Reject가 완료되기 전 PLAY를 비활성화한다. T+240과 T+260은 현재 Playback Frame과
+Cue 설명을 정확히 정지해 보여주며, 후속 비상운영 Domain 단계에서 전용 관제사 흐름과 연결한다.

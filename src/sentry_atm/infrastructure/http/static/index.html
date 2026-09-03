@@ -399,6 +399,45 @@
         </footer>
       </section>
 
+      <section class="playback-console" aria-labelledby="playback-console-title">
+        <div class="playback-console-heading">
+          <p class="eyebrow">ANIMATED SITUATION REPLAY</p>
+          <h2 id="playback-console-title">Playback Control</h2>
+        </div>
+        <div class="playback-transport">
+          <button class="playback-toggle" type="button" data-playback-toggle disabled aria-label="재생">
+            <span data-playback-toggle-icon aria-hidden="true">▶</span>
+            <strong data-playback-toggle-label>PLAY</strong>
+          </button>
+          <div class="playback-rates" data-playback-rates role="group" aria-label="재생 속도">
+            <button type="button" data-playback-rate="1" disabled>1x</button>
+            <button type="button" data-playback-rate="2" disabled>2x</button>
+            <button type="button" data-playback-rate="4" disabled>4x</button>
+          </div>
+        </div>
+        <div class="playback-timeline">
+          <div class="playback-timeline-meta">
+            <span data-playback-current>T+000.0</span>
+            <strong data-playback-status>LOADING FRAMES</strong>
+            <span data-playback-duration>T+300.0</span>
+          </div>
+          <div class="playback-track" data-playback-track>
+            <input
+              type="range"
+              min="0"
+              max="300"
+              step="0.1"
+              value="0"
+              data-playback-scrubber
+              aria-label="시나리오 재생 위치"
+              disabled
+            />
+            <div class="playback-cues" data-playback-cues></div>
+          </div>
+          <p class="playback-cue-label" data-playback-cue-label>Playback Frame을 준비하고 있습니다.</p>
+        </div>
+      </section>
+
       <section class="timeline-panel" aria-labelledby="timeline-title">
         <div class="timeline-heading">
           <p class="eyebrow">DETERMINISTIC RUN</p>

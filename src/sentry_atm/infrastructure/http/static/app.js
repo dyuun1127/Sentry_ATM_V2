@@ -156,6 +156,17 @@ const elements = {
   afterSeparation: document.querySelector("[data-after-separation]"),
   candidatePanel: document.querySelector("[data-candidate-panel]"),
   candidateBody: document.querySelector("[data-candidate-body]"),
+  playbackToggle: document.querySelector("[data-playback-toggle]"),
+  playbackToggleIcon: document.querySelector("[data-playback-toggle-icon]"),
+  playbackToggleLabel: document.querySelector("[data-playback-toggle-label]"),
+  playbackRateButtons: [...document.querySelectorAll("[data-playback-rate]")],
+  playbackCurrent: document.querySelector("[data-playback-current]"),
+  playbackDuration: document.querySelector("[data-playback-duration]"),
+  playbackStatus: document.querySelector("[data-playback-status]"),
+  playbackTrack: document.querySelector("[data-playback-track]"),
+  playbackScrubber: document.querySelector("[data-playback-scrubber]"),
+  playbackCues: document.querySelector("[data-playback-cues]"),
+  playbackCueLabel: document.querySelector("[data-playback-cue-label]"),
   toast: document.querySelector("[data-toast]"),
 };
 
@@ -166,8 +177,14 @@ let playback = null;
 let playbackAnimationId = null;
 let playbackStartTime = null;
 let playbackStartOffset = 0;
+let playbackCurrentOffset = 0;
+let playbackRate = 1;
+let playbackStatus = "LOADING FRAMES";
+let previousSessionStage = null;
+let playbackAutoStartPending = false;
 const animatedTracks = new Map();
 const animatedTrails = new Map();
+const consumedAutoPauseCueIds = new Set();
 
 function setConnection(status, label) {
   elements.connection.dataset.connectionStatus = status;
@@ -365,6 +382,88 @@ function updateAnimatedTrail(aircraft, frameIndex) {
 function renderPlaybackOffset(offsetSeconds) {
   const clamped = Math.max(0, Number(offsetSeconds));
   elements.playbackOffset.textContent = `T+${clamped.toFixed(1).padStart(5, "0")}`;
+  elements.playbackCurrent.textContent = `T+${clamped.toFixed(1).padStart(5, "0")}`;
+  if (playback) {
+    const duration = Number(playback.contract.duration_seconds);
+    const progress = duration === 0 ? 0 : (clamped / duration) * 100;
+    elements.playbackScrubber.value = clamped.toFixed(1);
+    elements.playbackTrack.style.setProperty("--playback-progress", `${progress}%`);
+  }
+}
+
+function cueAtOrBefore(offsetSeconds) {
+  if (!playback) {
+    return null;
+  }
+  return [...playback.contract.cues]
+    .reverse()
+    .find((cue) => Number(cue.offset_seconds) <= offsetSeconds + 0.001) ?? null;
+}
+
+function renderActiveCue(offsetSeconds) {
+  const activeCue = cueAtOrBefore(offsetSeconds);
+  for (const marker of elements.playbackCues.querySelectorAll("[data-playback-cue-id]")) {
+    marker.classList.toggle(
+      "is-active",
+      marker.dataset.playbackCueId === activeCue?.cue_id,
+    );
+  }
+  elements.playbackCueLabel.textContent = activeCue
+    ? `${activeCue.label} · T+${formatNumber(activeCue.offset_seconds)}`
+    : "Cue 대기";
+}
+
+function isDecisionCueBlocking() {
+  const activeCue = cueAtOrBefore(playbackCurrentOffset);
+  return Boolean(
+    activeCue?.requires_operator_action
+      && activeCue.cue_type === "RECOMMENDATION_AVAILABLE"
+      && currentSession?.stage === "RECOMMENDATION_AVAILABLE",
+  );
+}
+
+function updatePlaybackControls() {
+  const available = Boolean(playback);
+  const isPlaying = playbackAnimationId !== null;
+  const blocked = isDecisionCueBlocking();
+  elements.playbackToggle.disabled = !available || requestBusy || blocked;
+  elements.playbackToggleIcon.textContent = isPlaying ? "Ⅱ" : "▶";
+  elements.playbackToggleLabel.textContent = isPlaying ? "PAUSE" : "PLAY";
+  elements.playbackToggle.setAttribute("aria-label", isPlaying ? "일시정지" : "재생");
+  elements.playbackStatus.textContent = blocked ? "OPERATOR DECISION REQUIRED" : playbackStatus;
+  elements.playbackScrubber.disabled = !available || requestBusy;
+  for (const button of elements.playbackRateButtons) {
+    const rate = Number(button.dataset.playbackRate);
+    button.disabled = !available || requestBusy;
+    button.classList.toggle("is-active", rate === playbackRate);
+    button.setAttribute("aria-pressed", String(rate === playbackRate));
+  }
+}
+
+function setPlaybackStatus(status) {
+  playbackStatus = status;
+  updatePlaybackControls();
+}
+
+function renderPlaybackCueMarkers() {
+  elements.playbackCues.replaceChildren();
+  const duration = Number(playback.contract.duration_seconds);
+  for (const cue of playback.contract.cues) {
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = `playback-cue${cue.auto_pause ? " is-auto-pause" : ""}`;
+    marker.dataset.playbackCueId = cue.cue_id;
+    marker.style.left = `${(Number(cue.offset_seconds) / duration) * 100}%`;
+    marker.title = cue.label;
+    marker.setAttribute(
+      "aria-label",
+      `${cue.label}, T+${formatNumber(cue.offset_seconds)}${cue.auto_pause ? ", 자동 일시정지" : ""}`,
+    );
+    marker.addEventListener("click", () => {
+      seekPlayback(Number(cue.offset_seconds), "CUE PREVIEW");
+    });
+    elements.playbackCues.append(marker);
+  }
 }
 
 function renderPlaybackFrame(offsetSeconds) {
@@ -374,6 +473,7 @@ function renderPlaybackFrame(offsetSeconds) {
   const duration = Number(playback.contract.duration_seconds);
   const interval = Number(playback.contract.frame_interval_seconds);
   const offset = Math.max(0, Math.min(duration, Number(offsetSeconds)));
+  playbackCurrentOffset = offset;
   const frameIndex = Math.min(
     playback.frames.length - 1,
     Math.floor(offset / interval),
@@ -415,14 +515,64 @@ function renderPlaybackFrame(offsetSeconds) {
   }
   renderConflictOverlay(traffic);
   renderPlaybackOffset(offset);
+  renderActiveCue(offset);
 }
 
-function stopPlaybackAnimation() {
+function stopPlaybackAnimation(status = "PAUSED") {
   if (playbackAnimationId !== null) {
     cancelAnimationFrame(playbackAnimationId);
   }
   playbackAnimationId = null;
   playbackStartTime = null;
+  setPlaybackStatus(status);
+}
+
+function resetConsumedCues(offsetSeconds) {
+  consumedAutoPauseCueIds.clear();
+  for (const cue of playback.contract.cues) {
+    if (cue.auto_pause && Number(cue.offset_seconds) <= offsetSeconds + 0.001) {
+      consumedAutoPauseCueIds.add(cue.cue_id);
+    }
+  }
+}
+
+function seekPlayback(offsetSeconds, status = "PAUSED · VISUAL PREVIEW") {
+  if (!playback) {
+    return;
+  }
+  stopPlaybackAnimation(status);
+  const duration = Number(playback.contract.duration_seconds);
+  const offset = Math.max(0, Math.min(duration, Number(offsetSeconds)));
+  resetConsumedCues(offset);
+  renderPlaybackFrame(offset);
+  updatePlaybackControls();
+}
+
+function nextAutoPauseCue(previousOffset, nextOffset) {
+  return playback.contract.cues.find((cue) =>
+    cue.auto_pause
+      && !consumedAutoPauseCueIds.has(cue.cue_id)
+      && Number(cue.offset_seconds) > previousOffset + 0.001
+      && Number(cue.offset_seconds) <= nextOffset + 0.001,
+  );
+}
+
+async function advanceSessionForCue(cue) {
+  const commandByCueType = {
+    CONFLICT_DETECTED: {
+      command: "ADVANCE_TO_CONFLICT",
+      stage: "MONITORING",
+    },
+    RECOMMENDATION_AVAILABLE: {
+      command: "GENERATE_RECOMMENDATION",
+      stage: "CONFLICT_DETECTED",
+    },
+  };
+  const transition = commandByCueType[cue.cue_type];
+  if (transition && currentSession?.stage === transition.stage) {
+    await executeCommand(transition.command);
+    setPlaybackStatus(`AUTO PAUSED · ${cue.cue_type}`);
+  }
 }
 
 function startPlaybackAnimation(offsetSeconds = 0) {
@@ -432,16 +582,26 @@ function startPlaybackAnimation(offsetSeconds = 0) {
   playbackStartOffset = Number(offsetSeconds);
   playbackStartTime = null;
   const duration = Number(playback.contract.duration_seconds);
-  const rate = Number(playback.contract.default_rate);
+  setPlaybackStatus(`PLAYING · ${playbackRate}x`);
 
   function animate(timestamp) {
     if (playbackStartTime === null) {
       playbackStartTime = timestamp;
     }
-    const elapsed = playbackStartOffset + ((timestamp - playbackStartTime) / 1000) * rate;
+    const elapsed = playbackStartOffset
+      + ((timestamp - playbackStartTime) / 1000) * playbackRate;
+    const autoPauseCue = nextAutoPauseCue(playbackCurrentOffset, elapsed);
+    if (autoPauseCue) {
+      consumedAutoPauseCueIds.add(autoPauseCue.cue_id);
+      renderPlaybackFrame(Number(autoPauseCue.offset_seconds));
+      stopPlaybackAnimation(`AUTO PAUSED · ${autoPauseCue.cue_type}`);
+      showToast(`${autoPauseCue.label} 시점에서 자동 일시정지했습니다.`, "success");
+      void advanceSessionForCue(autoPauseCue);
+      return;
+    }
     renderPlaybackFrame(elapsed);
     if (elapsed >= duration) {
-      stopPlaybackAnimation();
+      stopPlaybackAnimation("PLAYBACK COMPLETE");
       return;
     }
     playbackAnimationId = requestAnimationFrame(animate);
@@ -450,21 +610,22 @@ function startPlaybackAnimation(offsetSeconds = 0) {
   playbackAnimationId = requestAnimationFrame(animate);
 }
 
-function synchronizePlayback(session) {
+function synchronizePlayback(session, priorStage) {
   if (!playback) {
     return;
   }
   const offset = Number(session.elapsed_seconds ?? 0);
   const stage = String(session.stage ?? "READY");
-  if (stage === "MONITORING" || stage === "DEVIATION_DETECTED") {
-    if (playbackAnimationId === null) {
-      renderPlaybackFrame(offset);
-      startPlaybackAnimation(offset);
-    }
+  if (stage === "READY") {
+    playbackAutoStartPending = false;
+    seekPlayback(0, "READY");
     return;
   }
-  stopPlaybackAnimation();
-  renderPlaybackFrame(offset);
+  if (priorStage === null || priorStage !== stage || playbackCurrentOffset < offset) {
+    seekPlayback(offset, `PAUSED · ${stage}`);
+    return;
+  }
+  updatePlaybackControls();
 }
 
 function cell(text, className = "") {
@@ -939,6 +1100,7 @@ function setRequestBusy(value) {
   if (currentSession) {
     updateCommandControl(currentSession);
   }
+  updatePlaybackControls();
 }
 
 function renderStage(stage) {
@@ -957,7 +1119,9 @@ function renderStage(stage) {
 }
 
 function renderSession(session) {
+  const priorStage = previousSessionStage;
   currentSession = session;
+  previousSessionStage = String(session.stage ?? "READY");
   const traffic = Array.isArray(session.traffic) ? session.traffic : [];
   elements.simulationTime.textContent = formatSimulationTime(session.simulation_time_utc);
   elements.runNumber.textContent = String(session.run_number ?? 0).padStart(2, "0");
@@ -969,7 +1133,7 @@ function renderSession(session) {
   elements.clockState.textContent = String(session.clock_state ?? "UNKNOWN");
   elements.sessionId.textContent = `SESSION ${session.session_id ?? "—"}`;
   if (playback) {
-    synchronizePlayback(session);
+    synchronizePlayback(session, priorStage);
   } else {
     renderAircraftMap(traffic);
   }
@@ -1018,14 +1182,25 @@ async function loadPlayback() {
       throw new Error("재생 Frame이 충분하지 않습니다.");
     }
     playback = payload;
+    playbackRate = Number(playback.contract.default_rate);
     animatedTracks.clear();
     animatedTrails.clear();
     elements.aircraftLayer.replaceChildren();
     elements.trailLayer.replaceChildren();
+    elements.playbackScrubber.max = String(playback.contract.duration_seconds);
+    elements.playbackDuration.textContent = `T+${Number(
+      playback.contract.duration_seconds,
+    ).toFixed(1)}`;
+    renderPlaybackCueMarkers();
+    setPlaybackStatus("READY");
     if (currentSession) {
-      synchronizePlayback(currentSession);
+      synchronizePlayback(currentSession, null);
     } else {
       renderPlaybackFrame(0);
+    }
+    if (playbackAutoStartPending && currentSession?.stage === "MONITORING") {
+      playbackAutoStartPending = false;
+      startPlaybackAnimation(playbackCurrentOffset);
     }
   } catch (error) {
     showToast(`연속 재생 데이터를 불러오지 못했습니다: ${error.message}`);
@@ -1073,6 +1248,10 @@ async function executeCommand(command, fields = {}) {
       throw error;
     }
     renderSession(payload);
+    if (command === "START") {
+      playbackAutoStartPending = !playback;
+      startPlaybackAnimation(playbackCurrentOffset);
+    }
     setConnection("online", "API ONLINE");
     showToast(`${command} 명령이 완료되었습니다.`, "success");
   } catch (error) {
@@ -1094,7 +1273,49 @@ async function executeCommand(command, fields = {}) {
   }
 }
 
+async function togglePlayback() {
+  if (!playback || requestBusy || isDecisionCueBlocking()) {
+    return;
+  }
+  if (playbackAnimationId !== null) {
+    stopPlaybackAnimation("PAUSED · OPERATOR");
+    return;
+  }
+  if (currentSession?.stage === "READY") {
+    await executeCommand("START");
+    return;
+  }
+  if (playbackCurrentOffset >= Number(playback.contract.duration_seconds)) {
+    seekPlayback(0, "READY TO REPLAY");
+  }
+  startPlaybackAnimation(playbackCurrentOffset);
+}
+
+function selectPlaybackRate(rate) {
+  if (!playback || !playback.contract.supported_rates.includes(rate)) {
+    return;
+  }
+  const wasPlaying = playbackAnimationId !== null;
+  if (wasPlaying) {
+    stopPlaybackAnimation("RATE CHANGE");
+  }
+  playbackRate = rate;
+  updatePlaybackControls();
+  if (wasPlaying) {
+    startPlaybackAnimation(playbackCurrentOffset);
+  }
+}
+
 elements.refresh.addEventListener("click", loadSession);
+elements.playbackToggle.addEventListener("click", togglePlayback);
+elements.playbackScrubber.addEventListener("input", () => {
+  seekPlayback(Number(elements.playbackScrubber.value));
+});
+for (const button of elements.playbackRateButtons) {
+  button.addEventListener("click", () => {
+    selectPlaybackRate(Number(button.dataset.playbackRate));
+  });
+}
 elements.primaryCommand.addEventListener("click", () => {
   executeCommand(elements.primaryCommand.dataset.command);
 });

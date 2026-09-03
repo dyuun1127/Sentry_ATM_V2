@@ -60,6 +60,12 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b"data-conflict-overlay" in body
     assert b"data-trail-layer" in body
     assert b"data-playback-offset" in body
+    assert b"data-playback-toggle" in body
+    assert b"data-playback-scrubber" in body
+    assert b"data-playback-cues" in body
+    assert b'data-playback-rate="1"' in body
+    assert b'data-playback-rate="2"' in body
+    assert b'data-playback-rate="4"' in body
     assert b"data-deviation-panel" in body
     assert b"data-candidate-panel" in body
     assert b"data-decision-actions" in body
@@ -142,6 +148,26 @@ def test_ui_assets_animate_playback_frames_with_interpolated_markers_and_trails(
     assert b"setInterval" not in script
     assert b".aircraft-trail" in stylesheet
     assert b"will-change: left, top" in stylesheet
+
+
+def test_ui_assets_control_rate_timeline_and_contract_driven_auto_pause() -> None:
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+    _, _, stylesheet = _request(app, path="/assets/app.css")
+
+    assert b"function togglePlayback()" in script
+    assert b"function selectPlaybackRate(rate)" in script
+    assert b"playback.contract.supported_rates.includes(rate)" in script
+    assert b"function nextAutoPauseCue(previousOffset, nextOffset)" in script
+    assert b"function advanceSessionForCue(cue)" in script
+    assert b'command: "ADVANCE_TO_CONFLICT"' in script
+    assert b'command: "GENERATE_RECOMMENDATION"' in script
+    assert b'playbackScrubber.addEventListener("input"' in script
+    assert b"cue.auto_pause" in script
+    assert b"activeCue?.requires_operator_action" in script
+    assert b".playback-console" in stylesheet
+    assert b"--playback-progress" in stylesheet
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:
