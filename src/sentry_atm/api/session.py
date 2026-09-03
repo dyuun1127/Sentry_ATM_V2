@@ -38,7 +38,12 @@ from sentry_atm.scenario import (
 from sentry_atm.simulation import TrafficSnapshot
 
 if TYPE_CHECKING:
-    from sentry_atm.runtime import GoldenDemoApprovedManeuverOrchestrator
+    from sentry_atm.runtime.application_orchestrator import (
+        GoldenDemoApprovedManeuverOrchestrator,
+    )
+    from sentry_atm.runtime.modified_revalidation_orchestrator import (
+        GoldenDemoModifiedManeuverRevalidationOrchestrator,
+    )
 
 
 def _utc_text(value: datetime) -> str:
@@ -55,6 +60,7 @@ class GoldenDemoSessionStage(StrEnum):
     RECOMMENDATION_AVAILABLE = "RECOMMENDATION_AVAILABLE"
     DECISION_ACCEPTED = "DECISION_ACCEPTED"
     DECISION_MODIFIED = "DECISION_MODIFIED"
+    MODIFICATION_REVALIDATED = "MODIFICATION_REVALIDATED"
     DECISION_REJECTED = "DECISION_REJECTED"
     CONFLICT_RESOLVED = "CONFLICT_RESOLVED"
 
@@ -67,6 +73,7 @@ class GoldenDemoSessionCommand(StrEnum):
     GENERATE_RECOMMENDATION = "GENERATE_RECOMMENDATION"
     ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
     MODIFY_RECOMMENDATION = "MODIFY_RECOMMENDATION"
+    REVALIDATE_MODIFIED_MANEUVER = "REVALIDATE_MODIFIED_MANEUVER"
     REJECT_RECOMMENDATION = "REJECT_RECOMMENDATION"
     APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
     RESET = "RESET"
@@ -287,6 +294,50 @@ class GoldenDemoCandidateComparisonReadModel:
 
 
 @dataclass(frozen=True, slots=True)
+class GoldenDemoModifiedRevalidationReadModel:
+    """JSON-ready isolated validation evidence for a modified Maneuver."""
+
+    revalidation_step_id: str
+    source_decision_step_id: str
+    candidate_id: str
+    evaluated_at_utc: str
+    validation_run_id: str
+    verdict: str
+    primary_conflict_status: str
+    primary_horizontal_separation_nm: float
+    primary_vertical_separation_ft: float
+    tcpa_seconds: float
+    secondary_conflict_aircraft_ids: tuple[tuple[str, str], ...]
+    performance_feasible: bool
+    rule_violation_ids: tuple[str, ...]
+    reason_codes: tuple[str, ...]
+    validation_profile_id: str
+    safe_to_apply: bool
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "revalidation_step_id": self.revalidation_step_id,
+            "source_decision_step_id": self.source_decision_step_id,
+            "candidate_id": self.candidate_id,
+            "evaluated_at_utc": self.evaluated_at_utc,
+            "validation_run_id": self.validation_run_id,
+            "verdict": self.verdict,
+            "primary_conflict_status": self.primary_conflict_status,
+            "primary_horizontal_separation_nm": self.primary_horizontal_separation_nm,
+            "primary_vertical_separation_ft": self.primary_vertical_separation_ft,
+            "tcpa_seconds": self.tcpa_seconds,
+            "secondary_conflict_aircraft_ids": [
+                list(aircraft_ids) for aircraft_ids in self.secondary_conflict_aircraft_ids
+            ],
+            "performance_feasible": self.performance_feasible,
+            "rule_violation_ids": list(self.rule_violation_ids),
+            "reason_codes": list(self.reason_codes),
+            "validation_profile_id": self.validation_profile_id,
+            "safe_to_apply": self.safe_to_apply,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class GoldenDemoSessionReadModel:
     """One complete JSON-compatible view of current Golden Demo backend state."""
 
@@ -309,6 +360,7 @@ class GoldenDemoSessionReadModel:
     exception_queue: ExceptionQueueSnapshotReadModel | None
     recommendation: ResolutionRecommendationSetReadModel | None
     controller_decision: ControllerDecisionAuditLogReadModel | None
+    modified_revalidation: GoldenDemoModifiedRevalidationReadModel | None
     revalidation: GoldenDemoRevalidationReadModel | None
 
     def to_dict(self) -> dict[str, object]:
@@ -343,6 +395,11 @@ class GoldenDemoSessionReadModel:
             "controller_decision": (
                 self.controller_decision.to_dict() if self.controller_decision is not None else None
             ),
+            "modified_revalidation": (
+                self.modified_revalidation.to_dict()
+                if self.modified_revalidation is not None
+                else None
+            ),
             "revalidation": (
                 self.revalidation.to_dict() if self.revalidation is not None else None
             ),
@@ -375,27 +432,56 @@ class GoldenDemoSessionCommandApiContract(Protocol):
 class InProcessGoldenDemoSessionApi:
     """Project the current Orchestrator chain without owning its lifecycle."""
 
-    __slots__ = ("_application_orchestrator",)
+    __slots__ = ("_application_orchestrator", "_modified_revalidation_orchestrator")
 
     def __init__(
         self,
         application_orchestrator: "GoldenDemoApprovedManeuverOrchestrator",
+        modified_revalidation_orchestrator: (
+            "GoldenDemoModifiedManeuverRevalidationOrchestrator"
+        ),
     ) -> None:
-        from sentry_atm.runtime import GoldenDemoApprovedManeuverOrchestrator
+        from sentry_atm.runtime.application_orchestrator import (
+            GoldenDemoApprovedManeuverOrchestrator,
+        )
+        from sentry_atm.runtime.modified_revalidation_orchestrator import (
+            GoldenDemoModifiedManeuverRevalidationOrchestrator,
+        )
 
         if not isinstance(application_orchestrator, GoldenDemoApprovedManeuverOrchestrator):
             raise TypeError(
                 "application_orchestrator must be a GoldenDemoApprovedManeuverOrchestrator"
             )
         self._application_orchestrator = application_orchestrator
+        if not isinstance(
+            modified_revalidation_orchestrator,
+            GoldenDemoModifiedManeuverRevalidationOrchestrator,
+        ):
+            raise TypeError(
+                "modified_revalidation_orchestrator must be a "
+                "GoldenDemoModifiedManeuverRevalidationOrchestrator"
+            )
+        if (
+            modified_revalidation_orchestrator.decision_orchestrator
+            is not application_orchestrator.decision_orchestrator
+        ):
+            raise ValueError("Session Orchestrators must share one Controller Decision source")
+        self._modified_revalidation_orchestrator = modified_revalidation_orchestrator
 
     @property
     def application_orchestrator(self) -> "GoldenDemoApprovedManeuverOrchestrator":
         return self._application_orchestrator
 
+    @property
+    def modified_revalidation_orchestrator(
+        self,
+    ) -> "GoldenDemoModifiedManeuverRevalidationOrchestrator":
+        return self._modified_revalidation_orchestrator
+
     def get_current(self) -> GoldenDemoSessionReadModel:
         application = self._application_orchestrator
         application_result = application.last_result
+        modified_revalidation_result = self._modified_revalidation_orchestrator.last_result
         decision = application.decision_orchestrator
         decision_result = decision.last_result
         resolution = decision.resolution_orchestrator
@@ -425,6 +511,7 @@ class InProcessGoldenDemoSessionApi:
                 step_result=step_result,
                 resolution_result=resolution_result,
                 decision_result=decision_result,
+                modified_revalidation_result=modified_revalidation_result,
                 application_result=application_result,
             ),
             clock_state=clock.state.value,
@@ -454,6 +541,11 @@ class InProcessGoldenDemoSessionApi:
             exception_queue=queue,
             recommendation=recommendation,
             controller_decision=controller_decision,
+            modified_revalidation=(
+                _map_modified_revalidation(modified_revalidation_result)
+                if modified_revalidation_result is not None
+                else None
+            ),
             revalidation=(
                 _map_revalidation(application_result) if application_result is not None else None
             ),
@@ -465,10 +557,13 @@ def _stage(
     step_result,
     resolution_result,
     decision_result,
+    modified_revalidation_result,
     application_result,
 ) -> GoldenDemoSessionStage:
     if application_result is not None:
         return GoldenDemoSessionStage.CONFLICT_RESOLVED
+    if modified_revalidation_result is not None:
+        return GoldenDemoSessionStage.MODIFICATION_REVALIDATED
     if decision_result is not None:
         decision_type = decision_result.decision_entry.decision_type
         if decision_type is ControllerDecisionType.MODIFY:
@@ -637,6 +732,31 @@ def _map_candidate_comparison(
         reason_codes=tuple(item.value for item in validation.reason_codes),
         validation_profile_id=validation.validation_profile_id,
         recommended=recommended,
+    )
+
+
+def _map_modified_revalidation(result) -> GoldenDemoModifiedRevalidationReadModel:
+    validation = result.validation_result
+    primary = validation.primary_conflict
+    return GoldenDemoModifiedRevalidationReadModel(
+        revalidation_step_id=result.revalidation_step_id,
+        source_decision_step_id=result.source_decision_step_id,
+        candidate_id=result.modified_candidate.candidate_id,
+        evaluated_at_utc=_utc_text(validation.evaluated_at_utc),
+        validation_run_id=result.validation_run.validation_run_id,
+        verdict=validation.verdict.value,
+        primary_conflict_status=primary.status.value,
+        primary_horizontal_separation_nm=primary.minimum_separation.horizontal_nm,
+        primary_vertical_separation_ft=primary.minimum_separation.vertical_ft,
+        tcpa_seconds=primary.tcpa_seconds,
+        secondary_conflict_aircraft_ids=tuple(
+            item.pair.aircraft_ids for item in validation.secondary_conflicts
+        ),
+        performance_feasible=validation.performance_feasible,
+        rule_violation_ids=tuple(item.rule_id for item in validation.rule_violations),
+        reason_codes=tuple(item.value for item in validation.reason_codes),
+        validation_profile_id=validation.validation_profile_id,
+        safe_to_apply=validation.is_safe,
     )
 
 

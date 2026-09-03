@@ -420,11 +420,16 @@ Phase 15-A의 Deviation 및 Candidate Comparison DTO도 Presentation용 파생 �
 `ScenarioEvent`, `ResolutionCandidateBatch`, `ResolutionSafetyValidationRun`을 변경하거나 중복 저장하지
 않으며 Candidate ID로 Generation과 Validation Evidence를 결합한다.
 
+Phase 15-C의 `GoldenDemoModifiedManeuverRevalidationResult`는 기존 MODIFY Audit Entry, 임시 수정 후보와
+`NO_ACTION` 기준선, 기존 Safety Validator가 만든 Validation Run을 연결하는 불변 Application Evidence다.
+`GoldenDemoModifiedRevalidationReadModel`은 이를 JSON용으로 투영하며 영속 Domain Aggregate나 적용된
+Aircraft State가 아니다. 임시 후보의 비용은 순위 산정 대상이 아니므로 0인 비교 중립값을 사용한다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- Modify/Reject 입력 모델: Phase 15-B 이후
+- SAFE 수정 기동의 재승인 및 Runtime 적용 모델: Phase 15-C 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

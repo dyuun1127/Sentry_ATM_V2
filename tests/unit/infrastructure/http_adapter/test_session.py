@@ -166,6 +166,43 @@ def test_modify_command_accepts_fixed_maneuver_schema_and_returns_audit() -> Non
     assert payload["application_step_id"] is None
 
 
+def test_modified_maneuver_revalidation_returns_json_without_application() -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+    maneuver = {
+        "maneuver_type": "ALTITUDE",
+        "target_heading_deg": None,
+        "target_altitude_ft": 8_800,
+        "target_ground_speed_kt": None,
+        "delay_seconds": None,
+        "target_sequence_position": None,
+    }
+    assert _post(
+        session.http_app,
+        "MODIFY_RECOMMENDATION",
+        fields={
+            "rationale": "Maintain additional vertical margin",
+            "modified_maneuver": maneuver,
+        },
+    )[0] == 200
+
+    status, _, body = _post(session.http_app, "REVALIDATE_MODIFIED_MANEUVER")
+    payload = json.loads(body)
+
+    assert status == 200
+    assert payload["stage"] == "MODIFICATION_REVALIDATED"
+    assert payload["elapsed_seconds"] == 90.0
+    assert payload["application_step_id"] is None
+    evidence = payload["modified_revalidation"]
+    assert evidence["verdict"] == "SAFE"
+    assert evidence["primary_conflict_status"] == "SAFE"
+    assert evidence["primary_horizontal_separation_nm"] == pytest.approx(2.3)
+    assert evidence["primary_vertical_separation_ft"] == pytest.approx(
+        1_591.6666666667
+    )
+    assert evidence["safe_to_apply"] is True
+
+
 def test_reject_command_returns_non_authorizing_audit() -> None:
     session = build_golden_demo_session_runtime()
     _post_to_recommendation(session)

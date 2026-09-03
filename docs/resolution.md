@@ -225,7 +225,17 @@ Phase 9-E는 `ASM-022`의 Synthetic 초기조건을 보정해 `CAND-B`의 1차 C
 1,016.25 ft로 회복하고, `MIL-F02`와 수평 약 3.99 NM·수직 약 407 ft의 2차 Conflict를 실제 CPA
 계산으로 재현한다. Scenario ID나 Candidate ID를 Validator 분기 조건으로 사용하지 않는다.
 
-## 10. 다음 단계
+## 10. Phase 15-C 수정 기동 격리 재검증
+
+관제사가 MODIFY로 기록한 Action Maneuver는 T+90 Traffic Snapshot의 복사본에서 기존
+`IsolatedResolutionSafetyValidator`로 검증한다. 재검증 Batch는 수정 후보와 필수 `NO_ACTION` 기준선을
+함께 가지며, 생성·검증 ID는 Clock Tick으로 결정된다. 이 경로는 Candidate Ranking을 다시 수행하지
+않으므로 수정 후보의 비용값을 운영 비용이나 선호도 근거로 해석하지 않는다.
+
+SAFE 판정은 후속 적용 가능성만 나타낸다. 검증기는 실제 Aircraft Runtime, Clock, 원 Candidate Batch,
+Controller Decision Audit을 변경하지 않으며, 적용에는 별도의 재승인 및 Application 경계가 필요하다.
+
+## 11. 다음 단계
 
 안전한 Candidate만 대상으로 비용과 검증 근거를 함께 사용하는 결정론적 Recommendation 순위를
 계산한다.

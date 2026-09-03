@@ -1381,6 +1381,60 @@ tbody tr:hover {
   line-height: 1.45;
 }
 
+.modified-revalidation {
+  margin-top: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(85, 205, 225, 0.3);
+  background: rgba(85, 205, 225, 0.045);
+}
+
+.modified-revalidation > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modified-revalidation span,
+.modified-revalidation dt {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.modified-revalidation strong,
+.modified-revalidation dd {
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.modified-revalidation dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.modified-revalidation dt {
+  margin-bottom: 4px;
+}
+
+.modified-revalidation dd {
+  margin: 0;
+}
+
+.modified-revalidation p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
 .decision-actions {
   margin-top: 16px;
   display: grid;

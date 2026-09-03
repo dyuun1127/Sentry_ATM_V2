@@ -39,7 +39,8 @@ Phase 14-B는 Session Stage를 backend의 고정 Command와 일대일로 연결�
 | `CONFLICT_DETECTED` | `GENERATE_RECOMMENDATION` |
 | `RECOMMENDATION_AVAILABLE` | Decision Card의 `ACCEPT`, `MODIFY`, `REJECT` |
 | `DECISION_ACCEPTED` | `APPLY_APPROVED_MANEUVER` |
-| `DECISION_MODIFIED` | `RESET` |
+| `DECISION_MODIFIED` | `REVALIDATE_MODIFIED_MANEUVER` |
+| `MODIFICATION_REVALIDATED` | `RESET` |
 | `DECISION_REJECTED` | `RESET` |
 | `CONFLICT_RESOLVED` | `RESET` |
 
@@ -73,8 +74,10 @@ Phase 15-B는 Recommendation 단계의 Decision Support Card에 `ACCEPT`, `MODIF
 Rationale만 받는다. Browser 기본 Form 검증과 backend 고정 Schema/Domain 검증을 모두 통과해야 Audit이
 기록된다. 완료 후에는 Decision Type, 변경 기동 또는 적용 불가 상태, Rationale을 같은 Card에서 보여준다.
 
-`ACCEPT`만 다음 `APPLY_APPROVED_MANEUVER`를 허용한다. `MODIFY`는 `REVALIDATION REQUIRED`, `REJECT`는
-`NO MANEUVER AUTHORIZED`로 표시하고 새 Run 외의 실행 Control을 제공하지 않는다.
+`ACCEPT`만 다음 `APPLY_APPROVED_MANEUVER`를 허용한다. `MODIFY`는 먼저 `REVALIDATION REQUIRED`로
+표시하고 격리 검증 Command만 제공한다. 검증 뒤에는 판정, CPA, 2차 충돌·성능·Rule 증거와
+`SAFE · NOT YET APPLIED` 또는 `BLOCKED` Gate를 표시한다. `REJECT`는 `NO MANEUVER AUTHORIZED`로
+표시하고 새 Run 외의 실행 Control을 제공하지 않는다.
 
 ## 4. 보안·접근성 경계
 
@@ -88,7 +91,7 @@ Rationale만 받는다. Browser 기본 Form 검증과 backend 고정 Schema/Doma
 
 - 지도는 실제 항법 Chart가 아닌 RKTU ARP 중심 PoC Local Coordinate View다.
 - 안전성 검증 결과가 SAFE인 Golden Demo Primary Recommendation만 Decision 대상으로 사용한다.
-- 수정 기동의 자동 재검증과 재추천은 후속 Phase 범위이며 Phase 15-B에서는 Audit까지만 수행한다.
+- SAFE로 격리 재검증된 수정 기동의 재승인·실제 적용은 후속 Phase 범위다.
 - UI는 Process-local 단일 Session만 읽고 Browser 상태를 영속화하지 않는다.
 
 ## 6. 다음 단계

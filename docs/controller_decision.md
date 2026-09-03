@@ -79,6 +79,10 @@ Phase 15-B Golden Demo UI에서는 같은 Primary Recommendation에 `MODIFY` 또
 있다. 수정 기동과 Rationale 또는 거절 Rationale은 기존 Audit Entry에 기록되며, 어느 경우도 Runtime
 적용 권한을 만들지 않는다. 수정 결과의 Safety 재검증은 Audit 기록과 분리된 후속 단계다.
 
+Phase 15-C는 해당 Audit Entry를 입력으로 수정 기동과 `NO_ACTION` 기준선을 T+90 Traffic 복사본에서
+격리 검증한다. 결과가 SAFE여도 원 `MODIFY` Entry를 `ACCEPT`로 바꾸거나 Runtime을 적용하지 않는다.
+따라서 Audit의 불변성과 사람의 최종 적용 권한 경계를 그대로 유지한다.
+
 ## 6. Phase 11-B Deterministic Controller Decision Service
 
 `DeterministicControllerDecisionService`는 하나의 `ResolutionRecommendationSet`과 그 안의

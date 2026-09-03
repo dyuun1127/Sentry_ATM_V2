@@ -13,6 +13,10 @@ from sentry_atm.runtime.decision_orchestrator import (
     GoldenDemoControllerDecisionOrchestrator,
     GoldenDemoControllerDecisionResult,
 )
+from sentry_atm.runtime.modified_revalidation_orchestrator import (
+    GoldenDemoModifiedManeuverRevalidationOrchestrator,
+    GoldenDemoModifiedManeuverRevalidationResult,
+)
 from sentry_atm.runtime.orchestrator import (
     GoldenDemoStepOrchestrator,
     GoldenDemoStepResult,
@@ -34,6 +38,8 @@ __all__ = [
     "GoldenDemoControllerDecisionOrchestrator",
     "GoldenDemoControllerDecisionResult",
     "GoldenDemoRuntime",
+    "GoldenDemoModifiedManeuverRevalidationOrchestrator",
+    "GoldenDemoModifiedManeuverRevalidationResult",
     "GoldenDemoSessionCommand",
     "GoldenDemoSessionCommandService",
     "GoldenDemoSessionRuntime",

@@ -11,13 +11,14 @@ Application을 실행하지 않는다.
 `GoldenDemoSessionStage`는 완료된 증거를 다음 우선순위로 평가한다.
 
 1. Application Result 존재 → `CONFLICT_RESOLVED`
-2. Controller Decision Result 존재 → Decision Type에 따라 `DECISION_ACCEPTED`,
+2. Modified Maneuver Revalidation Result 존재 → `MODIFICATION_REVALIDATED`
+3. Controller Decision Result 존재 → Decision Type에 따라 `DECISION_ACCEPTED`,
    `DECISION_MODIFIED`, `DECISION_REJECTED`
-3. Resolution Result 존재 → `RECOMMENDATION_AVAILABLE`
-4. 최신 Step에 HIGH/CRITICAL Risk 존재 → `CONFLICT_DETECTED`
-5. 최신 Step에 ROUTINE이 아닌 Priority 존재 → `DEVIATION_DETECTED`
-6. Step 존재 → `MONITORING`
-7. Step 없음 → `READY`
+4. Resolution Result 존재 → `RECOMMENDATION_AVAILABLE`
+5. 최신 Step에 HIGH/CRITICAL Risk 존재 → `CONFLICT_DETECTED`
+6. 최신 Step에 ROUTINE이 아닌 Priority 존재 → `DEVIATION_DETECTED`
+7. Step 존재 → `MONITORING`
+8. Step 없음 → `READY`
 
 단계는 별도로 수정하거나 저장하지 않으므로 실제 backend evidence보다 앞선 화면 상태를 만들 수 없다.
 
@@ -31,6 +32,7 @@ Application을 실행하지 않는다.
 - 8대 Traffic의 Metadata, 위치 NM, 고도 ft, 속도 kt, Heading, 수직속도와 운항 상태
 - 해결 항목을 포함한 현재 Exception Queue와 활성 개수
 - 현재 Recommendation Set과 Controller Decision Audit Log
+- 수정 기동의 격리 Safety Validation 판정, CPA/TCPA, 2차 충돌·성능·규칙 증거와 적용 Gate
 - HIGH/CRITICAL 원 충돌의 항공기쌍, CPA/TCPA, 분리기준 대비 비율, Risk Score/Reason/Profile 증거
 - T+60 진입 이벤트의 계획·실제 고도/침로 및 수평·수직·시간 편차
 - CAND-A~E 전체의 기동, 비용, 원 충돌 결과, 2차 충돌, 규칙 위반과 검증 판정
@@ -56,6 +58,7 @@ Revalidation은 비어 있다.
 | `GENERATE_RECOMMENDATION` | `CONFLICT_DETECTED`, T+70 | `RECOMMENDATION_AVAILABLE`, T+75 |
 | `ACCEPT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_ACCEPTED`, T+90 |
 | `MODIFY_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_MODIFIED`, T+90 |
+| `REVALIDATE_MODIFIED_MANEUVER` | `DECISION_MODIFIED`, T+90 | `MODIFICATION_REVALIDATED`, T+90 |
 | `REJECT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_REJECTED`, T+90 |
 | `APPLY_APPROVED_MANEUVER` | `DECISION_ACCEPTED`, T+90 | `CONFLICT_RESOLVED`, T+90 |
 | `RESET` | 모든 Stage | 새 `READY`, T+0 Run |
@@ -147,3 +150,14 @@ Golden Demo Session은 기존 Controller Decision Domain을 재사용해 Primary
 `ACCEPT`, `MODIFY`, `REJECT`를 기록한다. `MODIFY`와 `REJECT`는 별도 종료 Stage로 투영되며 Runtime
 적용 Command를 노출하지 않는다. `MODIFY`의 변경 기동은 Audit에 보존되지만 이 단계에서 안전하다고
 간주하거나 적용하지 않고 `requires_revalidation=true`로 남는다. `REJECT`도 적용 권한을 만들지 않는다.
+
+## 12. Phase 15-C Modified Maneuver Isolated Revalidation
+
+`REVALIDATE_MODIFIED_MANEUVER`는 Audit에 기록된 수정 기동과 `NO_ACTION` 기준선을 T+90 Traffic
+복사본에 적용해 기존 `IsolatedResolutionSafetyValidator`로 다시 검증한다. 같은 Tick에서 한 번만
+실행되며 Clock, Aircraft Runtime과 Controller Decision Audit은 변경하지 않는다.
+
+`modified_revalidation`은 수정 후보와 Validation Run의 Identity, 판정, 원 충돌 CPA/TCPA, 2차 충돌쌍,
+성능 가능 여부, Rule 위반 및 Reason Code를 제공한다. `safe_to_apply=true`는 격리 검증 통과를 뜻할 뿐
+실제 Runtime 적용 완료나 새 Controller 승인으로 간주하지 않는다. 현재 Golden Demo 기본 수정값
+8,800 ft는 SAFE이고 7,200 ft는 최저고도 Rule 위반으로 UNSAFE다.

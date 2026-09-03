@@ -74,7 +74,8 @@ Host를 변경하는 기능은 제공하지 않는다.
 - 최종 단계는 `AFTER · POST-ACTION REVALIDATION`과 `SEPARATION RESTORED`를 표시한다.
 - Radar의 `CIV-A02`, `MIL-F01` Marker와 연결선이 붉게 강조된다.
 - 새로고침 후에도 backend의 현재 Stage와 동일한 화면이 복원된다.
-- 별도 Reset Run에서 `기동 수정`은 변경값과 근거를 Audit에 표시하고 `REVALIDATION REQUIRED`로 끝난다.
+- 별도 Reset Run에서 `기동 수정` 후 `수정 기동 격리 검증`을 누르면 기본 8,800 ft 수정안은
+  `SAFE · NOT YET APPLIED`와 계산된 CPA 증거를 표시하고 실제 Aircraft 고도는 바뀌지 않는다.
 - 별도 Reset Run에서 `추천안 거절`은 근거를 Audit에 표시하고 기동 적용 버튼을 노출하지 않는다.
 
 ## 5. 실패 복구 절차

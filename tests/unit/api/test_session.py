@@ -12,6 +12,7 @@ from sentry_atm.api import (
 from sentry_atm.runtime import (
     GoldenDemoApprovedManeuverOrchestrator,
     GoldenDemoControllerDecisionOrchestrator,
+    GoldenDemoModifiedManeuverRevalidationOrchestrator,
     GoldenDemoResolutionOrchestrator,
     GoldenDemoStepOrchestrator,
     build_golden_demo_runtime,
@@ -23,8 +24,9 @@ def _session():
     steps = GoldenDemoStepOrchestrator(runtime)
     resolution = GoldenDemoResolutionOrchestrator(steps)
     decision = GoldenDemoControllerDecisionOrchestrator(resolution)
+    modified_revalidation = GoldenDemoModifiedManeuverRevalidationOrchestrator(decision)
     application = GoldenDemoApprovedManeuverOrchestrator(decision)
-    api = InProcessGoldenDemoSessionApi(application)
+    api = InProcessGoldenDemoSessionApi(application, modified_revalidation)
     return runtime, steps, resolution, decision, application, api
 
 
@@ -58,9 +60,11 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
     assert current.exception_queue is None
     assert current.recommendation is None
     assert current.controller_decision is None
+    assert current.modified_revalidation is None
     assert current.revalidation is None
     assert payload["traffic_count"] == 8
     assert payload["stage"] == "READY"
+    assert payload["modified_revalidation"] is None
     assert json.loads(json.dumps(payload))["traffic"][0]["aircraft_id"] == "CIV-A01"
     assert runtime.simulation.clock.state.value == "READY"
     assert steps.last_result is None
@@ -202,6 +206,7 @@ def test_deviation_stage_is_distinct_from_conflict_and_monitoring() -> None:
         step_result=deviation_only,
         resolution_result=None,
         decision_result=None,
+        modified_revalidation_result=None,
         application_result=None,
     )
 
@@ -274,4 +279,7 @@ def test_identical_session_sequences_produce_equal_read_models() -> None:
 
 def test_session_api_rejects_unsupported_source() -> None:
     with pytest.raises(TypeError, match="GoldenDemoApprovedManeuverOrchestrator"):
-        InProcessGoldenDemoSessionApi("application")  # type: ignore[arg-type]
+        InProcessGoldenDemoSessionApi(
+            "application",  # type: ignore[arg-type]
+            "modified",  # type: ignore[arg-type]
+        )

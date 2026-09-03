@@ -153,3 +153,8 @@ Phase 13-D는 매 실행마다 새 Session Runtime을 만들고 HTTP App을 IPv4
 14-A의 `GoldenDemoWebWsgiApp`은 정적 UI Route만 소유하고 나머지 Route를 동일 Session HTTP App에
 위임한다. Phase 14-B는 브라우저가 현재 Session Stage에서 허용된 고정 Command만 POST하게 하고 응답
 Session 전체를 다시 투영한다. Command 순서 검증과 실제 상태 변경 권한은 계속 backend에 있다.
+
+Phase 15-C의 `GoldenDemoModifiedManeuverRevalidationOrchestrator`는 동일 Controller Decision Source를
+참조한다. T+90 MODIFY Audit의 기동을 Traffic 복사본에서 기존 Safety Validator로 검증하고 결과만
+보존한다. Session Factory는 이 Orchestrator를 Read API와 Command Service에 같은 인스턴스로 연결한다.
+Clock Reset 시 결과가 제거되며 실제 Aircraft Runtime과 승인 적용 Orchestrator는 변경되지 않는다.

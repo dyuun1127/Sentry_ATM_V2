@@ -25,6 +25,9 @@ def test_session_factory_wires_one_unstarted_independent_command_boundary() -> N
     assert first.command_service.read_api is first.read_api
     assert isinstance(first.http_app, GoldenDemoSessionWsgiApp)
     assert first.read_api.application_orchestrator is first.application_orchestrator
+    assert first.read_api.modified_revalidation_orchestrator is (
+        first.modified_revalidation_orchestrator
+    )
     assert first.application_orchestrator.decision_orchestrator is first.decision_orchestrator
     assert first.decision_orchestrator.resolution_orchestrator is (first.resolution_orchestrator)
     assert first.resolution_orchestrator.step_orchestrator is first.step_orchestrator
@@ -107,6 +110,36 @@ def test_modify_command_records_revalidation_required_without_runtime_applicatio
     assert snapshot == session.step_orchestrator.last_result.traffic_snapshot
     target_state = next(item for item in snapshot.states if item.aircraft_id == "MIL-F01")
     assert target_state.altitude_ft != 8_800
+
+
+def test_modified_maneuver_revalidation_returns_isolated_safety_evidence() -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+    session.command_service.execute(
+        GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+        rationale="Maintain additional vertical margin",
+        modified_maneuver=AltitudeManeuver(8_800),
+    )
+    traffic_before = session.runtime.simulation.engine.snapshot()
+
+    revalidated = session.command_service.execute(
+        GoldenDemoSessionCommand.REVALIDATE_MODIFIED_MANEUVER
+    )
+
+    assert revalidated.stage is GoldenDemoSessionStage.MODIFICATION_REVALIDATED
+    assert revalidated.elapsed_seconds == 90.0
+    assert revalidated.application_step_id is None
+    assert revalidated.modified_revalidation is not None
+    evidence = revalidated.modified_revalidation
+    assert evidence.verdict == "SAFE"
+    assert evidence.primary_conflict_status == "SAFE"
+    assert evidence.primary_horizontal_separation_nm == pytest.approx(2.3)
+    assert evidence.primary_vertical_separation_ft == pytest.approx(1_591.6666666667)
+    assert evidence.secondary_conflict_aircraft_ids == ()
+    assert evidence.performance_feasible
+    assert evidence.rule_violation_ids == ()
+    assert evidence.safe_to_apply
+    assert session.runtime.simulation.engine.snapshot() == traffic_before
 
 
 def test_reject_command_records_reason_without_runtime_application() -> None:
@@ -245,17 +278,29 @@ def test_identical_command_sequences_produce_equal_session_views() -> None:
 def test_command_service_validates_dependencies_and_command_type() -> None:
     session = build_golden_demo_session_runtime()
     with pytest.raises(TypeError, match="GoldenDemoApprovedManeuverOrchestrator"):
-        GoldenDemoSessionCommandService("application", session.read_api)  # type: ignore[arg-type]
+        GoldenDemoSessionCommandService(
+            "application",  # type: ignore[arg-type]
+            session.modified_revalidation_orchestrator,
+            session.read_api,
+        )
     with pytest.raises(TypeError, match="InProcessGoldenDemoSessionApi"):
         GoldenDemoSessionCommandService(
             session.application_orchestrator,
+            session.modified_revalidation_orchestrator,
             "api",  # type: ignore[arg-type]
         )
 
     other = build_golden_demo_session_runtime()
-    mismatched_api = InProcessGoldenDemoSessionApi(other.application_orchestrator)
+    mismatched_api = InProcessGoldenDemoSessionApi(
+        other.application_orchestrator,
+        other.modified_revalidation_orchestrator,
+    )
     with pytest.raises(ValueError, match="same Application Orchestrator"):
-        GoldenDemoSessionCommandService(session.application_orchestrator, mismatched_api)
+        GoldenDemoSessionCommandService(
+            session.application_orchestrator,
+            session.modified_revalidation_orchestrator,
+            mismatched_api,
+        )
 
     with pytest.raises(TypeError, match="GoldenDemoSessionCommand"):
         session.command_service.execute(1)  # type: ignore[arg-type]

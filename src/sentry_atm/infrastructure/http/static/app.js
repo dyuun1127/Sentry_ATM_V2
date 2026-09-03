@@ -33,9 +33,14 @@ const COMMAND_BY_STAGE = {
     label: "승인 기동 적용",
   },
   DECISION_MODIFIED: {
+    command: "REVALIDATE_MODIFIED_MANEUVER",
+    code: "REVALIDATE · T+90",
+    label: "수정 기동 격리 검증",
+  },
+  MODIFICATION_REVALIDATED: {
     command: "RESET",
     code: "RESET · T+00",
-    label: "재검증 전 새 Run 시작",
+    label: "검증 결과 보존 후 새 Run",
   },
   DECISION_REJECTED: {
     command: "RESET",
@@ -100,6 +105,11 @@ const elements = {
   decisionAuditDetail: document.querySelector("[data-decision-audit-detail]"),
   decisionAuditSummary: document.querySelector("[data-decision-audit-summary]"),
   decisionRationale: document.querySelector("[data-decision-rationale]"),
+  modifiedRevalidation: document.querySelector("[data-modified-revalidation]"),
+  modifiedVerdict: document.querySelector("[data-modified-verdict]"),
+  modifiedSeparation: document.querySelector("[data-modified-separation]"),
+  modifiedApplyGate: document.querySelector("[data-modified-apply-gate]"),
+  modifiedEvidence: document.querySelector("[data-modified-evidence]"),
   decisionActions: document.querySelector("[data-decision-actions]"),
   decisionActionButtons: [...document.querySelectorAll("[data-decision-action]")],
   decisionForm: document.querySelector("[data-decision-form]"),
@@ -491,6 +501,8 @@ function renderDecisionWorkflow(session, latestDecision) {
   const awaitingDecision = session.stage === "RECOMMENDATION_AVAILABLE";
   elements.decisionActions.hidden = !awaitingDecision;
   elements.decisionAuditDetail.hidden = !latestDecision;
+  const modifiedValidation = session.modified_revalidation;
+  elements.modifiedRevalidation.hidden = !modifiedValidation;
   if (!awaitingDecision && decisionMode) {
     setDecisionMode(null);
   }
@@ -505,6 +517,30 @@ function renderDecisionWorkflow(session, latestDecision) {
       : "ORIGINAL CANDIDATE AUTHORIZED";
   elements.decisionAuditSummary.textContent = outcome;
   elements.decisionRationale.textContent = latestDecision.rationale ?? "No rationale required.";
+  if (!modifiedValidation) {
+    return;
+  }
+  elements.modifiedVerdict.textContent = modifiedValidation.verdict ?? "UNKNOWN";
+  elements.modifiedSeparation.textContent = `H ${formatNumber(
+    modifiedValidation.primary_horizontal_separation_nm,
+    2,
+  )} NM · V ${formatNumber(modifiedValidation.primary_vertical_separation_ft)} FT`;
+  elements.modifiedApplyGate.textContent = modifiedValidation.safe_to_apply
+    ? "SAFE · NOT YET APPLIED"
+    : "BLOCKED";
+  const constraints = [];
+  for (const pair of modifiedValidation.secondary_conflict_aircraft_ids ?? []) {
+    constraints.push(`SECONDARY ${pair.join("/")}`);
+  }
+  for (const ruleId of modifiedValidation.rule_violation_ids ?? []) {
+    constraints.push(`RULE ${ruleId}`);
+  }
+  if (!modifiedValidation.performance_feasible) {
+    constraints.push("PERFORMANCE LIMIT");
+  }
+  elements.modifiedEvidence.textContent = constraints.length > 0
+    ? constraints.join(" · ")
+    : (modifiedValidation.reason_codes ?? []).join(" · ");
 }
 
 function renderDecisionSupport(session) {
@@ -527,8 +563,13 @@ function renderDecisionSupport(session) {
   const conflict = primary.safety?.primary_conflict;
   const latestDecision = session.controller_decision?.entries?.at(-1);
   const revalidation = session.revalidation;
+  const modifiedValidation = session.modified_revalidation;
   elements.decisionStatus.textContent = revalidation?.resolved
     ? "POST-ACTION SAFE"
+    : modifiedValidation
+      ? modifiedValidation.safe_to_apply
+        ? "MODIFIED · SAFE TO APPLY"
+        : "MODIFIED · VALIDATION FAILED"
     : latestDecision?.decision_type === "MODIFY"
       ? "MODIFIED · REVALIDATION REQUIRED"
       : latestDecision?.decision_type === "REJECT"
@@ -604,8 +645,17 @@ function renderConflictExplainability(session) {
 
   const recommendation = primaryRecommendation(session);
   const candidateConflict = recommendation?.safety?.primary_conflict;
-  const after = session.revalidation ?? candidateConflict;
-  elements.afterCard.classList.toggle("is-safe", Boolean(after));
+  const modifiedValidation = session.modified_revalidation;
+  const after = session.revalidation ?? modifiedValidation ?? candidateConflict;
+  const afterIsSafe = session.revalidation
+    ? session.revalidation.resolved
+    : modifiedValidation
+      ? modifiedValidation.safe_to_apply
+      : Boolean(candidateConflict);
+  elements.afterCard.classList.toggle(
+    "is-safe",
+    Boolean(after && afterIsSafe),
+  );
   if (session.revalidation) {
     elements.afterLabel.textContent = "AFTER · POST-ACTION REVALIDATION";
     elements.afterOutcome.textContent = session.revalidation.resolved
@@ -617,6 +667,15 @@ function renderConflictExplainability(session) {
     )} NM · V ${formatNumber(session.revalidation.vertical_separation_ft)} FT · ${
       session.revalidation.risk_level
     }`;
+  } else if (modifiedValidation) {
+    elements.afterLabel.textContent = "AFTER · MODIFIED REVALIDATION";
+    elements.afterOutcome.textContent = modifiedValidation.safe_to_apply
+      ? "SAFE · NOT YET APPLIED"
+      : modifiedValidation.verdict;
+    elements.afterSeparation.textContent = `H ${formatNumber(
+      modifiedValidation.primary_horizontal_separation_nm,
+      2,
+    )} NM · V ${formatNumber(modifiedValidation.primary_vertical_separation_ft)} FT`;
   } else if (candidateConflict) {
     elements.afterLabel.textContent = "AFTER · VALIDATED CANDIDATE";
     elements.afterOutcome.textContent = recommendation.safety?.verdict ?? "VALIDATED";
@@ -661,6 +720,7 @@ function renderStage(stage) {
   const normalized = {
     DEVIATION_DETECTED: "MONITORING",
     DECISION_MODIFIED: "DECISION_ACCEPTED",
+    MODIFICATION_REVALIDATED: "DECISION_ACCEPTED",
     DECISION_REJECTED: "DECISION_ACCEPTED",
   }[stage] ?? stage;
   const currentIndex = STAGE_ORDER.indexOf(normalized);

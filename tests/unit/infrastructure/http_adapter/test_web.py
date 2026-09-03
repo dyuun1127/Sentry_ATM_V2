@@ -63,6 +63,7 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b"data-decision-actions" in body
     assert b"data-decision-form" in body
     assert b"data-modified-type" in body
+    assert b"data-modified-revalidation" in body
     assert b"/assets/app.css" in body
     assert app.api_app is runtime.http_app
 
@@ -102,6 +103,7 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
         b'command: "START"',
         b'command: "ADVANCE_TO_CONFLICT"',
         b'command: "GENERATE_RECOMMENDATION"',
+        b'command: "REVALIDATE_MODIFIED_MANEUVER"',
         b'command: "APPLY_APPROVED_MANEUVER"',
         b'command: "RESET"',
     ):
@@ -117,6 +119,7 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
     assert b'executeCommand("REJECT_RECOMMENDATION"' in script
     assert b"function buildModifiedManeuver()" in script
     assert b"function renderDecisionWorkflow(session, latestDecision)" in script
+    assert b"session.modified_revalidation" in script
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:
