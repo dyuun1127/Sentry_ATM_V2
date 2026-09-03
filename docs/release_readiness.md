@@ -48,3 +48,8 @@ SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
 - OS 전체 상태, 브라우저 배율, 화면 해상도와 포트 충돌은 Runbook의 육안 점검이 필요하다.
 - SQLite 데이터는 Golden Demo 실행의 필수 조건이 아니다.
 - Preflight 통과는 실제 관제 운용 적합성이나 보안 인증을 의미하지 않는다.
+
+## 6. Main 병합 준비
+
+환경과 시나리오 검증 이후 Git 이력, 추적 자료, 원격 동기화와 전체 개발 검증까지 포함한 최종
+판정은 [Final Release & Main Merge Checklist](final_release.md)를 따른다.
