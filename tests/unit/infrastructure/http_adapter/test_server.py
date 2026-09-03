@@ -6,10 +6,14 @@ from threading import Thread
 import pytest
 
 from sentry_atm.infrastructure.http import demo_check as demo_check_module
+from sentry_atm.infrastructure.http import release_check as release_check_module
 from sentry_atm.infrastructure.http import server as server_module
 from sentry_atm.infrastructure.http.demo_check import (
     GoldenDemoRegressionFailure,
     GoldenDemoRegressionReport,
+)
+from sentry_atm.infrastructure.http.release_check import (
+    GoldenDemoReleasePreflightFailure,
 )
 from sentry_atm.infrastructure.http.server import (
     LocalGoldenDemoServerSettings,
@@ -170,6 +174,28 @@ def test_readiness_check_cli_reports_success_and_failure(monkeypatch, capsys) ->
 
     assert run_local_golden_demo_check() == 1
     assert "[FAIL] broken checkpoint" in capsys.readouterr().out
+
+
+def test_readiness_check_stops_before_regression_when_preflight_fails(
+    monkeypatch,
+    capsys,
+) -> None:
+    def fail_preflight():
+        raise GoldenDemoReleasePreflightFailure("unsupported presentation environment")
+
+    monkeypatch.setattr(
+        release_check_module,
+        "run_golden_demo_release_preflight",
+        fail_preflight,
+    )
+    monkeypatch.setattr(
+        demo_check_module,
+        "run_golden_demo_regression",
+        lambda: pytest.fail("regression must not run after preflight failure"),
+    )
+
+    assert run_local_golden_demo_check() == 1
+    assert "[FAIL] unsupported presentation environment" in capsys.readouterr().out
 
 
 def test_module_entrypoint_exits_with_main_result(monkeypatch) -> None:

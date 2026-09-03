@@ -14,8 +14,9 @@ process-local 단일 Session이며 외부 네트워크, Docker, PostgreSQL/PostG
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
 ```
 
-이 명령은 운영 서버와 별도의 임시 loopback Port를 사용하고 자동으로 종료한다. 실제 HTTP와 독립된
-Reset Run을 통해 다음 계약을 순서대로 검증한다.
+이 명령은 먼저 Python 3.12+, 패키지 버전, 정적 UI 자산, 외부 URL 부재와 `127.0.0.1` 고정 Bind의
+Release Preflight 5개를 검사한다. 통과하면 운영 서버와 별도의 임시 loopback Port를 사용하고 자동으로
+종료한다. 실제 HTTP와 독립된 Reset Run을 통해 다음 계약을 순서대로 검증한다.
 
 1. UI HTML/CSS/JavaScript와 Explainability 자산 응답
 2. `READY`에서 8대 초기 Traffic
@@ -33,9 +34,10 @@ Reset Run을 통해 다음 계약을 순서대로 검증한다.
 T+70 Checkpoint에서는 `MIL-F01`의 진입 고도·침로·수평·시간 편차도 확인하고, T+75 Checkpoint에서는
 CAND-A~E 전체 판정 행렬이 Golden Scenario Contract와 일치하는지 검증한다.
 
-정상 종료 기준은 마지막 줄이다.
+정상 종료 기준은 다음 두 줄과 종료 코드 `0`이다.
 
 ```text
+SENTRY ATM RELEASE PREFLIGHT PASSED (5 checks)
 SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
 ```
 
@@ -106,7 +108,7 @@ Host를 변경하는 기능은 제공하지 않는다.
 ## 6. 발표 직전 체크리스트
 
 - 최신 발표 대상 Commit인지 `git status --short --branch`로 확인했다.
-- 자동 점검 10개 Checkpoint와 마지막 Clean Reset이 모두 통과했다.
+- Release Preflight 5개, 자동 점검 10개 Checkpoint와 마지막 Clean Reset이 모두 통과했다.
 - Wi-Fi를 끈 상태에서도 화면이 정상적으로 열린다.
 - 브라우저 Zoom 100%와 발표 해상도에서 핵심 Panel이 읽힌다.
 - Golden Demo를 Reset부터 최종 Revalidation까지 한 번 실행했다.

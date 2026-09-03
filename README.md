@@ -67,6 +67,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 15-C: Modified Maneuver Isolated Revalidation 구현 완료
 - Phase 15-D: Validated Modified Maneuver Application 구현 완료
 - Phase 15-E: Multi-Path Golden Demo Regression 구현 완료
+- Phase 16-A: Demo Release Preflight 구현 완료
 
 ## 핵심 문서
 
@@ -87,6 +88,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - [Golden Demo Session Read API](docs/session_api.md)
 - [Golden Demo Web UI](docs/web_ui.md)
 - [Golden Demo 실행 Runbook](docs/demo_runbook.md)
+- [Golden Demo Release Readiness](docs/release_readiness.md)
 
 ## 요구 환경
 

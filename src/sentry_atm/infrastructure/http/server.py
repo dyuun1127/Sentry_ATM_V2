@@ -76,19 +76,30 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def run_local_golden_demo_check() -> int:
-    """Run the optional readiness check without loading it for normal serving."""
+    """Run release preflight and regression without loading either for normal serving."""
 
     from sentry_atm.infrastructure.http.demo_check import (
         GoldenDemoRegressionFailure,
         print_golden_demo_regression_report,
         run_golden_demo_regression,
     )
+    from sentry_atm.infrastructure.http.release_check import (
+        GoldenDemoReleasePreflightFailure,
+        print_golden_demo_release_preflight_report,
+        run_golden_demo_release_preflight,
+    )
 
     try:
+        preflight = run_golden_demo_release_preflight()
         report = run_golden_demo_regression()
-    except (GoldenDemoRegressionFailure, OSError) as error:
+    except (
+        GoldenDemoRegressionFailure,
+        GoldenDemoReleasePreflightFailure,
+        OSError,
+    ) as error:
         print(f"[FAIL] {error}")
         return 1
+    print_golden_demo_release_preflight_report(preflight)
     print_golden_demo_regression_report(report)
     return 0
 
