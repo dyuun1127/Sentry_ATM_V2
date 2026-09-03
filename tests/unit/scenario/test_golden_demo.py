@@ -15,6 +15,7 @@ from sentry_atm.infrastructure.persistence.seed import (
     POC_AIRCRAFT_TYPES,
     POC_PERFORMANCE_PROFILES,
 )
+from sentry_atm.reference_data import wake_category_for
 from sentry_atm.scenario import (
     GOLDEN_DEMO_SCENARIO_ID,
     GOLDEN_DEMO_START_UTC,
@@ -102,7 +103,9 @@ def test_metadata_links_seeded_type_and_performance_profile() -> None:
         profile = profiles[metadata.performance_class]
 
         assert metadata.category is aircraft_type.category is profile.category
-        assert profile.aircraft_type_code == metadata.aircraft_type
+        # 후류 등급은 기종에 딸린 사실이므로 전사 데이터와 일치해야 한다.
+        assert metadata.wake_category is wake_category_for(metadata.aircraft_type)
+        assert state.wake_category is metadata.wake_category
         assert profile.min_speed_kt <= state.ground_speed_kt <= profile.max_speed_kt
         assert -profile.max_descent_rate_fpm <= state.vertical_speed_fpm
         assert state.vertical_speed_fpm <= profile.max_climb_rate_fpm

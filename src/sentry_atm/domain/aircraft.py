@@ -10,6 +10,7 @@ from sentry_atm.domain.enums import (
     EmergencyStatus,
     EmergencyType,
     FlightPhase,
+    WakeCategory,
 )
 from sentry_atm.domain.time_policy import to_kst, to_utc
 from sentry_atm.domain.units import (
@@ -40,6 +41,13 @@ class AircraftMetadata:
     callsign: str | None = None
     icao24: str | None = None
     performance_class: str | None = None
+    wake_category: WakeCategory | None = None
+    """항적난기류 등급 (고시 5-5-4 사·아항).
+
+    `category` 와 다르다. `category` 는 운용 역할(민항/전투기/수송기)이고 이쪽은
+    중량 등급이다. F-15K 는 역할이 전투기이지만 등급은 중형이고, C-130 은
+    수송기이면서 대형이다 — 하나로 다른 하나를 추정하면 틀린다.
+    """
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -85,6 +93,13 @@ class AircraftState:
     flight_phase: FlightPhase = FlightPhase.UNKNOWN
     emergency_status: EmergencyStatus = EmergencyStatus.NONE
     emergency_type: EmergencyType | None = None
+    wake_category: WakeCategory | None = None
+    """이 시점 항적의 후류 등급.
+
+    기종에 딸린 사실이지만 상태에 실어 둔다. 분리 판정은 상태만 받으므로,
+    여기 없으면 판정기가 기종 목록을 따로 조회해야 하고 그 조회 실패가 조용한
+    기본값으로 흐른다. 없을 때는 규정 어댑터가 조건 없는 최저치로 폴백한다.
+    """
 
     def __post_init__(self) -> None:
         object.__setattr__(

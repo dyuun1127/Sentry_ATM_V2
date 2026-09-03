@@ -37,6 +37,7 @@ from sentry_atm.domain.enums import (
     RiskReasonCode,
     SafetyRuleViolationType,
     TrajectoryType,
+    WakeCategory,
 )
 from sentry_atm.domain.exception_queue import (
     POC_EXCEPTION_QUEUE_V1_POLICY,
@@ -149,4 +150,5 @@ __all__ = [
     "Trajectory",
     "TrajectoryPoint",
     "TrajectoryType",
+    "WakeCategory",
 ]

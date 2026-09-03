@@ -159,6 +159,10 @@ class SyntheticAircraftRuntime:
             flight_phase=motion_anchor.flight_phase,
             emergency_status=motion_anchor.emergency_status,
             emergency_type=motion_anchor.emergency_type,
+            # 후류 등급은 위치처럼 시간에 따라 변하지 않지만 상태에 실려 다닌다.
+            # 여기서 빠뜨리면 초기 상태에만 남고 전파 이후로는 사라져, 분리 판정이
+            # 조용히 조건 없는 최저치로 폴백한다.
+            wake_category=motion_anchor.wake_category,
         )
 
     def _synchronize_reset(self) -> None:

@@ -8,7 +8,8 @@
       "후류등급": "고시 5-5-4 사·아항 등급 구분 (초대형/대형/중형/소형)",
       "주둔부대": "공군 제17전투비행단(F-35A), 제6탐색구조전대, 제29전술개발훈련비행전대"
     },
-    "_srs_note": "srs_cat 은 고시 3-9-6 주기 가의 **군 공항** 기준으로 분류했다. 청주는 민·군 공용이지만 군 공항이므로 민간전용공항 기준(주기 나)을 쓰지 않는다. 결과적으로 헬기를 제외한 전 기종이 CAT III 로 묶여, 동일활주로 거리 최저치가 6,000ft 로 일괄 적용된다 — 이 공항에서는 SRS 범주가 기종을 구분하지 못한다.",
+    "_role_note": "role 은 기종의 운용 역할이다. 후류 등급(wake_cat)과 별개이며 — 예컨대 F-15K 는 역할이 전투기이지만 후류 등급은 중형이고, C-130 은 수송기이면서 대형이다. 등급으로 역할을 추정하면 틀린다.",
+  "_srs_note": "srs_cat 은 고시 3-9-6 주기 가의 **군 공항** 기준으로 분류했다. 청주는 민·군 공용이지만 군 공항이므로 민간전용공항 기준(주기 나)을 쓰지 않는다. 결과적으로 헬기를 제외한 전 기종이 CAT III 로 묶여, 동일활주로 거리 최저치가 6,000ft 로 일괄 적용된다 — 이 공항에서는 SRS 범주가 기종을 구분하지 못한다.",
   "_runway_occupancy_note": "활주로 점유시간(ROT)은 추정값이다. 고시 5-5-4 차의 2.5NM 감축은 '활주로 평균점유시간 50초 이하로 문서화된 경우'를 조건으로 하는데, 청주는 민·군 공용에 제동장치(BAK-12/14) 운용 활주로라 공개자료로 확인할 수 없다. 그래서 감축은 비활성이고, 여기서는 보수적으로 60초를 기본값으로 둔다."
   },
 
@@ -22,52 +23,52 @@
   "_departure_note": "departure_roll_s 는 이륙활주 시작부터 활주로 종단 통과까지의 추정 시간이다 (고시 3-9-6 가항의 '활주로 종단을 통과' 판정에 쓴다). initial_climb_kt 는 SID 구간 대표 상승속도이며, 상승률은 값을 따로 두지 않고 AIP 가 고시한 SID 상승구배(ft/NM) × 대지속도로 산출한다 — 지어낸 상승률로 절차 고도제한을 어기지 않게 하기 위해서다.",
 
   "types": {
-    "B738": { "name": "Boeing 737-800", "wake_cat": "중형", "final_gs_kt": 140, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "B38M": { "name": "Boeing 737 MAX 8", "wake_cat": "중형", "final_gs_kt": 140, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "A320": { "name": "Airbus A320", "wake_cat": "중형", "final_gs_kt": 138, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "A321": { "name": "Airbus A321", "wake_cat": "중형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "B77W": { "name": "Boeing 777-300ER", "wake_cat": "대형", "final_gs_kt": 150, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "B789": { "name": "Boeing 787-9", "wake_cat": "대형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "A333": { "name": "Airbus A330-300", "wake_cat": "대형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
-    "A388": { "name": "Airbus A380-800", "wake_cat": "초대형", "final_gs_kt": 150, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "B738": { "name": "Boeing 737-800", "role": "airliner", "wake_cat": "중형", "final_gs_kt": 140, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "B38M": { "name": "Boeing 737 MAX 8", "role": "airliner", "wake_cat": "중형", "final_gs_kt": 140, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "A320": { "name": "Airbus A320", "role": "airliner", "wake_cat": "중형", "final_gs_kt": 138, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "A321": { "name": "Airbus A321", "role": "airliner", "wake_cat": "중형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "B77W": { "name": "Boeing 777-300ER", "role": "airliner", "wake_cat": "대형", "final_gs_kt": 150, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "B789": { "name": "Boeing 787-9", "role": "airliner", "wake_cat": "대형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "A333": { "name": "Airbus A330-300", "role": "airliner", "wake_cat": "대형", "final_gs_kt": 145, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
+    "A388": { "name": "Airbus A380-800", "role": "airliner", "wake_cat": "초대형", "final_gs_kt": 150, "tcas": true, "srs_cat": "CAT_III", "operator": "civil" },
 
     "F35A": {
-      "name": "F-35A Lightning II", "wake_cat": "소형", "final_gs_kt": 150,
+      "name": "F-35A Lightning II", "role": "fast_jet", "wake_cat": "소형", "final_gs_kt": 150,
       "runway_occupancy_s": 50, "tcas": false, "srs_cat": "CAT_III", "operator": "military",
       "unit": "제17전투비행단",
       "_note": "TCAS 미장착. 등급은 소형이나 최종접근속도는 민항 중형기보다 빠르다."
     },
     "KF16": {
-      "name": "KF-16", "wake_cat": "소형", "final_gs_kt": 155,
+      "name": "KF-16", "role": "fast_jet", "wake_cat": "소형", "final_gs_kt": 155,
       "runway_occupancy_s": 50, "tcas": false, "srs_cat": "CAT_III", "operator": "military",
       "_note": "TCAS 미장착"
     },
     "FA50": {
-      "name": "FA-50", "wake_cat": "소형", "final_gs_kt": 145,
+      "name": "FA-50", "role": "fast_jet", "wake_cat": "소형", "final_gs_kt": 145,
       "runway_occupancy_s": 50, "tcas": false, "srs_cat": "CAT_III", "operator": "military",
       "_note": "TCAS 미장착"
     },
     "F15K": {
-      "name": "F-15K", "wake_cat": "중형", "final_gs_kt": 160,
+      "name": "F-15K", "role": "fast_jet", "wake_cat": "중형", "final_gs_kt": 160,
       "runway_occupancy_s": 50, "tcas": false, "srs_cat": "CAT_III", "operator": "military",
       "_note": "TCAS 미장착. 최대이륙중량 36t 으로 중형 등급이며 접근속도가 가장 빠르다."
     },
     "C130": {
-      "name": "C-130H Hercules", "wake_cat": "대형", "final_gs_kt": 130,
+      "name": "C-130H Hercules", "role": "transport", "wake_cat": "대형", "final_gs_kt": 130,
       "runway_occupancy_s": 65, "tcas": true, "srs_cat": "CAT_III", "operator": "military",
       "_note": "등급은 대형이나 접근속도는 가장 느린 축 — 전투기 앞에 서면 큰 간격이 생긴다."
     },
     "KC30": {
-      "name": "KC-330 Cygnus", "wake_cat": "대형", "final_gs_kt": 145,
+      "name": "KC-330 Cygnus", "role": "transport", "wake_cat": "대형", "final_gs_kt": 145,
       "runway_occupancy_s": 70, "tcas": true, "srs_cat": "CAT_III", "operator": "military"
     },
     "CN35": {
-      "name": "CN-235", "wake_cat": "중형", "final_gs_kt": 120,
+      "name": "CN-235", "role": "transport", "wake_cat": "중형", "final_gs_kt": 120,
       "runway_occupancy_s": 55, "tcas": false, "srs_cat": "CAT_III", "operator": "military",
       "unit": "제6탐색구조전대"
     },
     "H60": {
-      "name": "HH-60 Pave Hawk", "wake_cat": "소형", "final_gs_kt": 80,
+      "name": "HH-60 Pave Hawk", "role": "rotorcraft", "wake_cat": "소형", "final_gs_kt": 80,
       "runway_occupancy_s": 40, "tcas": false, "srs_cat": "CAT_I", "operator": "military",
       "unit": "제6탐색구조전대", "rotorcraft": true,
       "_note": "회전익. 고정익 시퀀스와 별도 처리 대상 — 본 과제 범위에서는 제외한다."

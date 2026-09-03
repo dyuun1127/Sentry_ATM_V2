@@ -19,6 +19,19 @@ class AircraftCategory(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class WakeCategory(StrEnum):
+    """항적난기류 등급. 고시 5-5-4 사·아항.
+
+    민간공항 전용인 A~G 그룹(고시 1-2-1 라항)이 아니라 민·군 공통 적용되는
+    네 등급을 쓴다. 청주는 민·군 공용이므로 공통 등급이어야 한다.
+    """
+
+    SUPER = "초대형"
+    HEAVY = "대형"
+    MEDIUM = "중형"
+    LIGHT = "소형"
+
+
 class FlightPhase(StrEnum):
     """Coarse flight phase used by the PoC domain."""
 

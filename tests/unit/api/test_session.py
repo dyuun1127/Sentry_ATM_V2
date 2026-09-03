@@ -55,7 +55,7 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
     assert current.elapsed_seconds == 0.0
     assert len(current.traffic) == 8
     assert current.traffic[0].aircraft_id == "CIV-A01"
-    assert current.traffic[0].aircraft_type == "SYN-AIRLINER"
+    assert current.traffic[0].aircraft_type == "B738"
     assert current.traffic[0].category == "AIRLINER"
     assert current.traffic[0].source == "SYNTHETIC"
     assert current.active_exception_count == 0

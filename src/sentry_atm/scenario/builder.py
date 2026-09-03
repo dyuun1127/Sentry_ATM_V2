@@ -11,6 +11,7 @@ from sentry_atm.domain import (
     EmergencyType,
     FlightPhase,
 )
+from sentry_atm.reference_data import wake_category_for
 from sentry_atm.scenario.event import (
     EmergencyDeclaredPayload,
     EmergencyReasonCategory,
@@ -81,12 +82,16 @@ def _scenario_aircraft(
     flight_phase: FlightPhase,
     scheduled_states: tuple[AircraftState, ...] = (),
 ) -> ScenarioAircraft:
+    # 후류 등급은 인자로 받지 않는다. 기종에 딸린 사실이므로 전사 데이터에서
+    # 끌어와야 하고, 시나리오가 따로 적으면 두 벌이 되어 어긋난다.
+    wake = wake_category_for(aircraft_type)
     return ScenarioAircraft(
         metadata=AircraftMetadata(
             aircraft_id=aircraft_id,
             aircraft_type=aircraft_type,
             category=category,
             performance_class=performance_profile_id,
+            wake_category=wake,
         ),
         initial_state=AircraftState(
             aircraft_id=aircraft_id,
@@ -99,6 +104,7 @@ def _scenario_aircraft(
             vertical_speed_fpm=vertical_speed_fpm,
             source=DataSource.SYNTHETIC,
             flight_phase=flight_phase,
+            wake_category=wake,
         ),
         scheduled_states=scheduled_states,
     )
@@ -113,7 +119,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
         aircraft=(
             _scenario_aircraft(
                 aircraft_id="CIV-A01",
-                aircraft_type="SYN-AIRLINER",
+                aircraft_type="B738",
                 category=AircraftCategory.AIRLINER,
                 performance_profile_id="AIRLINER-POC-V1",
                 x_nm=-3.0,
@@ -126,7 +132,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="CIV-A02",
-                aircraft_type="SYN-AIRLINER",
+                aircraft_type="B738",
                 category=AircraftCategory.AIRLINER,
                 performance_profile_id="AIRLINER-POC-V1",
                 x_nm=10.0,
@@ -139,7 +145,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="CIV-A03",
-                aircraft_type="SYN-AIRLINER",
+                aircraft_type="B738",
                 category=AircraftCategory.AIRLINER,
                 performance_profile_id="AIRLINER-POC-V1",
                 x_nm=-14.0,
@@ -152,7 +158,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="CIV-D01",
-                aircraft_type="SYN-AIRLINER",
+                aircraft_type="B738",
                 category=AircraftCategory.AIRLINER,
                 performance_profile_id="AIRLINER-POC-V1",
                 x_nm=-16.0,
@@ -165,7 +171,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-F01",
-                aircraft_type="SYN-FAST-JET",
+                aircraft_type="F35A",
                 category=AircraftCategory.FAST_JET,
                 performance_profile_id="FAST-JET-POC-V1",
                 x_nm=_MIL_F01_INITIAL_X_NM,
@@ -187,12 +193,13 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                         vertical_speed_fpm=_MIL_F01_ACTUAL_VERTICAL_SPEED_FPM,
                         source=DataSource.SYNTHETIC,
                         flight_phase=FlightPhase.CLIMB,
+                        wake_category=wake_category_for("F35A"),
                     ),
                 ),
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-F02",
-                aircraft_type="SYN-FAST-JET",
+                aircraft_type="F35A",
                 category=AircraftCategory.FAST_JET,
                 performance_profile_id="FAST-JET-POC-V1",
                 x_nm=_MIL_F02_INITIAL_X_NM,
@@ -205,7 +212,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-T01",
-                aircraft_type="SYN-TRANSPORT",
+                aircraft_type="C130",
                 category=AircraftCategory.TRANSPORT,
                 performance_profile_id="TRANSPORT-POC-V1",
                 x_nm=18.0,
@@ -218,7 +225,7 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-T02",
-                aircraft_type="SYN-TRANSPORT",
+                aircraft_type="C130",
                 category=AircraftCategory.TRANSPORT,
                 performance_profile_id="TRANSPORT-POC-V1",
                 x_nm=-1.0,
