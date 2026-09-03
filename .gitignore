@@ -75,3 +75,6 @@ Desktop.ini
 /자료/
 # /*.pdf
 # /*.hwp
+
+# 도구 산출물 — 시나리오 JSON 등
+artifacts/

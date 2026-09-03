@@ -214,6 +214,20 @@ SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
 | 승인 기동 적용 | 승인된 기동만 Runtime에 반영하고 CPA·위험도 재검증 |
 | Run Reset | 파생 상태를 제거하고 깨끗한 `READY` Session 재생성 |
 
+## 명령줄 도구
+
+`tools/` 에 규정 엔진을 다루는 도구가 있다. 서버나 웹 UI 없이 단독으로 돈다 —
+AIP 정합성 검증, 예측기·예외 스코어러 학습과 평가, 시퀀싱 시연, 시나리오 내보내기.
+자세한 것은 [tools/README.md](tools/README.md).
+
+```powershell
+.\.venv\Scripts\python.exe toolsalidate_aip.py       # AIP 전사값 67건 대조
+.\.venv\Scripts\python.exe tools	rain_predictor.py    # 물리 + 잔차 LSTM 학습
+.\.venv\Scripts\python.exe tools	rain_mbe.py          # 예외 스코어러 학습
+```
+
+학습·평가 도구는 `pip install -e ".[learning]"` 이 필요하다.
+
 ## 테스트 및 정적 검사
 
 ```powershell
