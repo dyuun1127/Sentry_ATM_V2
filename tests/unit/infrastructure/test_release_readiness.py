@@ -185,3 +185,19 @@ def test_report_printer_and_cli_are_stable(monkeypatch, capsys) -> None:
     assert main(["unexpected"]) == 2
     assert "does not accept arguments" in capsys.readouterr().out
     assert isinstance(report, MainMergeReadinessReport)
+
+
+def test_command_runner_decodes_git_paths_as_utf8(monkeypatch, tmp_path) -> None:
+    captured = {}
+
+    def run(command, **options):
+        captured.update(options)
+        return release.subprocess.CompletedProcess(command, 0, "양식/template.pdf\0", "")
+
+    monkeypatch.setattr(release.subprocess, "run", run)
+
+    result = release._run_command(("git", "ls-files", "-z"), tmp_path)
+
+    assert result.stdout == "양식/template.pdf\0"
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"

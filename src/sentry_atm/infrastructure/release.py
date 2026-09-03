@@ -231,6 +231,8 @@ def _run_command(command: tuple[str, ...], repository_root: Path) -> _CommandRes
             cwd=repository_root,
             capture_output=True,
             check=False,
+            encoding="utf-8",
+            errors="replace",
             text=True,
             timeout=120,
         )
