@@ -41,6 +41,9 @@ if TYPE_CHECKING:
     from sentry_atm.runtime.application_orchestrator import (
         GoldenDemoApprovedManeuverOrchestrator,
     )
+    from sentry_atm.runtime.modified_application_orchestrator import (
+        GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
+    )
     from sentry_atm.runtime.modified_revalidation_orchestrator import (
         GoldenDemoModifiedManeuverRevalidationOrchestrator,
     )
@@ -74,6 +77,7 @@ class GoldenDemoSessionCommand(StrEnum):
     ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
     MODIFY_RECOMMENDATION = "MODIFY_RECOMMENDATION"
     REVALIDATE_MODIFIED_MANEUVER = "REVALIDATE_MODIFIED_MANEUVER"
+    APPLY_VALIDATED_MODIFIED_MANEUVER = "APPLY_VALIDATED_MODIFIED_MANEUVER"
     REJECT_RECOMMENDATION = "REJECT_RECOMMENDATION"
     APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
     RESET = "RESET"
@@ -127,6 +131,11 @@ class GoldenDemoRevalidationReadModel:
 
     application_step_id: str
     source_decision_step_id: str
+    application_source: str
+    source_modified_revalidation_step_id: str | None
+    authorization_id: str | None
+    authorized_at_utc: str | None
+    applied_maneuver_type: str
     applied_aircraft_id: str
     before_altitude_ft: float
     applied_altitude_ft: float
@@ -147,6 +156,13 @@ class GoldenDemoRevalidationReadModel:
         return {
             "application_step_id": self.application_step_id,
             "source_decision_step_id": self.source_decision_step_id,
+            "application_source": self.application_source,
+            "source_modified_revalidation_step_id": (
+                self.source_modified_revalidation_step_id
+            ),
+            "authorization_id": self.authorization_id,
+            "authorized_at_utc": self.authorized_at_utc,
+            "applied_maneuver_type": self.applied_maneuver_type,
             "applied_aircraft_id": self.applied_aircraft_id,
             "before_altitude_ft": self.before_altitude_ft,
             "applied_altitude_ft": self.applied_altitude_ft,
@@ -432,7 +448,11 @@ class GoldenDemoSessionCommandApiContract(Protocol):
 class InProcessGoldenDemoSessionApi:
     """Project the current Orchestrator chain without owning its lifecycle."""
 
-    __slots__ = ("_application_orchestrator", "_modified_revalidation_orchestrator")
+    __slots__ = (
+        "_application_orchestrator",
+        "_modified_application_orchestrator",
+        "_modified_revalidation_orchestrator",
+    )
 
     def __init__(
         self,
@@ -440,9 +460,15 @@ class InProcessGoldenDemoSessionApi:
         modified_revalidation_orchestrator: (
             "GoldenDemoModifiedManeuverRevalidationOrchestrator"
         ),
+        modified_application_orchestrator: (
+            "GoldenDemoValidatedModifiedManeuverApplicationOrchestrator"
+        ),
     ) -> None:
         from sentry_atm.runtime.application_orchestrator import (
             GoldenDemoApprovedManeuverOrchestrator,
+        )
+        from sentry_atm.runtime.modified_application_orchestrator import (
+            GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
         )
         from sentry_atm.runtime.modified_revalidation_orchestrator import (
             GoldenDemoModifiedManeuverRevalidationOrchestrator,
@@ -467,6 +493,22 @@ class InProcessGoldenDemoSessionApi:
         ):
             raise ValueError("Session Orchestrators must share one Controller Decision source")
         self._modified_revalidation_orchestrator = modified_revalidation_orchestrator
+        if not isinstance(
+            modified_application_orchestrator,
+            GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
+        ):
+            raise TypeError(
+                "modified_application_orchestrator must be a "
+                "GoldenDemoValidatedModifiedManeuverApplicationOrchestrator"
+            )
+        if (
+            modified_application_orchestrator.modified_revalidation_orchestrator
+            is not modified_revalidation_orchestrator
+        ):
+            raise ValueError(
+                "Session Orchestrators must share one Modified Revalidation source"
+            )
+        self._modified_application_orchestrator = modified_application_orchestrator
 
     @property
     def application_orchestrator(self) -> "GoldenDemoApprovedManeuverOrchestrator":
@@ -478,10 +520,18 @@ class InProcessGoldenDemoSessionApi:
     ) -> "GoldenDemoModifiedManeuverRevalidationOrchestrator":
         return self._modified_revalidation_orchestrator
 
+    @property
+    def modified_application_orchestrator(
+        self,
+    ) -> "GoldenDemoValidatedModifiedManeuverApplicationOrchestrator":
+        return self._modified_application_orchestrator
+
     def get_current(self) -> GoldenDemoSessionReadModel:
         application = self._application_orchestrator
-        application_result = application.last_result
+        approved_application_result = application.last_result
         modified_revalidation_result = self._modified_revalidation_orchestrator.last_result
+        modified_application_result = self._modified_application_orchestrator.last_result
+        application_result = modified_application_result or approved_application_result
         decision = application.decision_orchestrator
         decision_result = decision.last_result
         resolution = decision.resolution_orchestrator
@@ -865,9 +915,29 @@ def _map_revalidation(application_result) -> GoldenDemoRevalidationReadModel:
         and risk.risk_level is RiskLevel.LOW
         and source_exception.status is ExceptionStatus.RESOLVED
     )
+    modified_revalidation = getattr(application_result, "modified_revalidation", None)
+    if modified_revalidation is None:
+        candidate = application_result.decision_entry.approved_candidate
+        application_source = "ACCEPTED_RECOMMENDATION"
+        source_modified_revalidation_step_id = None
+        authorization_id = None
+        authorized_at_utc = None
+    else:
+        candidate = modified_revalidation.modified_candidate
+        application_source = "REVALIDATED_MODIFICATION"
+        source_modified_revalidation_step_id = (
+            application_result.source_revalidation_step_id
+        )
+        authorization_id = application_result.authorization_id
+        authorized_at_utc = _utc_text(application_result.authorized_at_utc)
     return GoldenDemoRevalidationReadModel(
         application_step_id=application_result.application_step_id,
         source_decision_step_id=application_result.source_decision_step_id,
+        application_source=application_source,
+        source_modified_revalidation_step_id=source_modified_revalidation_step_id,
+        authorization_id=authorization_id,
+        authorized_at_utc=authorized_at_utc,
+        applied_maneuver_type=candidate.maneuver.maneuver_type.value,
         applied_aircraft_id=application_result.applied_state.aircraft_id,
         before_altitude_ft=application_result.before_state.altitude_ft,
         applied_altitude_ft=application_result.applied_state.altitude_ft,

@@ -38,9 +38,14 @@ const COMMAND_BY_STAGE = {
     label: "수정 기동 격리 검증",
   },
   MODIFICATION_REVALIDATED: {
+    command: "APPLY_VALIDATED_MODIFIED_MANEUVER",
+    code: "AUTHORIZE · T+90",
+    label: "SAFE 수정 기동 재승인·적용",
+  },
+  BLOCKED_MODIFICATION: {
     command: "RESET",
     code: "RESET · T+00",
-    label: "검증 결과 보존 후 새 Run",
+    label: "차단된 수정안 폐기 후 새 Run",
   },
   DECISION_REJECTED: {
     command: "RESET",
@@ -123,6 +128,7 @@ const elements = {
   decisionRationaleInput: document.querySelector("[data-decision-rationale-input]"),
   decisionSubmit: document.querySelector("[data-decision-submit]"),
   revalidation: document.querySelector("[data-revalidation]"),
+  revalidationSource: document.querySelector("[data-revalidation-source]"),
   revalidationResult: document.querySelector("[data-revalidation-result]"),
   conflictExplainability: document.querySelector("[data-conflict-explainability]"),
   conflictPair: document.querySelector("[data-conflict-pair]"),
@@ -510,8 +516,9 @@ function renderDecisionWorkflow(session, latestDecision) {
     return;
   }
   const modified = latestDecision.modified_maneuver;
+  const modifiedApplied = session.revalidation?.application_source === "REVALIDATED_MODIFICATION";
   const outcome = latestDecision.decision_type === "MODIFY"
-    ? `${maneuverText(modified)} · REVALIDATION REQUIRED`
+    ? `${maneuverText(modified)} · ${modifiedApplied ? "AUTHORIZED & APPLIED" : "REVALIDATION REQUIRED"}`
     : latestDecision.decision_type === "REJECT"
       ? "NO MANEUVER AUTHORIZED"
       : "ORIGINAL CANDIDATE AUTHORIZED";
@@ -525,8 +532,10 @@ function renderDecisionWorkflow(session, latestDecision) {
     modifiedValidation.primary_horizontal_separation_nm,
     2,
   )} NM · V ${formatNumber(modifiedValidation.primary_vertical_separation_ft)} FT`;
-  elements.modifiedApplyGate.textContent = modifiedValidation.safe_to_apply
-    ? "SAFE · NOT YET APPLIED"
+  elements.modifiedApplyGate.textContent = modifiedApplied
+    ? "AUTHORIZED · APPLIED"
+    : modifiedValidation.safe_to_apply
+      ? "SAFE · NOT YET APPLIED"
     : "BLOCKED";
   const constraints = [];
   for (const pair of modifiedValidation.secondary_conflict_aircraft_ids ?? []) {
@@ -577,7 +586,10 @@ function renderDecisionSupport(session) {
         : `${primary.safety?.verdict ?? "UNKNOWN"} CANDIDATE`;
   elements.decisionRank.textContent = `RANK ${String(primary.rank ?? 0).padStart(2, "0")}`;
   elements.decisionTarget.textContent = primary.target_aircraft_id ?? "—";
-  elements.decisionManeuver.textContent = maneuverText(primary.maneuver);
+  const displayedManeuver = revalidation?.application_source === "REVALIDATED_MODIFICATION"
+    ? latestDecision?.modified_maneuver
+    : primary.maneuver;
+  elements.decisionManeuver.textContent = maneuverText(displayedManeuver);
   elements.safetyVerdict.textContent = revalidation?.conflict_status ?? primary.safety?.verdict ?? "—";
   elements.safetyHorizontal.textContent = `${formatNumber(
     revalidation?.horizontal_separation_nm ?? conflict?.horizontal_separation_nm,
@@ -590,6 +602,9 @@ function renderDecisionSupport(session) {
   elements.decisionExplanation.textContent = primary.explanation ?? "";
   renderDecisionWorkflow(session, latestDecision);
   elements.revalidation.hidden = !revalidation;
+  elements.revalidationSource.textContent = revalidation?.application_source === "REVALIDATED_MODIFICATION"
+    ? "AUTHORIZED MODIFICATION · POST-ACTION REVALIDATION"
+    : "POST-ACTION REVALIDATION";
   elements.revalidationResult.textContent = revalidation?.resolved ? "RESOLVED" : "RECHECK";
 }
 
@@ -690,8 +705,12 @@ function renderConflictExplainability(session) {
   }
 }
 
-function updateCommandControl(stage) {
-  const config = COMMAND_BY_STAGE[stage];
+function updateCommandControl(session) {
+  const stage = String(session?.stage ?? "READY");
+  const config = stage === "MODIFICATION_REVALIDATED"
+    && !session?.modified_revalidation?.safe_to_apply
+    ? COMMAND_BY_STAGE.BLOCKED_MODIFICATION
+    : COMMAND_BY_STAGE[stage];
   elements.primaryCommand.dataset.command = config?.command ?? "";
   elements.commandCode.textContent = config?.code ?? "NO AUTHORIZED COMMAND";
   elements.commandLabel.textContent = config?.label ?? "현재 단계 확인 필요";
@@ -712,7 +731,7 @@ function setRequestBusy(value) {
   }
   elements.primaryCommand.setAttribute("aria-busy", String(value));
   if (currentSession) {
-    updateCommandControl(currentSession.stage);
+    updateCommandControl(currentSession);
   }
 }
 
@@ -751,7 +770,7 @@ function renderSession(session) {
   renderDecisionSupport(session);
   renderConflictExplainability(session);
   renderCandidateComparisons(session.candidate_comparisons);
-  updateCommandControl(String(session.stage ?? "READY"));
+  updateCommandControl(session);
 }
 
 function showToast(message, variant = "error") {

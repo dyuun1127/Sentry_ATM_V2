@@ -15,6 +15,7 @@ from sentry_atm.runtime import (
     GoldenDemoModifiedManeuverRevalidationOrchestrator,
     GoldenDemoResolutionOrchestrator,
     GoldenDemoStepOrchestrator,
+    GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
     build_golden_demo_runtime,
 )
 
@@ -25,13 +26,20 @@ def _session():
     resolution = GoldenDemoResolutionOrchestrator(steps)
     decision = GoldenDemoControllerDecisionOrchestrator(resolution)
     modified_revalidation = GoldenDemoModifiedManeuverRevalidationOrchestrator(decision)
+    modified_application = GoldenDemoValidatedModifiedManeuverApplicationOrchestrator(
+        modified_revalidation
+    )
     application = GoldenDemoApprovedManeuverOrchestrator(decision)
-    api = InProcessGoldenDemoSessionApi(application, modified_revalidation)
-    return runtime, steps, resolution, decision, application, api
+    api = InProcessGoldenDemoSessionApi(
+        application,
+        modified_revalidation,
+        modified_application,
+    )
+    return runtime, steps, resolution, decision, application, modified_application, api
 
 
 def test_ready_session_is_complete_json_ready_and_read_only() -> None:
-    runtime, steps, resolution, decision, application, api = _session()
+    runtime, steps, resolution, decision, application, _, api = _session()
 
     current = api.get_current()
     payload = current.to_dict()
@@ -74,7 +82,7 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
 
 
 def test_session_projects_each_completed_backend_stage() -> None:
-    runtime, steps, resolution, decision, application, api = _session()
+    runtime, steps, resolution, decision, application, _, api = _session()
     runtime.simulation.clock.play()
 
     steps.step(0)
@@ -166,6 +174,11 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert resolved.application_step_id == application_result.application_step_id
     assert resolved.revalidation is not None
     assert resolved.revalidation.applied_aircraft_id == "MIL-F01"
+    assert resolved.revalidation.application_source == "ACCEPTED_RECOMMENDATION"
+    assert resolved.revalidation.source_modified_revalidation_step_id is None
+    assert resolved.revalidation.authorization_id is None
+    assert resolved.revalidation.authorized_at_utc is None
+    assert resolved.revalidation.applied_maneuver_type == "ALTITUDE"
     assert resolved.revalidation.before_altitude_ft == pytest.approx(7_492.5)
     assert resolved.revalidation.applied_altitude_ft == 9_000.0
     assert resolved.revalidation.conflict_status == "SAFE"
@@ -197,7 +210,7 @@ def test_session_projects_each_completed_backend_stage() -> None:
 
 
 def test_deviation_stage_is_distinct_from_conflict_and_monitoring() -> None:
-    runtime, steps, _, _, _, _ = _session()
+    runtime, steps, _, _, _, _, _ = _session()
     runtime.simulation.clock.play()
     conflict_step = steps.step(75)
     deviation_only = replace(conflict_step, risk_assessments=())
@@ -214,7 +227,7 @@ def test_deviation_stage_is_distinct_from_conflict_and_monitoring() -> None:
 
 
 def test_reset_returns_a_new_empty_session_run_with_initial_traffic() -> None:
-    runtime, steps, resolution, decision, application, api = _session()
+    runtime, steps, resolution, decision, application, _, api = _session()
     runtime.simulation.clock.play()
     steps.step(75)
     resolution.resolve()
@@ -244,12 +257,18 @@ def test_reset_returns_a_new_empty_session_run_with_initial_traffic() -> None:
 
 
 def test_identical_session_sequences_produce_equal_read_models() -> None:
-    first_runtime, first_steps, first_resolution, first_decision, first_application, first = (
+    first_runtime, first_steps, first_resolution, first_decision, first_application, _, first = (
         _session()
     )
-    second_runtime, second_steps, second_resolution, second_decision, second_application, second = (
-        _session()
-    )
+    (
+        second_runtime,
+        second_steps,
+        second_resolution,
+        second_decision,
+        second_application,
+        _,
+        second,
+    ) = _session()
     for runtime, steps, resolution, decision, application in (
         (
             first_runtime,
@@ -282,4 +301,5 @@ def test_session_api_rejects_unsupported_source() -> None:
         InProcessGoldenDemoSessionApi(
             "application",  # type: ignore[arg-type]
             "modified",  # type: ignore[arg-type]
+            "modified application",  # type: ignore[arg-type]
         )

@@ -3,6 +3,7 @@ from io import BytesIO
 
 import pytest
 
+from sentry_atm.api import GoldenDemoSessionStage
 from sentry_atm.infrastructure.http import GoldenDemoSessionWsgiApp
 from sentry_atm.runtime import build_golden_demo_session_runtime
 
@@ -201,6 +202,86 @@ def test_modified_maneuver_revalidation_returns_json_without_application() -> No
         1_591.6666666667
     )
     assert evidence["safe_to_apply"] is True
+
+
+def test_safe_modified_maneuver_requires_explicit_http_application_command() -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+    maneuver = {
+        "maneuver_type": "ALTITUDE",
+        "target_heading_deg": None,
+        "target_altitude_ft": 8_800,
+        "target_ground_speed_kt": None,
+        "delay_seconds": None,
+        "target_sequence_position": None,
+    }
+    assert _post(
+        session.http_app,
+        "MODIFY_RECOMMENDATION",
+        fields={
+            "rationale": "Maintain additional vertical margin",
+            "modified_maneuver": maneuver,
+        },
+    )[0] == 200
+    assert _post(session.http_app, "REVALIDATE_MODIFIED_MANEUVER")[0] == 200
+
+    status, _, body = _post(
+        session.http_app,
+        "APPLY_VALIDATED_MODIFIED_MANEUVER",
+    )
+    payload = json.loads(body)
+
+    assert status == 200
+    assert payload["stage"] == "CONFLICT_RESOLVED"
+    assert payload["application_step_id"] == (
+        "GOLDEN-MODIFIED-APPLICATION-000000000090"
+    )
+    assert payload["controller_decision"]["entries"][-1]["decision_type"] == "MODIFY"
+    assert payload["controller_decision"]["entries"][-1]["authorizes_application"] is False
+    evidence = payload["revalidation"]
+    assert evidence["application_source"] == "REVALIDATED_MODIFICATION"
+    assert evidence["source_modified_revalidation_step_id"] == (
+        "GOLDEN-MODIFIED-REVALIDATION-000000000090"
+    )
+    assert evidence["authorization_id"] == (
+        "GOLDEN-MODIFIED-AUTHORIZATION-000000000090"
+    )
+    assert evidence["applied_altitude_ft"] == 8_800
+    assert evidence["resolved"] is True
+    target = next(item for item in payload["traffic"] if item["aircraft_id"] == "MIL-F01")
+    assert target["altitude_ft"] == 8_800
+
+
+def test_unsafe_modified_maneuver_http_application_is_blocked() -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+    maneuver = {
+        "maneuver_type": "ALTITUDE",
+        "target_heading_deg": None,
+        "target_altitude_ft": 7_200,
+        "target_ground_speed_kt": None,
+        "delay_seconds": None,
+        "target_sequence_position": None,
+    }
+    assert _post(
+        session.http_app,
+        "MODIFY_RECOMMENDATION",
+        fields={"rationale": "Test unsafe gate", "modified_maneuver": maneuver},
+    )[0] == 200
+    assert _post(session.http_app, "REVALIDATE_MODIFIED_MANEUVER")[0] == 200
+    traffic_before = session.runtime.simulation.engine.snapshot()
+
+    status, _, body = _post(
+        session.http_app,
+        "APPLY_VALIDATED_MODIFIED_MANEUVER",
+    )
+    payload = json.loads(body)
+
+    assert status == 409
+    assert payload["error"]["code"] == "SESSION_STATE_CONFLICT"
+    assert "only a SAFE" in payload["error"]["message"]
+    assert session.runtime.simulation.engine.snapshot() == traffic_before
+    assert session.read_api.get_current().stage is GoldenDemoSessionStage.MODIFICATION_REVALIDATED
 
 
 def test_reject_command_returns_non_authorizing_audit() -> None:

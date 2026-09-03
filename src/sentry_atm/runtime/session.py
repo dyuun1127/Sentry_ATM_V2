@@ -26,6 +26,9 @@ from sentry_atm.runtime.composition import GoldenDemoRuntime, build_golden_demo_
 from sentry_atm.runtime.decision_orchestrator import (
     GoldenDemoControllerDecisionOrchestrator,
 )
+from sentry_atm.runtime.modified_application_orchestrator import (
+    GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
+)
 from sentry_atm.runtime.modified_revalidation_orchestrator import (
     GoldenDemoModifiedManeuverRevalidationOrchestrator,
 )
@@ -38,6 +41,7 @@ class GoldenDemoSessionCommandService:
 
     __slots__ = (
         "_application_orchestrator",
+        "_modified_application_orchestrator",
         "_modified_revalidation_orchestrator",
         "_read_api",
     )
@@ -46,6 +50,9 @@ class GoldenDemoSessionCommandService:
         self,
         application_orchestrator: GoldenDemoApprovedManeuverOrchestrator,
         modified_revalidation_orchestrator: GoldenDemoModifiedManeuverRevalidationOrchestrator,
+        modified_application_orchestrator: (
+            GoldenDemoValidatedModifiedManeuverApplicationOrchestrator
+        ),
         read_api: InProcessGoldenDemoSessionApi,
     ) -> None:
         if not isinstance(
@@ -77,8 +84,26 @@ class GoldenDemoSessionCommandService:
             is not application_orchestrator.decision_orchestrator
         ):
             raise ValueError("Session Orchestrators must share one Controller Decision source")
+        if not isinstance(
+            modified_application_orchestrator,
+            GoldenDemoValidatedModifiedManeuverApplicationOrchestrator,
+        ):
+            raise TypeError(
+                "modified_application_orchestrator must be a "
+                "GoldenDemoValidatedModifiedManeuverApplicationOrchestrator"
+            )
+        if (
+            modified_application_orchestrator.modified_revalidation_orchestrator
+            is not modified_revalidation_orchestrator
+        ):
+            raise ValueError(
+                "Session Orchestrators must share one Modified Revalidation source"
+            )
+        if read_api.modified_application_orchestrator is not modified_application_orchestrator:
+            raise ValueError("read_api must use the same Modified Application Orchestrator")
         self._application_orchestrator = application_orchestrator
         self._modified_revalidation_orchestrator = modified_revalidation_orchestrator
+        self._modified_application_orchestrator = modified_application_orchestrator
         self._read_api = read_api
 
     @property
@@ -98,7 +123,14 @@ class GoldenDemoSessionCommandService:
             raise TypeError("command must be a GoldenDemoSessionCommand")
         selected = GoldenDemoSessionCommand(command)
         current = self._read_api.get_current()
-        runtime, steps, resolution, decision, modified_revalidation = self._components()
+        (
+            runtime,
+            steps,
+            resolution,
+            decision,
+            modified_revalidation,
+            modified_application,
+        ) = self._components()
 
         _validate_command_inputs(
             selected,
@@ -159,6 +191,13 @@ class GoldenDemoSessionCommandService:
                 elapsed_seconds=90.0,
             )
             modified_revalidation.revalidate()
+        elif selected is GoldenDemoSessionCommand.APPLY_VALIDATED_MODIFIED_MANEUVER:
+            _require_checkpoint(
+                current,
+                GoldenDemoSessionStage.MODIFICATION_REVALIDATED,
+                elapsed_seconds=90.0,
+            )
+            modified_application.authorize_apply_and_revalidate()
         elif selected is GoldenDemoSessionCommand.APPLY_APPROVED_MANEUVER:
             _require_checkpoint(
                 current,
@@ -174,7 +213,14 @@ class GoldenDemoSessionCommandService:
         decision = self._application_orchestrator.decision_orchestrator
         resolution = decision.resolution_orchestrator
         steps = resolution.step_orchestrator
-        return steps.runtime, steps, resolution, decision, self._modified_revalidation_orchestrator
+        return (
+            steps.runtime,
+            steps,
+            resolution,
+            decision,
+            self._modified_revalidation_orchestrator,
+            self._modified_application_orchestrator,
+        )
 
 
 _ACTION_MANEUVERS = (
@@ -298,6 +344,7 @@ class GoldenDemoSessionRuntime:
     resolution_orchestrator: GoldenDemoResolutionOrchestrator
     decision_orchestrator: GoldenDemoControllerDecisionOrchestrator
     modified_revalidation_orchestrator: GoldenDemoModifiedManeuverRevalidationOrchestrator
+    modified_application_orchestrator: GoldenDemoValidatedModifiedManeuverApplicationOrchestrator
     application_orchestrator: GoldenDemoApprovedManeuverOrchestrator
     read_api: InProcessGoldenDemoSessionApi
     command_service: GoldenDemoSessionCommandService
@@ -312,11 +359,19 @@ def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
     resolution = GoldenDemoResolutionOrchestrator(steps)
     decision = GoldenDemoControllerDecisionOrchestrator(resolution)
     modified_revalidation = GoldenDemoModifiedManeuverRevalidationOrchestrator(decision)
+    modified_application = GoldenDemoValidatedModifiedManeuverApplicationOrchestrator(
+        modified_revalidation
+    )
     application = GoldenDemoApprovedManeuverOrchestrator(decision)
-    read_api = InProcessGoldenDemoSessionApi(application, modified_revalidation)
+    read_api = InProcessGoldenDemoSessionApi(
+        application,
+        modified_revalidation,
+        modified_application,
+    )
     command_service = GoldenDemoSessionCommandService(
         application,
         modified_revalidation,
+        modified_application,
         read_api,
     )
     http_app = GoldenDemoSessionWsgiApp(read_api, command_service)
@@ -326,6 +381,7 @@ def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
         resolution_orchestrator=resolution,
         decision_orchestrator=decision,
         modified_revalidation_orchestrator=modified_revalidation,
+        modified_application_orchestrator=modified_application,
         application_orchestrator=application,
         read_api=read_api,
         command_service=command_service,

@@ -40,7 +40,8 @@ Phase 14-B는 Session Stage를 backend의 고정 Command와 일대일로 연결�
 | `RECOMMENDATION_AVAILABLE` | Decision Card의 `ACCEPT`, `MODIFY`, `REJECT` |
 | `DECISION_ACCEPTED` | `APPLY_APPROVED_MANEUVER` |
 | `DECISION_MODIFIED` | `REVALIDATE_MODIFIED_MANEUVER` |
-| `MODIFICATION_REVALIDATED` | `RESET` |
+| SAFE `MODIFICATION_REVALIDATED` | `APPLY_VALIDATED_MODIFIED_MANEUVER` |
+| 차단된 `MODIFICATION_REVALIDATED` | `RESET` |
 | `DECISION_REJECTED` | `RESET` |
 | `CONFLICT_RESOLVED` | `RESET` |
 
@@ -79,6 +80,11 @@ Rationale만 받는다. Browser 기본 Form 검증과 backend 고정 Schema/Doma
 `SAFE · NOT YET APPLIED` 또는 `BLOCKED` Gate를 표시한다. `REJECT`는 `NO MANEUVER AUTHORIZED`로
 표시하고 새 Run 외의 실행 Control을 제공하지 않는다.
 
+Phase 15-D에서 SAFE Gate는 `SAFE 수정 기동 재승인·적용` 버튼을 노출한다. 사용자가 이 버튼을 눌러야
+수정 기동이 Actual Runtime에 적용된다. 완료 후 Decision Card는 수정값과 `AUTHORIZED · APPLIED`,
+Post-action Revalidation을 표시하고 Tactical View와 Aircraft Table도 적용된 상태를 반영한다. UNSAFE
+Gate는 적용 버튼 없이 Reset만 제공한다.
+
 ## 4. 보안·접근성 경계
 
 - `default-src 'self'` 기반 Content Security Policy
@@ -91,7 +97,7 @@ Rationale만 받는다. Browser 기본 Form 검증과 backend 고정 Schema/Doma
 
 - 지도는 실제 항법 Chart가 아닌 RKTU ARP 중심 PoC Local Coordinate View다.
 - 안전성 검증 결과가 SAFE인 Golden Demo Primary Recommendation만 Decision 대상으로 사용한다.
-- SAFE로 격리 재검증된 수정 기동의 재승인·실제 적용은 후속 Phase 범위다.
+- 수정 적용 Authorization과 Application Result는 현재 process-local이며 영속 감사 저장소는 아니다.
 - UI는 Process-local 단일 Session만 읽고 Browser 상태를 영속화하지 않는다.
 
 ## 6. 다음 단계

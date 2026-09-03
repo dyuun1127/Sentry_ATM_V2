@@ -28,6 +28,9 @@ def test_session_factory_wires_one_unstarted_independent_command_boundary() -> N
     assert first.read_api.modified_revalidation_orchestrator is (
         first.modified_revalidation_orchestrator
     )
+    assert first.read_api.modified_application_orchestrator is (
+        first.modified_application_orchestrator
+    )
     assert first.application_orchestrator.decision_orchestrator is first.decision_orchestrator
     assert first.decision_orchestrator.resolution_orchestrator is (first.resolution_orchestrator)
     assert first.resolution_orchestrator.step_orchestrator is first.step_orchestrator
@@ -140,6 +143,68 @@ def test_modified_maneuver_revalidation_returns_isolated_safety_evidence() -> No
     assert evidence.rule_violation_ids == ()
     assert evidence.safe_to_apply
     assert session.runtime.simulation.engine.snapshot() == traffic_before
+
+
+def test_safe_modified_maneuver_requires_explicit_application_command() -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+    session.command_service.execute(
+        GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+        rationale="Maintain additional vertical margin",
+        modified_maneuver=AltitudeManeuver(8_800),
+    )
+    session.command_service.execute(
+        GoldenDemoSessionCommand.REVALIDATE_MODIFIED_MANEUVER
+    )
+    before = session.runtime.simulation.engine.snapshot()
+
+    applied = session.command_service.execute(
+        GoldenDemoSessionCommand.APPLY_VALIDATED_MODIFIED_MANEUVER
+    )
+
+    assert applied.stage is GoldenDemoSessionStage.CONFLICT_RESOLVED
+    assert applied.application_step_id == "GOLDEN-MODIFIED-APPLICATION-000000000090"
+    assert applied.revalidation is not None
+    assert applied.revalidation.application_source == "REVALIDATED_MODIFICATION"
+    assert applied.revalidation.source_modified_revalidation_step_id == (
+        "GOLDEN-MODIFIED-REVALIDATION-000000000090"
+    )
+    assert applied.revalidation.authorization_id == (
+        "GOLDEN-MODIFIED-AUTHORIZATION-000000000090"
+    )
+    assert applied.revalidation.authorized_at_utc is not None
+    assert applied.revalidation.applied_maneuver_type == "ALTITUDE"
+    assert applied.revalidation.before_altitude_ft == pytest.approx(7_492.5)
+    assert applied.revalidation.applied_altitude_ft == 8_800
+    assert applied.revalidation.resolved
+    assert next(
+        item for item in applied.traffic if item.aircraft_id == "MIL-F01"
+    ).altitude_ft == 8_800
+    assert session.runtime.simulation.engine.snapshot() != before
+
+
+def test_unsafe_modified_maneuver_has_no_application_command_effect() -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+    session.command_service.execute(
+        GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+        rationale="Exercise unsafe application gate",
+        modified_maneuver=AltitudeManeuver(7_200),
+    )
+    revalidated = session.command_service.execute(
+        GoldenDemoSessionCommand.REVALIDATE_MODIFIED_MANEUVER
+    )
+    assert revalidated.modified_revalidation is not None
+    assert not revalidated.modified_revalidation.safe_to_apply
+    before = session.runtime.simulation.engine.snapshot()
+
+    with pytest.raises(ValueError, match="only a SAFE"):
+        session.command_service.execute(
+            GoldenDemoSessionCommand.APPLY_VALIDATED_MODIFIED_MANEUVER
+        )
+
+    assert session.read_api.get_current() == revalidated
+    assert session.runtime.simulation.engine.snapshot() == before
 
 
 def test_reject_command_records_reason_without_runtime_application() -> None:
@@ -281,24 +346,35 @@ def test_command_service_validates_dependencies_and_command_type() -> None:
         GoldenDemoSessionCommandService(
             "application",  # type: ignore[arg-type]
             session.modified_revalidation_orchestrator,
+            session.modified_application_orchestrator,
             session.read_api,
         )
     with pytest.raises(TypeError, match="InProcessGoldenDemoSessionApi"):
         GoldenDemoSessionCommandService(
             session.application_orchestrator,
             session.modified_revalidation_orchestrator,
+            session.modified_application_orchestrator,
             "api",  # type: ignore[arg-type]
+        )
+    with pytest.raises(TypeError, match="ValidatedModifiedManeuverApplication"):
+        GoldenDemoSessionCommandService(
+            session.application_orchestrator,
+            session.modified_revalidation_orchestrator,
+            "modified application",  # type: ignore[arg-type]
+            session.read_api,
         )
 
     other = build_golden_demo_session_runtime()
     mismatched_api = InProcessGoldenDemoSessionApi(
         other.application_orchestrator,
         other.modified_revalidation_orchestrator,
+        other.modified_application_orchestrator,
     )
     with pytest.raises(ValueError, match="same Application Orchestrator"):
         GoldenDemoSessionCommandService(
             session.application_orchestrator,
             session.modified_revalidation_orchestrator,
+            session.modified_application_orchestrator,
             mismatched_api,
         )
 

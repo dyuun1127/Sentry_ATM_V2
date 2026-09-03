@@ -184,7 +184,7 @@ class IsolatedResolutionSafetyValidator:
         isolated_states = dict(state_by_id)
         if candidate.target_aircraft_id is not None:
             target_state = isolated_states[candidate.target_aircraft_id]
-            isolated_states[candidate.target_aircraft_id] = _apply_maneuver(
+            isolated_states[candidate.target_aircraft_id] = apply_candidate_maneuver_to_state(
                 target_state,
                 candidate,
             )
@@ -237,7 +237,18 @@ class IsolatedResolutionSafetyValidator:
         )
 
 
-def _apply_maneuver(state: AircraftState, candidate: ResolutionCandidate) -> AircraftState:
+def apply_candidate_maneuver_to_state(
+    state: AircraftState,
+    candidate: ResolutionCandidate,
+) -> AircraftState:
+    """Return the candidate-applied state used by validation and authorized application."""
+
+    if not isinstance(state, AircraftState):
+        raise TypeError("state must be an AircraftState")
+    if not isinstance(candidate, ResolutionCandidate):
+        raise TypeError("candidate must be a ResolutionCandidate")
+    if candidate.target_aircraft_id != state.aircraft_id:
+        raise ValueError("candidate target must match the Aircraft State")
     maneuver = candidate.maneuver
     if isinstance(maneuver, HeadingManeuver):
         return replace(state, heading_deg=maneuver.target_heading_deg)

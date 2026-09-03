@@ -11,6 +11,7 @@ from sentry_atm.resolution.validator import (
     POC_SAFETY_V1_VALIDATION_PROFILE,
     IsolatedResolutionSafetyValidator,
     ResolutionSafetyValidationProfile,
+    apply_candidate_maneuver_to_state,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "ResolutionCandidateGenerationProfile",
     "ResolutionCandidateTemplate",
     "ResolutionSafetyValidationProfile",
+    "apply_candidate_maneuver_to_state",
 ]

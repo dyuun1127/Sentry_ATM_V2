@@ -235,7 +235,17 @@ Phase 9-E는 `ASM-022`의 Synthetic 초기조건을 보정해 `CAND-B`의 1차 C
 SAFE 판정은 후속 적용 가능성만 나타낸다. 검증기는 실제 Aircraft Runtime, Clock, 원 Candidate Batch,
 Controller Decision Audit을 변경하지 않으며, 적용에는 별도의 재승인 및 Application 경계가 필요하다.
 
-## 11. 다음 단계
+## 11. Phase 15-D 검증된 수정 기동 적용
+
+SAFE 수정 후보는 `apply_candidate_maneuver_to_state()`의 검증과 동일한 상태 변환을 사용한다. 별도
+관제사 재승인 Command가 들어온 뒤에만 현재 시각의 Synthetic Runtime Anchor로 기록하고 전체 Traffic을
+다시 평가한다. UNSAFE/INEFFECTIVE 결과는 Anchor 생성 전에 거부한다.
+
+기본 수정 고도 8,800 ft를 적용하면 원 `CIV-A02 / MIL-F01` 충돌은 격리 검증과 동일하게 수평 약
+2.30 NM·수직 약 1,591.67 ft로 SAFE이며 Queue 원 항목은 RESOLVED가 된다. 이 실제 적용 결과는
+Phase 15-C의 `SAFE · NOT YET APPLIED` 증거와 별도로 보존한다.
+
+## 12. 다음 단계
 
 안전한 Candidate만 대상으로 비용과 검증 근거를 함께 사용하는 결정론적 Recommendation 순위를
 계산한다.

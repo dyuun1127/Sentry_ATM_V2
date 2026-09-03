@@ -425,11 +425,15 @@ Phase 15-C의 `GoldenDemoModifiedManeuverRevalidationResult`는 기존 MODIFY Au
 `GoldenDemoModifiedRevalidationReadModel`은 이를 JSON용으로 투영하며 영속 Domain Aggregate나 적용된
 Aircraft State가 아니다. 임시 후보의 비용은 순위 산정 대상이 아니므로 0인 비교 중립값을 사용한다.
 
+Phase 15-D의 `GoldenDemoValidatedModifiedManeuverApplicationResult`는 명시적 재승인 Authorization,
+원 MODIFY/Revalidation Identity, 적용 전후 Actual State와 Post-action 계산 결과를 연결한다. 기존
+Controller Decision Audit Aggregate를 덮어쓰지 않으며 현재 Run에만 존재하는 Application Evidence다.
+`GoldenDemoRevalidationReadModel`의 `application_source`가 기존 ACCEPT 적용과 수정안 적용을 구분한다.
+
 ## 19. 의도적으로 제외한 모델
 
 다음은 현재 Phase의 책임이 아니므로 아직 구현하지 않는다.
 
-- SAFE 수정 기동의 재승인 및 Runtime 적용 모델: Phase 15-C 이후
 - Session 및 Application Audit Persistence: 현재 process-local PoC 범위 이후
 
 외부 데이터 Schema를 Domain Model에 직접 추가하지 않고 각 Adapter에서 명시적으로 변환한다.

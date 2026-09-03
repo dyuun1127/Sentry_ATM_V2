@@ -59,6 +59,7 @@ Revalidation은 비어 있다.
 | `ACCEPT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_ACCEPTED`, T+90 |
 | `MODIFY_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_MODIFIED`, T+90 |
 | `REVALIDATE_MODIFIED_MANEUVER` | `DECISION_MODIFIED`, T+90 | `MODIFICATION_REVALIDATED`, T+90 |
+| `APPLY_VALIDATED_MODIFIED_MANEUVER` | SAFE `MODIFICATION_REVALIDATED`, T+90 | `CONFLICT_RESOLVED`, T+90 |
 | `REJECT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_REJECTED`, T+90 |
 | `APPLY_APPROVED_MANEUVER` | `DECISION_ACCEPTED`, T+90 | `CONFLICT_RESOLVED`, T+90 |
 | `RESET` | 모든 Stage | 새 `READY`, T+0 Run |
@@ -161,3 +162,16 @@ Golden Demo Session은 기존 Controller Decision Domain을 재사용해 Primary
 성능 가능 여부, Rule 위반 및 Reason Code를 제공한다. `safe_to_apply=true`는 격리 검증 통과를 뜻할 뿐
 실제 Runtime 적용 완료나 새 Controller 승인으로 간주하지 않는다. 현재 Golden Demo 기본 수정값
 8,800 ft는 SAFE이고 7,200 ft는 최저고도 Rule 위반으로 UNSAFE다.
+
+## 13. Phase 15-D Validated Modified Maneuver Application
+
+`APPLY_VALIDATED_MODIFIED_MANEUVER`는 사용자가 누르는 별도 명령이며 SAFE 수정안에 대한 명시적
+재승인 경계다. 현재 MODIFY Audit Entry와 Safety Validation Result가 그대로 최신 상태인지 확인한 후에만
+수정 기동을 Actual Aircraft Runtime에 적용하고 전체 8대 Traffic의 Prediction, Conflict, Risk,
+Priority와 Exception Queue를 다시 계산한다. UNSAFE 또는 INEFFECTIVE 수정안은 `409`로 차단된다.
+
+적용 결과는 별도 Authorization ID와 원 Decision/Revalidation ID를 연결한다. 기존 MODIFY Audit Entry의
+`authorizes_application=false`는 변경하지 않는다. Session의 `revalidation`은
+`application_source=REVALIDATED_MODIFICATION`, 적용 기동 종류, Authorization 시각과 ID, 적용 전후 고도,
+Post-action Run ID 및 원 충돌 해소 증거를 제공한다. 기본 8,800 ft 수정안 적용 후 원 충돌은 수평
+약 2.30 NM·수직 약 1,591.67 ft로 SAFE/LOW/RESOLVED다.

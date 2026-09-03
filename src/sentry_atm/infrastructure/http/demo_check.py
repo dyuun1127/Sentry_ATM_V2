@@ -237,6 +237,10 @@ def _verify_ui_assets(connection: HTTPConnection) -> None:
         b"REVALIDATE_MODIFIED_MANEUVER" in script,
         "modified Maneuver revalidation workflow is missing",
     )
+    _require(
+        b"APPLY_VALIDATED_MODIFIED_MANEUVER" in script,
+        "validated modified Maneuver application workflow is missing",
+    )
 
 
 def _get_bytes(

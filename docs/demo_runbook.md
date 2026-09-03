@@ -75,7 +75,9 @@ Host를 변경하는 기능은 제공하지 않는다.
 - Radar의 `CIV-A02`, `MIL-F01` Marker와 연결선이 붉게 강조된다.
 - 새로고침 후에도 backend의 현재 Stage와 동일한 화면이 복원된다.
 - 별도 Reset Run에서 `기동 수정` 후 `수정 기동 격리 검증`을 누르면 기본 8,800 ft 수정안은
-  `SAFE · NOT YET APPLIED`와 계산된 CPA 증거를 표시하고 실제 Aircraft 고도는 바뀌지 않는다.
+  `SAFE · NOT YET APPLIED`와 계산된 CPA 증거를 표시하고 실제 Aircraft 고도는 바뀌지 않는다. 이어서
+  `SAFE 수정 기동 재승인·적용`을 누른 뒤에만 고도가 8,800 ft로 바뀌고 `AUTHORIZED · APPLIED`와
+  SAFE/LOW/RESOLVED가 표시된다.
 - 별도 Reset Run에서 `추천안 거절`은 근거를 Audit에 표시하고 기동 적용 버튼을 노출하지 않는다.
 
 ## 5. 실패 복구 절차

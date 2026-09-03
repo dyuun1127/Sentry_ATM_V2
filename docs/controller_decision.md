@@ -83,6 +83,11 @@ Phase 15-C는 해당 Audit Entry를 입력으로 수정 기동과 `NO_ACTION` �
 격리 검증한다. 결과가 SAFE여도 원 `MODIFY` Entry를 `ACCEPT`로 바꾸거나 Runtime을 적용하지 않는다.
 따라서 Audit의 불변성과 사람의 최종 적용 권한 경계를 그대로 유지한다.
 
+Phase 15-D의 `APPLY_VALIDATED_MODIFIED_MANEUVER`는 SAFE 재검증 이후 관제사가 수행하는 별도 재승인
+동작이다. 원 MODIFY Entry의 `authorizes_application=false`를 수정하지 않고, Application Result에
+Authorization ID·시각·Controller Position과 원 Decision/Revalidation ID를 연결한다. 따라서 수정 제안,
+안전성 검증, 사람의 재승인, 실제 적용이 서로 구분된다.
+
 ## 6. Phase 11-B Deterministic Controller Decision Service
 
 `DeterministicControllerDecisionService`는 하나의 `ResolutionRecommendationSet`과 그 안의

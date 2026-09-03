@@ -158,3 +158,9 @@ Phase 15-C의 `GoldenDemoModifiedManeuverRevalidationOrchestrator`는 동일 Con
 참조한다. T+90 MODIFY Audit의 기동을 Traffic 복사본에서 기존 Safety Validator로 검증하고 결과만
 보존한다. Session Factory는 이 Orchestrator를 Read API와 Command Service에 같은 인스턴스로 연결한다.
 Clock Reset 시 결과가 제거되며 실제 Aircraft Runtime과 승인 적용 Orchestrator는 변경되지 않는다.
+
+Phase 15-D의 `GoldenDemoValidatedModifiedManeuverApplicationOrchestrator`는 같은 Modified Revalidation
+인스턴스만 입력으로 받는다. SAFE 최신 결과에 대한 명시적 Application Command가 들어오면 수정 후보를
+Actual Synthetic Runtime Anchor로 적용하고 Prediction/Conflict/Risk/Priority/Queue를 다시 계산한다.
+결과는 별도 Authorization ID와 원 Decision/Revalidation ID를 보존하며 Clock Reset 시 적용 Anchor와
+함께 제거된다. 기존 ACCEPT 적용 Orchestrator와 MODIFY Audit Entry는 변경하지 않는다.
