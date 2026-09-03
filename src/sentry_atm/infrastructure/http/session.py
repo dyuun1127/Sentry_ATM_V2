@@ -5,10 +5,13 @@ from collections.abc import Callable, Iterable
 from http import HTTPStatus
 
 from sentry_atm.api import (
+    ControllerDecisionManeuverModel,
     GoldenDemoSessionApiContract,
     GoldenDemoSessionCommand,
     GoldenDemoSessionCommandApiContract,
+    GoldenDemoSessionCommandValidationError,
 )
+from sentry_atm.domain import ResolutionManeuver
 
 type StartResponse = Callable[[str, list[tuple[str, str]]], object]
 type WsgiResponse = Iterable[bytes]
@@ -16,6 +19,14 @@ type WsgiResponse = Iterable[bytes]
 _SESSION_PATH = "/api/v1/golden-demo/session"
 _COMMAND_PATH = "/api/v1/golden-demo/session/commands"
 _MAX_REQUEST_BODY_BYTES = 16_384
+_MANEUVER_FIELDS = {
+    "maneuver_type",
+    "target_heading_deg",
+    "target_altitude_ft",
+    "target_ground_speed_kt",
+    "delay_seconds",
+    "target_sequence_position",
+}
 
 
 class GoldenDemoSessionWsgiApp:
@@ -91,17 +102,18 @@ class GoldenDemoSessionWsgiApp:
     ) -> WsgiResponse:
         _reject_query(environ)
         payload = _read_json_object(environ)
-        if set(payload) != {"command"}:
-            raise _HttpError(
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-                "INVALID_REQUEST",
-                "body must contain only command",
-            )
         try:
             command_value = payload["command"]
             if not isinstance(command_value, str):
                 raise TypeError("command must be text")
             command = GoldenDemoSessionCommand(command_value)
+            rationale, modified_maneuver = _parse_command_inputs(payload, command)
+        except KeyError:
+            raise _HttpError(
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                "INVALID_REQUEST",
+                "body must contain command",
+            ) from None
         except (TypeError, ValueError) as error:
             raise _HttpError(
                 HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -109,7 +121,17 @@ class GoldenDemoSessionWsgiApp:
                 str(error),
             ) from None
         try:
-            current = self._command_api.execute(command)
+            current = self._command_api.execute(
+                command,
+                rationale=rationale,
+                modified_maneuver=modified_maneuver,
+            )
+        except GoldenDemoSessionCommandValidationError as error:
+            raise _HttpError(
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                "INVALID_REQUEST",
+                str(error),
+            ) from None
         except ValueError as error:
             raise _HttpError(
                 HTTPStatus.CONFLICT,
@@ -117,6 +139,40 @@ class GoldenDemoSessionWsgiApp:
                 str(error),
             ) from None
         return _json_response(start_response, HTTPStatus.OK, current.to_dict())
+
+
+def _parse_command_inputs(
+    payload: dict[str, object],
+    command: GoldenDemoSessionCommand,
+) -> tuple[str | None, ResolutionManeuver | None]:
+    if command is GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
+        expected_fields = {"command", "rationale", "modified_maneuver"}
+    elif command is GoldenDemoSessionCommand.REJECT_RECOMMENDATION:
+        expected_fields = {"command", "rationale"}
+    else:
+        expected_fields = {"command"}
+    if set(payload) != expected_fields:
+        raise ValueError(
+            f"{command.value} body must contain exactly: "
+            f"{', '.join(sorted(expected_fields))}"
+        )
+    rationale = payload.get("rationale")
+    if rationale is not None and not isinstance(rationale, str):
+        raise TypeError("rationale must be text")
+    if command is not GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
+        return rationale, None
+    value = payload["modified_maneuver"]
+    if not isinstance(value, dict) or set(value) != _MANEUVER_FIELDS:
+        raise TypeError("modified_maneuver must contain exactly the fixed Maneuver fields")
+    model = ControllerDecisionManeuverModel(
+        maneuver_type=value["maneuver_type"],  # type: ignore[arg-type]
+        target_heading_deg=value["target_heading_deg"],  # type: ignore[arg-type]
+        target_altitude_ft=value["target_altitude_ft"],  # type: ignore[arg-type]
+        target_ground_speed_kt=value["target_ground_speed_kt"],  # type: ignore[arg-type]
+        delay_seconds=value["delay_seconds"],  # type: ignore[arg-type]
+        target_sequence_position=value["target_sequence_position"],  # type: ignore[arg-type]
+    )
+    return rationale, model.to_domain()
 
 
 class _HttpError(Exception):

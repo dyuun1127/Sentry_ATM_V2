@@ -75,6 +75,10 @@ T+85 Recommendation에서 관제사가 `CAND-A`를 선택하면 `ACCEPT` Entry�
 후속 적용 가능 대상으로 노출된다. 이 시점까지 T+75 원본 Aircraft State와 Runtime은 변하지 않는다.
 실제 적용과 적용 후 재평가는 후속 단계의 책임이다.
 
+Phase 15-B Golden Demo UI에서는 같은 Primary Recommendation에 `MODIFY` 또는 `REJECT`도 선택할 수
+있다. 수정 기동과 Rationale 또는 거절 Rationale은 기존 Audit Entry에 기록되며, 어느 경우도 Runtime
+적용 권한을 만들지 않는다. 수정 결과의 Safety 재검증은 Audit 기록과 분리된 후속 단계다.
+
 ## 6. Phase 11-B Deterministic Controller Decision Service
 
 `DeterministicControllerDecisionService`는 하나의 `ResolutionRecommendationSet`과 그 안의

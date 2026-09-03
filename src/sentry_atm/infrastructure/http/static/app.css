@@ -1350,6 +1350,209 @@ tbody tr:hover {
   line-height: 1.55;
 }
 
+.decision-audit-detail {
+  margin-top: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(113, 227, 172, 0.24);
+  background: rgba(113, 227, 172, 0.045);
+}
+
+.decision-audit-detail > span,
+.decision-form-heading span,
+.decision-form label > span {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.09em;
+}
+
+.decision-audit-detail strong {
+  color: var(--green-bright);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.decision-audit-detail p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.decision-actions {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.decision-action {
+  min-height: 46px;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  cursor: pointer;
+}
+
+.decision-action:hover {
+  border-color: var(--green);
+  background: rgba(113, 227, 172, 0.08);
+}
+
+.decision-action small {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.decision-action strong {
+  font-size: 9px;
+}
+
+.decision-action.accept {
+  border-color: rgba(113, 227, 172, 0.42);
+  color: var(--green-bright);
+}
+
+.decision-action.reject {
+  border-color: rgba(242, 119, 108, 0.35);
+  color: #ffc5c0;
+}
+
+.decision-action:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
+.decision-form {
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid rgba(231, 183, 101, 0.35);
+  background: rgba(231, 183, 101, 0.035);
+}
+
+.decision-form-heading {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.decision-form-heading div {
+  display: grid;
+  gap: 4px;
+}
+
+.decision-form-heading strong {
+  font-size: 11px;
+}
+
+.form-cancel {
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.modified-fields {
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.decision-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.decision-form select,
+.decision-form input,
+.decision-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  color: var(--text);
+  background: rgba(3, 9, 8, 0.76);
+  font-family: var(--mono);
+  font-size: 10px;
+  outline: none;
+}
+
+.decision-form select,
+.decision-form input {
+  height: 34px;
+  padding: 0 9px;
+}
+
+.decision-form textarea {
+  padding: 8px 9px;
+  resize: vertical;
+}
+
+.decision-form select:focus,
+.decision-form input:focus,
+.decision-form textarea:focus {
+  border-color: var(--amber);
+}
+
+.value-input {
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  align-items: center;
+}
+
+.value-input b {
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-left: 0;
+  color: var(--faint);
+  background: rgba(255, 255, 255, 0.025);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.rationale-field {
+  margin-top: 2px;
+}
+
+.decision-submit {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border: 1px solid rgba(231, 183, 101, 0.52);
+  color: #ffe2ad;
+  background: rgba(231, 183, 101, 0.1);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.decision-submit:hover {
+  background: rgba(231, 183, 101, 0.16);
+}
+
+.decision-submit:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
 .revalidation-result {
   margin-top: 14px;
   padding-top: 12px;
@@ -1587,6 +1790,11 @@ body[data-request-busy="true"] .connection-dot {
   .separation-evidence { border-bottom: 1px solid var(--line); }
   .exception-panel { grid-row: 2; }
   .timeline-panel { grid-template-columns: 150px minmax(470px, 1fr) 180px; overflow-x: auto; }
+}
+
+@media (max-width: 520px) {
+  .decision-actions,
+  .modified-fields { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {

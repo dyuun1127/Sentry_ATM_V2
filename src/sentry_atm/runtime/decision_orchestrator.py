@@ -1,4 +1,4 @@
-"""Deterministic Golden Demo controller ACCEPT audit orchestration."""
+"""Deterministic Golden Demo controller decision audit orchestration."""
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -7,6 +7,7 @@ from sentry_atm.domain import (
     ControllerDecisionAuditEntry,
     ControllerDecisionAuditLog,
     ControllerDecisionType,
+    ResolutionManeuver,
     ResolutionRecommendation,
 )
 from sentry_atm.runtime.resolution_orchestrator import GoldenDemoResolutionOrchestrator
@@ -18,7 +19,7 @@ _CONTROLLER_POSITION_ID = "RKTU-DEMO-CONTROLLER"
 
 @dataclass(frozen=True, slots=True)
 class GoldenDemoControllerDecisionResult:
-    """Immutable evidence for the Golden Demo controller ACCEPT action."""
+    """Immutable evidence for one Golden Demo controller decision."""
 
     decision_step_id: str
     source_step_id: str
@@ -30,7 +31,7 @@ class GoldenDemoControllerDecisionResult:
 
 
 class GoldenDemoControllerDecisionOrchestrator:
-    """Record the calibrated T+90 CAND-A ACCEPT without applying its Maneuver."""
+    """Record one calibrated T+90 CAND-A decision without applying a Maneuver."""
 
     __slots__ = (
         "_last_result",
@@ -60,6 +61,38 @@ class GoldenDemoControllerDecisionOrchestrator:
 
     def accept(self) -> GoldenDemoControllerDecisionResult:
         """Record the selected SAFE Recommendation as accepted at T+90."""
+
+        return self.decide(ControllerDecisionType.ACCEPT)
+
+    def modify(
+        self,
+        *,
+        rationale: str,
+        modified_maneuver: ResolutionManeuver,
+    ) -> GoldenDemoControllerDecisionResult:
+        """Record a changed Maneuver that still requires isolated revalidation."""
+
+        return self.decide(
+            ControllerDecisionType.MODIFY,
+            rationale=rationale,
+            modified_maneuver=modified_maneuver,
+        )
+
+    def reject(self, *, rationale: str) -> GoldenDemoControllerDecisionResult:
+        """Record rejection without authorizing any Runtime application."""
+
+        return self.decide(ControllerDecisionType.REJECT, rationale=rationale)
+
+    def decide(
+        self,
+        decision_type: ControllerDecisionType,
+        *,
+        rationale: str | None = None,
+        modified_maneuver: ResolutionManeuver | None = None,
+    ) -> GoldenDemoControllerDecisionResult:
+        """Record one validated controller response at the calibrated checkpoint."""
+
+        selected_decision_type = ControllerDecisionType(decision_type)
 
         resolution_result = self._resolution_orchestrator.last_result
         self._synchronize_reset()
@@ -94,9 +127,11 @@ class GoldenDemoControllerDecisionOrchestrator:
         audit_log = runtime.controller_decision_service.decide(
             recommendation_set,
             recommendation.recommendation_id,
-            ControllerDecisionType.ACCEPT,
+            selected_decision_type,
             decided_at_utc=step_result.timestamp_utc,
             controller_position_id=_CONTROLLER_POSITION_ID,
+            rationale=rationale,
+            modified_maneuver=modified_maneuver,
         )
         decision_entry = audit_log.latest_entry
         if decision_entry is None:  # pragma: no cover - successful decide always appends

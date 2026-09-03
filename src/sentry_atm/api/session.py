@@ -16,11 +16,13 @@ from sentry_atm.domain import (
     ConflictEvent,
     ConflictRiskAssessment,
     ConflictStatus,
+    ControllerDecisionType,
     EntryDelayManeuver,
     ExceptionStatus,
     HeadingManeuver,
     OperationalPriorityLevel,
     ResolutionCandidate,
+    ResolutionManeuver,
     RiskLevel,
     SeparationMinimum,
     SequenceChangeManeuver,
@@ -52,6 +54,8 @@ class GoldenDemoSessionStage(StrEnum):
     CONFLICT_DETECTED = "CONFLICT_DETECTED"
     RECOMMENDATION_AVAILABLE = "RECOMMENDATION_AVAILABLE"
     DECISION_ACCEPTED = "DECISION_ACCEPTED"
+    DECISION_MODIFIED = "DECISION_MODIFIED"
+    DECISION_REJECTED = "DECISION_REJECTED"
     CONFLICT_RESOLVED = "CONFLICT_RESOLVED"
 
 
@@ -62,8 +66,14 @@ class GoldenDemoSessionCommand(StrEnum):
     ADVANCE_TO_CONFLICT = "ADVANCE_TO_CONFLICT"
     GENERATE_RECOMMENDATION = "GENERATE_RECOMMENDATION"
     ACCEPT_RECOMMENDATION = "ACCEPT_RECOMMENDATION"
+    MODIFY_RECOMMENDATION = "MODIFY_RECOMMENDATION"
+    REJECT_RECOMMENDATION = "REJECT_RECOMMENDATION"
     APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
     RESET = "RESET"
+
+
+class GoldenDemoSessionCommandValidationError(ValueError):
+    """A well-formed Session request whose decision inputs are invalid."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,6 +366,9 @@ class GoldenDemoSessionCommandApiContract(Protocol):
     def execute(
         self,
         command: GoldenDemoSessionCommand,
+        *,
+        rationale: str | None = None,
+        modified_maneuver: ResolutionManeuver | None = None,
     ) -> GoldenDemoSessionReadModel: ...
 
 
@@ -457,6 +470,11 @@ def _stage(
     if application_result is not None:
         return GoldenDemoSessionStage.CONFLICT_RESOLVED
     if decision_result is not None:
+        decision_type = decision_result.decision_entry.decision_type
+        if decision_type is ControllerDecisionType.MODIFY:
+            return GoldenDemoSessionStage.DECISION_MODIFIED
+        if decision_type is ControllerDecisionType.REJECT:
+            return GoldenDemoSessionStage.DECISION_REJECTED
         return GoldenDemoSessionStage.DECISION_ACCEPTED
     if resolution_result is not None:
         return GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE

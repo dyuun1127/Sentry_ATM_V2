@@ -4,10 +4,20 @@ from dataclasses import dataclass
 
 from sentry_atm.api import (
     GoldenDemoSessionCommand,
+    GoldenDemoSessionCommandValidationError,
     GoldenDemoSessionReadModel,
     GoldenDemoSessionStage,
     InProcessGoldenDemoSessionApi,
 )
+from sentry_atm.domain import (
+    AltitudeManeuver,
+    EntryDelayManeuver,
+    HeadingManeuver,
+    ResolutionManeuver,
+    SequenceChangeManeuver,
+    SpeedManeuver,
+)
+from sentry_atm.domain.validation import require_identifier
 from sentry_atm.infrastructure.http import GoldenDemoSessionWsgiApp
 from sentry_atm.runtime.application_orchestrator import (
     GoldenDemoApprovedManeuverOrchestrator,
@@ -51,6 +61,9 @@ class GoldenDemoSessionCommandService:
     def execute(
         self,
         command: GoldenDemoSessionCommand,
+        *,
+        rationale: str | None = None,
+        modified_maneuver: ResolutionManeuver | None = None,
     ) -> GoldenDemoSessionReadModel:
         """Execute one validated checkpoint and return its resulting Session view."""
 
@@ -59,6 +72,13 @@ class GoldenDemoSessionCommandService:
         selected = GoldenDemoSessionCommand(command)
         current = self._read_api.get_current()
         runtime, steps, resolution, decision = self._components()
+
+        _validate_command_inputs(
+            selected,
+            rationale=rationale,
+            modified_maneuver=modified_maneuver,
+            current=current,
+        )
 
         if selected is GoldenDemoSessionCommand.RESET:
             runtime.simulation.clock.reset()
@@ -86,13 +106,34 @@ class GoldenDemoSessionCommandService:
             )
             steps.step(15)
             decision.accept()
-        else:
+        elif selected is GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
+            _require_checkpoint(
+                current,
+                GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE,
+                elapsed_seconds=75.0,
+            )
+            steps.step(15)
+            decision.modify(
+                rationale=rationale,  # type: ignore[arg-type]
+                modified_maneuver=modified_maneuver,  # type: ignore[arg-type]
+            )
+        elif selected is GoldenDemoSessionCommand.REJECT_RECOMMENDATION:
+            _require_checkpoint(
+                current,
+                GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE,
+                elapsed_seconds=75.0,
+            )
+            steps.step(15)
+            decision.reject(rationale=rationale)  # type: ignore[arg-type]
+        elif selected is GoldenDemoSessionCommand.APPLY_APPROVED_MANEUVER:
             _require_checkpoint(
                 current,
                 GoldenDemoSessionStage.DECISION_ACCEPTED,
                 elapsed_seconds=90.0,
             )
             self._application_orchestrator.apply_and_revalidate()
+        else:  # pragma: no cover - exhaustive StrEnum dispatch
+            raise AssertionError(f"unsupported Session command: {selected.value}")
         return self._read_api.get_current()
 
     def _components(self):
@@ -100,6 +141,100 @@ class GoldenDemoSessionCommandService:
         resolution = decision.resolution_orchestrator
         steps = resolution.step_orchestrator
         return steps.runtime, steps, resolution, decision
+
+
+_ACTION_MANEUVERS = (
+    HeadingManeuver,
+    AltitudeManeuver,
+    SpeedManeuver,
+    EntryDelayManeuver,
+    SequenceChangeManeuver,
+)
+
+
+def _validate_command_inputs(
+    command: GoldenDemoSessionCommand,
+    *,
+    rationale: str | None,
+    modified_maneuver: ResolutionManeuver | None,
+    current: GoldenDemoSessionReadModel,
+) -> None:
+    decision_commands = {
+        GoldenDemoSessionCommand.ACCEPT_RECOMMENDATION,
+        GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+        GoldenDemoSessionCommand.REJECT_RECOMMENDATION,
+    }
+    if command not in decision_commands:
+        if rationale is not None or modified_maneuver is not None:
+            raise GoldenDemoSessionCommandValidationError(
+                "decision inputs are only allowed for Recommendation decisions"
+            )
+        return
+    if command is GoldenDemoSessionCommand.ACCEPT_RECOMMENDATION:
+        if rationale is not None or modified_maneuver is not None:
+            raise GoldenDemoSessionCommandValidationError(
+                "ACCEPT_RECOMMENDATION does not accept decision inputs"
+            )
+        return
+    try:
+        require_identifier(rationale, field_name="rationale")  # type: ignore[arg-type]
+    except (TypeError, ValueError) as error:
+        raise GoldenDemoSessionCommandValidationError(str(error)) from None
+    if command is GoldenDemoSessionCommand.REJECT_RECOMMENDATION:
+        if modified_maneuver is not None:
+            raise GoldenDemoSessionCommandValidationError(
+                "REJECT_RECOMMENDATION cannot contain a modified Maneuver"
+            )
+        return
+    if not isinstance(modified_maneuver, _ACTION_MANEUVERS):
+        raise GoldenDemoSessionCommandValidationError(
+            "MODIFY_RECOMMENDATION requires a supported action Maneuver"
+        )
+    recommendation = current.recommendation
+    if recommendation is not None:
+        primary = next(
+            (
+                item
+                for item in recommendation.recommendations
+                if item.recommendation_id == recommendation.primary_recommendation_id
+            ),
+            None,
+        )
+        if primary is not None and _matches_read_maneuver(
+            primary.maneuver,
+            modified_maneuver,
+        ):
+            raise GoldenDemoSessionCommandValidationError(
+                "MODIFY_RECOMMENDATION must change the recommended Maneuver"
+            )
+
+
+def _matches_read_maneuver(read_model, maneuver: ResolutionManeuver) -> bool:
+    if isinstance(maneuver, HeadingManeuver):
+        return (
+            read_model.maneuver_type == "HEADING"
+            and read_model.target_heading_deg == maneuver.target_heading_deg
+        )
+    if isinstance(maneuver, AltitudeManeuver):
+        return (
+            read_model.maneuver_type == "ALTITUDE"
+            and read_model.target_altitude_ft == maneuver.target_altitude_ft
+        )
+    if isinstance(maneuver, SpeedManeuver):
+        return (
+            read_model.maneuver_type == "SPEED"
+            and read_model.target_ground_speed_kt == maneuver.target_ground_speed_kt
+        )
+    if isinstance(maneuver, EntryDelayManeuver):
+        return (
+            read_model.maneuver_type == "ENTRY_DELAY"
+            and read_model.delay_seconds == maneuver.delay_seconds
+        )
+    return (
+        isinstance(maneuver, SequenceChangeManeuver)
+        and read_model.maneuver_type == "SEQUENCE_CHANGE"
+        and read_model.target_sequence_position == maneuver.target_sequence_position
+    )
 
 
 def _require_checkpoint(

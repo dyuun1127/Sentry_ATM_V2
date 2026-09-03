@@ -41,19 +41,30 @@ def _request(
     return status_code, headers, response_body
 
 
-def _command_body(command: object, *, extra: bool = False) -> bytes:
+def _command_body(
+    command: object,
+    *,
+    extra: bool = False,
+    fields: dict[str, object] | None = None,
+) -> bytes:
     payload = {"command": command}
+    payload.update(fields or {})
     if extra:
         payload["unexpected"] = True
     return json.dumps(payload).encode()
 
 
-def _post(app: GoldenDemoSessionWsgiApp, command: str):
+def _post(
+    app: GoldenDemoSessionWsgiApp,
+    command: str,
+    *,
+    fields: dict[str, object] | None = None,
+):
     return _request(
         app,
         method="POST",
         path=_COMMAND_PATH,
-        body=_command_body(command),
+        body=_command_body(command, fields=fields),
         content_type="application/json; charset=utf-8",
     )
 
@@ -117,6 +128,96 @@ def test_post_commands_run_full_session_and_get_returns_latest_state() -> None:
     assert reset_status == 200
     assert reset["stage"] == "READY"
     assert reset["run_number"] == 1
+
+
+def _post_to_recommendation(session) -> None:
+    for command in ("START", "ADVANCE_TO_CONFLICT", "GENERATE_RECOMMENDATION"):
+        assert _post(session.http_app, command)[0] == 200
+
+
+def test_modify_command_accepts_fixed_maneuver_schema_and_returns_audit() -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+    maneuver = {
+        "maneuver_type": "ALTITUDE",
+        "target_heading_deg": None,
+        "target_altitude_ft": 8_800,
+        "target_ground_speed_kt": None,
+        "delay_seconds": None,
+        "target_sequence_position": None,
+    }
+
+    status, _, body = _post(
+        session.http_app,
+        "MODIFY_RECOMMENDATION",
+        fields={
+            "rationale": "Maintain additional vertical margin",
+            "modified_maneuver": maneuver,
+        },
+    )
+    payload = json.loads(body)
+
+    assert status == 200
+    assert payload["stage"] == "DECISION_MODIFIED"
+    entry = payload["controller_decision"]["entries"][-1]
+    assert entry["decision_type"] == "MODIFY"
+    assert entry["modified_maneuver"]["target_altitude_ft"] == 8_800
+    assert entry["requires_revalidation"] is True
+    assert payload["application_step_id"] is None
+
+
+def test_reject_command_returns_non_authorizing_audit() -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+
+    status, _, body = _post(
+        session.http_app,
+        "REJECT_RECOMMENDATION",
+        fields={"rationale": "Coordinate a different sector strategy"},
+    )
+    payload = json.loads(body)
+
+    assert status == 200
+    assert payload["stage"] == "DECISION_REJECTED"
+    entry = payload["controller_decision"]["entries"][-1]
+    assert entry["decision_type"] == "REJECT"
+    assert entry["modified_maneuver"] is None
+    assert entry["authorizes_application"] is False
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"rationale": "", "modified_maneuver": None},
+        {"rationale": "Missing Maneuver"},
+        {"rationale": 1, "modified_maneuver": None},
+        {
+            "rationale": "No actual change",
+            "modified_maneuver": {
+                "maneuver_type": "ALTITUDE",
+                "target_heading_deg": None,
+                "target_altitude_ft": 9_000,
+                "target_ground_speed_kt": None,
+                "delay_seconds": None,
+                "target_sequence_position": None,
+            },
+        },
+    ],
+)
+def test_invalid_modify_payload_returns_422_without_advancing(fields: dict[str, object]) -> None:
+    session = build_golden_demo_session_runtime()
+    _post_to_recommendation(session)
+
+    status, _, body = _post(
+        session.http_app,
+        "MODIFY_RECOMMENDATION",
+        fields=fields,
+    )
+
+    assert status == 422
+    assert json.loads(body)["error"]["code"] == "INVALID_REQUEST"
+    assert session.read_api.get_current().stage.value == "RECOMMENDATION_AVAILABLE"
+    assert session.runtime.simulation.clock.elapsed_seconds == 75.0
 
 
 @pytest.mark.parametrize(

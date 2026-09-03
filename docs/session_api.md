@@ -11,7 +11,8 @@ Application을 실행하지 않는다.
 `GoldenDemoSessionStage`는 완료된 증거를 다음 우선순위로 평가한다.
 
 1. Application Result 존재 → `CONFLICT_RESOLVED`
-2. Controller Decision Result 존재 → `DECISION_ACCEPTED`
+2. Controller Decision Result 존재 → Decision Type에 따라 `DECISION_ACCEPTED`,
+   `DECISION_MODIFIED`, `DECISION_REJECTED`
 3. Resolution Result 존재 → `RECOMMENDATION_AVAILABLE`
 4. 최신 Step에 HIGH/CRITICAL Risk 존재 → `CONFLICT_DETECTED`
 5. 최신 Step에 ROUTINE이 아닌 Priority 존재 → `DEVIATION_DETECTED`
@@ -54,11 +55,14 @@ Revalidation은 비어 있다.
 | `ADVANCE_TO_CONFLICT` | `MONITORING`, T+0 | `CONFLICT_DETECTED`, T+70 |
 | `GENERATE_RECOMMENDATION` | `CONFLICT_DETECTED`, T+70 | `RECOMMENDATION_AVAILABLE`, T+75 |
 | `ACCEPT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_ACCEPTED`, T+90 |
+| `MODIFY_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_MODIFIED`, T+90 |
+| `REJECT_RECOMMENDATION` | `RECOMMENDATION_AVAILABLE`, T+75 | `DECISION_REJECTED`, T+90 |
 | `APPLY_APPROVED_MANEUVER` | `DECISION_ACCEPTED`, T+90 | `CONFLICT_RESOLVED`, T+90 |
 | `RESET` | 모든 Stage | 새 `READY`, T+0 Run |
 
-서비스는 caller가 임의 `advance_steps`나 Decision 내용을 전달하게 하지 않는다. 현재 Stage 또는 경과시각이
-다르면 Orchestrator 호출 전에 거부하며, 성공하면 즉시 새 Session Read Model을 반환한다.
+서비스는 caller가 임의 `advance_steps`를 전달하게 하지 않는다. `MODIFY`는 Rationale과 원 추천과 다른
+Action Maneuver, `REJECT`는 Rationale을 요구한다. Decision 입력은 Clock을 T+90으로 진행하기 전에
+검증하므로 실패한 요청은 T+75 Session, Traffic, Audit Revision을 변경하지 않는다.
 
 `build_golden_demo_session_runtime()`은 Core Runtime, Step/Resolution/Decision/Application Orchestrator,
 Read API와 Command Service를 하나의 독립된 process-local Container로 조립하지만 Command를 자동으로
@@ -70,7 +74,8 @@ Read API와 Command Service를 하나의 독립된 process-local Container로 �
 
 - `GET /api/v1/golden-demo/session`: 현재 Session JSON, 항상 `200 OK`
 - `POST /api/v1/golden-demo/session/commands`: `{"command":"START"}` 형태의 고정 Command 실행 후
-  새 Session JSON, 성공 시 `200 OK`
+  새 Session JSON, 성공 시 `200 OK`. 일반 명령과 `ACCEPT`는 `command`만, `MODIFY`는 `rationale`과
+  고정 `modified_maneuver` Schema, `REJECT`는 `rationale`을 추가로 요구한다.
 
 두 Endpoint는 Query를 거부한다. POST는 `application/json`, 정확한 Content-Length, UTF-8 JSON Object,
 정확히 하나의 `command` 필드와 16 KiB Body 제한을 검증한다. 응답 JSON은 Key를 정렬하고 공백을
@@ -135,3 +140,10 @@ Expected/Actual 값과 최신 Step의 Aircraft Heading을 결합하며, Reset �
 각 항목은 Candidate와 같은 ID의 Safety Validation Result를 결합하며 SAFE 후보만 담는 Recommendation
 Set과 구분된다. 따라서 추천에서 제외된 2차 충돌, 원 충돌 미해소, 최저고도 규칙 위반 및 No-action
 결과도 화면과 자동 회귀 검사에서 확인할 수 있다.
+
+## 11. Phase 15-B Operator Decision Workflow
+
+Golden Demo Session은 기존 Controller Decision Domain을 재사용해 Primary SAFE Recommendation에
+`ACCEPT`, `MODIFY`, `REJECT`를 기록한다. `MODIFY`와 `REJECT`는 별도 종료 Stage로 투영되며 Runtime
+적용 Command를 노출하지 않는다. `MODIFY`의 변경 기동은 Audit에 보존되지만 이 단계에서 안전하다고
+간주하거나 적용하지 않고 `requires_revalidation=true`로 남는다. `REJECT`도 적용 권한을 만들지 않는다.

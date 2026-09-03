@@ -23,14 +23,24 @@ const COMMAND_BY_STAGE = {
     label: "대응 후보 생성",
   },
   RECOMMENDATION_AVAILABLE: {
-    command: "ACCEPT_RECOMMENDATION",
-    code: "ACCEPT · T+90",
-    label: "추천안 승인 기록",
+    command: "",
+    code: "DECIDE · T+90",
+    label: "관제사 판단 입력",
   },
   DECISION_ACCEPTED: {
     command: "APPLY_APPROVED_MANEUVER",
     code: "APPLY · T+90",
     label: "승인 기동 적용",
+  },
+  DECISION_MODIFIED: {
+    command: "RESET",
+    code: "RESET · T+00",
+    label: "재검증 전 새 Run 시작",
+  },
+  DECISION_REJECTED: {
+    command: "RESET",
+    code: "RESET · T+00",
+    label: "거절 기록 후 새 Run 시작",
   },
   CONFLICT_RESOLVED: {
     command: "RESET",
@@ -87,6 +97,21 @@ const elements = {
   safetyVertical: document.querySelector("[data-safety-vertical]"),
   decisionAudit: document.querySelector("[data-decision-audit]"),
   decisionExplanation: document.querySelector("[data-decision-explanation]"),
+  decisionAuditDetail: document.querySelector("[data-decision-audit-detail]"),
+  decisionAuditSummary: document.querySelector("[data-decision-audit-summary]"),
+  decisionRationale: document.querySelector("[data-decision-rationale]"),
+  decisionActions: document.querySelector("[data-decision-actions]"),
+  decisionActionButtons: [...document.querySelectorAll("[data-decision-action]")],
+  decisionForm: document.querySelector("[data-decision-form]"),
+  decisionFormTitle: document.querySelector("[data-decision-form-title]"),
+  decisionCancel: document.querySelector("[data-decision-cancel]"),
+  modifiedFields: document.querySelector("[data-modified-fields]"),
+  modifiedType: document.querySelector("[data-modified-type]"),
+  modifiedValueLabel: document.querySelector("[data-modified-value-label]"),
+  modifiedValue: document.querySelector("[data-modified-value]"),
+  modifiedUnit: document.querySelector("[data-modified-unit]"),
+  decisionRationaleInput: document.querySelector("[data-decision-rationale-input]"),
+  decisionSubmit: document.querySelector("[data-decision-submit]"),
   revalidation: document.querySelector("[data-revalidation]"),
   revalidationResult: document.querySelector("[data-revalidation-result]"),
   conflictExplainability: document.querySelector("[data-conflict-explainability]"),
@@ -116,6 +141,7 @@ const elements = {
 
 let currentSession = null;
 let requestBusy = false;
+let decisionMode = null;
 
 function setConnection(status, label) {
   elements.connection.dataset.connectionStatus = status;
@@ -396,6 +422,91 @@ function renderCandidateComparisons(candidates) {
   }
 }
 
+const MANEUVER_INPUT = {
+  ALTITUDE: { label: "TARGET ALTITUDE", unit: "FT", value: 8800, min: 0, max: null, step: 100 },
+  HEADING: { label: "TARGET HEADING", unit: "DEG", value: 190, min: 0, max: 359, step: 1 },
+  SPEED: { label: "TARGET SPEED", unit: "KT", value: 230, min: 1, max: null, step: 1 },
+  ENTRY_DELAY: { label: "ENTRY DELAY", unit: "SEC", value: 30, min: 1, max: null, step: 1 },
+  SEQUENCE_CHANGE: { label: "SEQUENCE", unit: "POS", value: 2, min: 1, max: null, step: 1 },
+};
+
+function updateManeuverInput() {
+  const config = MANEUVER_INPUT[elements.modifiedType.value] ?? MANEUVER_INPUT.ALTITUDE;
+  elements.modifiedValueLabel.textContent = config.label;
+  elements.modifiedUnit.textContent = config.unit;
+  elements.modifiedValue.value = String(config.value);
+  elements.modifiedValue.min = String(config.min);
+  elements.modifiedValue.step = String(config.step);
+  if (config.max === null) {
+    elements.modifiedValue.removeAttribute("max");
+  } else {
+    elements.modifiedValue.max = String(config.max);
+  }
+}
+
+function setDecisionMode(mode) {
+  decisionMode = mode;
+  elements.decisionForm.hidden = !mode;
+  if (!mode) {
+    elements.decisionForm.reset();
+    elements.modifiedType.value = "ALTITUDE";
+    updateManeuverInput();
+    return;
+  }
+  const modifying = mode === "MODIFY";
+  elements.modifiedFields.hidden = !modifying;
+  elements.decisionFormTitle.textContent = modifying ? "추천 기동 수정" : "추천안 거절";
+  elements.decisionSubmit.textContent = modifying ? "수정 결정 기록" : "거절 결정 기록";
+  elements.decisionRationaleInput.placeholder = modifying
+    ? "추천 기동을 변경하는 이유를 입력하세요."
+    : "추천안을 거절하는 이유를 입력하세요.";
+  elements.decisionRationaleInput.focus();
+}
+
+function buildModifiedManeuver() {
+  const maneuverType = elements.modifiedType.value;
+  const numericValue = Number(elements.modifiedValue.value);
+  const maneuver = {
+    maneuver_type: maneuverType,
+    target_heading_deg: null,
+    target_altitude_ft: null,
+    target_ground_speed_kt: null,
+    delay_seconds: null,
+    target_sequence_position: null,
+  };
+  const fieldByType = {
+    HEADING: "target_heading_deg",
+    ALTITUDE: "target_altitude_ft",
+    SPEED: "target_ground_speed_kt",
+    ENTRY_DELAY: "delay_seconds",
+    SEQUENCE_CHANGE: "target_sequence_position",
+  };
+  maneuver[fieldByType[maneuverType]] = maneuverType === "SEQUENCE_CHANGE"
+    ? Math.trunc(numericValue)
+    : numericValue;
+  return maneuver;
+}
+
+function renderDecisionWorkflow(session, latestDecision) {
+  const awaitingDecision = session.stage === "RECOMMENDATION_AVAILABLE";
+  elements.decisionActions.hidden = !awaitingDecision;
+  elements.decisionAuditDetail.hidden = !latestDecision;
+  if (!awaitingDecision && decisionMode) {
+    setDecisionMode(null);
+  }
+  if (!latestDecision) {
+    return;
+  }
+  const modified = latestDecision.modified_maneuver;
+  const outcome = latestDecision.decision_type === "MODIFY"
+    ? `${maneuverText(modified)} · REVALIDATION REQUIRED`
+    : latestDecision.decision_type === "REJECT"
+      ? "NO MANEUVER AUTHORIZED"
+      : "ORIGINAL CANDIDATE AUTHORIZED";
+  elements.decisionAuditSummary.textContent = outcome;
+  elements.decisionRationale.textContent = latestDecision.rationale ?? "No rationale required.";
+}
+
 function renderDecisionSupport(session) {
   const recommendationSet = session.recommendation;
   const recommendations = Array.isArray(recommendationSet?.recommendations)
@@ -409,6 +520,7 @@ function renderDecisionSupport(session) {
   elements.decisionEmpty.hidden = Boolean(primary);
   elements.decisionCard.hidden = !primary;
   if (!primary) {
+    renderDecisionWorkflow(session, null);
     return;
   }
 
@@ -417,7 +529,11 @@ function renderDecisionSupport(session) {
   const revalidation = session.revalidation;
   elements.decisionStatus.textContent = revalidation?.resolved
     ? "POST-ACTION SAFE"
-    : `${primary.safety?.verdict ?? "UNKNOWN"} CANDIDATE`;
+    : latestDecision?.decision_type === "MODIFY"
+      ? "MODIFIED · REVALIDATION REQUIRED"
+      : latestDecision?.decision_type === "REJECT"
+        ? "REJECTED BY CONTROLLER"
+        : `${primary.safety?.verdict ?? "UNKNOWN"} CANDIDATE`;
   elements.decisionRank.textContent = `RANK ${String(primary.rank ?? 0).padStart(2, "0")}`;
   elements.decisionTarget.textContent = primary.target_aircraft_id ?? "—";
   elements.decisionManeuver.textContent = maneuverText(primary.maneuver);
@@ -431,6 +547,7 @@ function renderDecisionSupport(session) {
   )} FT`;
   elements.decisionAudit.textContent = latestDecision?.decision_type ?? "PENDING";
   elements.decisionExplanation.textContent = primary.explanation ?? "";
+  renderDecisionWorkflow(session, latestDecision);
   elements.revalidation.hidden = !revalidation;
   elements.revalidationResult.textContent = revalidation?.resolved ? "RESOLVED" : "RECHECK";
 }
@@ -519,7 +636,7 @@ function updateCommandControl(stage) {
   elements.primaryCommand.dataset.command = config?.command ?? "";
   elements.commandCode.textContent = config?.code ?? "NO AUTHORIZED COMMAND";
   elements.commandLabel.textContent = config?.label ?? "현재 단계 확인 필요";
-  elements.resetCommand.hidden = stage === "READY" || stage === "CONFLICT_RESOLVED";
+  elements.resetCommand.hidden = stage === "READY" || config?.command === "RESET";
   elements.primaryCommand.disabled = requestBusy || !config;
   elements.resetCommand.disabled = requestBusy;
 }
@@ -530,6 +647,10 @@ function setRequestBusy(value) {
   elements.refresh.disabled = value;
   elements.primaryCommand.disabled = value || !elements.primaryCommand.dataset.command;
   elements.resetCommand.disabled = value;
+  elements.decisionSubmit.disabled = value;
+  for (const button of elements.decisionActionButtons) {
+    button.disabled = value;
+  }
   elements.primaryCommand.setAttribute("aria-busy", String(value));
   if (currentSession) {
     updateCommandControl(currentSession.stage);
@@ -537,7 +658,11 @@ function setRequestBusy(value) {
 }
 
 function renderStage(stage) {
-  const normalized = stage === "DEVIATION_DETECTED" ? "MONITORING" : stage;
+  const normalized = {
+    DEVIATION_DETECTED: "MONITORING",
+    DECISION_MODIFIED: "DECISION_ACCEPTED",
+    DECISION_REJECTED: "DECISION_ACCEPTED",
+  }[stage] ?? stage;
   const currentIndex = STAGE_ORDER.indexOf(normalized);
   for (const item of elements.stageItems) {
     const itemIndex = STAGE_ORDER.indexOf(item.dataset.stageKey);
@@ -604,7 +729,7 @@ async function loadSession() {
   }
 }
 
-async function executeCommand(command) {
+async function executeCommand(command, fields = {}) {
   if (requestBusy || !command) {
     return;
   }
@@ -618,7 +743,7 @@ async function executeCommand(command) {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ command }),
+      body: JSON.stringify({ command, ...fields }),
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -652,5 +777,33 @@ elements.refresh.addEventListener("click", loadSession);
 elements.primaryCommand.addEventListener("click", () => {
   executeCommand(elements.primaryCommand.dataset.command);
 });
+for (const button of elements.decisionActionButtons) {
+  button.addEventListener("click", () => {
+    const action = button.dataset.decisionAction;
+    if (action === "ACCEPT") {
+      executeCommand("ACCEPT_RECOMMENDATION");
+    } else {
+      setDecisionMode(action);
+    }
+  });
+}
+elements.modifiedType.addEventListener("change", updateManeuverInput);
+elements.decisionCancel.addEventListener("click", () => setDecisionMode(null));
+elements.decisionForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!decisionMode || !elements.decisionForm.reportValidity()) {
+    return;
+  }
+  const rationale = elements.decisionRationaleInput.value.trim();
+  if (decisionMode === "MODIFY") {
+    executeCommand("MODIFY_RECOMMENDATION", {
+      rationale,
+      modified_maneuver: buildModifiedManeuver(),
+    });
+  } else {
+    executeCommand("REJECT_RECOMMENDATION", { rationale });
+  }
+});
 elements.resetCommand.addEventListener("click", () => executeCommand("RESET"));
+updateManeuverInput();
 loadSession();

@@ -1,6 +1,7 @@
 import pytest
 
 from sentry_atm.api import GoldenDemoSessionStage, InProcessGoldenDemoSessionApi
+from sentry_atm.domain import AltitudeManeuver
 from sentry_atm.infrastructure.http import GoldenDemoSessionWsgiApp
 from sentry_atm.runtime import (
     GoldenDemoSessionCommand,
@@ -73,6 +74,97 @@ def test_command_service_runs_only_calibrated_checkpoints_in_order() -> None:
     assert resolved.application_step_id == "GOLDEN-APPLICATION-000000000090"
     assert resolved.revalidation is not None
     assert resolved.revalidation.resolved
+
+
+def _advance_to_recommendation(session) -> None:
+    session.command_service.execute(GoldenDemoSessionCommand.START)
+    session.command_service.execute(GoldenDemoSessionCommand.ADVANCE_TO_CONFLICT)
+    session.command_service.execute(GoldenDemoSessionCommand.GENERATE_RECOMMENDATION)
+
+
+def test_modify_command_records_revalidation_required_without_runtime_application() -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+
+    modified = session.command_service.execute(
+        GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+        rationale="Maintain additional vertical margin",
+        modified_maneuver=AltitudeManeuver(8_800),
+    )
+
+    assert modified.stage is GoldenDemoSessionStage.DECISION_MODIFIED
+    assert modified.elapsed_seconds == 90.0
+    assert modified.application_step_id is None
+    assert modified.controller_decision is not None
+    entry = modified.controller_decision.entries[-1]
+    assert entry.decision_type == "MODIFY"
+    assert entry.rationale == "Maintain additional vertical margin"
+    assert entry.modified_maneuver is not None
+    assert entry.modified_maneuver.target_altitude_ft == 8_800
+    assert entry.requires_revalidation
+    assert not entry.authorizes_application
+    snapshot = session.runtime.simulation.engine.snapshot()
+    assert snapshot == session.step_orchestrator.last_result.traffic_snapshot
+    target_state = next(item for item in snapshot.states if item.aircraft_id == "MIL-F01")
+    assert target_state.altitude_ft != 8_800
+
+
+def test_reject_command_records_reason_without_runtime_application() -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+
+    rejected = session.command_service.execute(
+        GoldenDemoSessionCommand.REJECT_RECOMMENDATION,
+        rationale="Coordinate a different sector strategy",
+    )
+
+    assert rejected.stage is GoldenDemoSessionStage.DECISION_REJECTED
+    assert rejected.elapsed_seconds == 90.0
+    assert rejected.application_step_id is None
+    assert rejected.controller_decision is not None
+    entry = rejected.controller_decision.entries[-1]
+    assert entry.decision_type == "REJECT"
+    assert entry.rationale == "Coordinate a different sector strategy"
+    assert entry.modified_maneuver is None
+    assert not entry.requires_revalidation
+    assert not entry.authorizes_application
+    snapshot = session.runtime.simulation.engine.snapshot()
+    assert snapshot == session.step_orchestrator.last_result.traffic_snapshot
+
+
+@pytest.mark.parametrize(
+    ("command", "rationale", "maneuver", "message"),
+    [
+        (GoldenDemoSessionCommand.MODIFY_RECOMMENDATION, "", AltitudeManeuver(8_800), "rationale"),
+        (
+            GoldenDemoSessionCommand.MODIFY_RECOMMENDATION,
+            "No actual change",
+            AltitudeManeuver(9_000),
+            "must change",
+        ),
+        (GoldenDemoSessionCommand.REJECT_RECOMMENDATION, "", None, "rationale"),
+    ],
+)
+def test_invalid_operator_decision_does_not_advance_or_mutate_session(
+    command: GoldenDemoSessionCommand,
+    rationale: str,
+    maneuver: AltitudeManeuver | None,
+    message: str,
+) -> None:
+    session = build_golden_demo_session_runtime()
+    _advance_to_recommendation(session)
+    before = session.read_api.get_current()
+
+    with pytest.raises(ValueError, match=message):
+        session.command_service.execute(
+            command,
+            rationale=rationale,
+            modified_maneuver=maneuver,
+        )
+
+    assert session.read_api.get_current() == before
+    assert session.runtime.simulation.clock.elapsed_seconds == 75.0
+    assert session.runtime.controller_decision_service.revision == 0
 
 
 def test_out_of_order_and_duplicate_commands_are_rejected_without_state_change() -> None:

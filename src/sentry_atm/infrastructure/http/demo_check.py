@@ -223,8 +223,12 @@ def _verify_ui_assets(connection: HTTPConnection) -> None:
         expected_content_type="text/javascript; charset=utf-8",
     )
     _require(b"data-conflict-explainability" in html, "explainability UI is missing")
+    _require(b"data-decision-actions" in html, "operator decision controls are missing")
     _require(b".conflict-explainability" in css, "explainability styles are missing")
+    _require(b".decision-form" in css, "operator decision styles are missing")
     _require(b"renderConflictExplainability" in script, "explainability renderer is missing")
+    _require(b"MODIFY_RECOMMENDATION" in script, "Modify workflow is missing")
+    _require(b"REJECT_RECOMMENDATION" in script, "Reject workflow is missing")
 
 
 def _get_bytes(

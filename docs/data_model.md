@@ -379,8 +379,9 @@ Domain 전용 `reference_data`에서 공급하며 SQLite Seed도 같은 객체�
 
 Phase 12-D의 `GoldenDemoControllerDecisionResult`는 T+90 Step, T+75 Resolution, 선택한
 Recommendation과 기존 `ControllerDecisionAuditEntry/Log`를 연결하는 불변 Application 결과다.
-`ACCEPT`의 `authorizes_application`은 후속 적용 권한이며 적용 완료 상태가 아니다. 따라서 이 Result에도
-적용 후 Aircraft State나 Conflict 해소 판정을 저장하지 않는다.
+Phase 15-B에서 이 조립 경계가 `MODIFY`, `REJECT`에도 재사용된다. `ACCEPT`의
+`authorizes_application`은 후속 적용 권한이며 적용 완료 상태가 아니고, 다른 두 Decision은 적용 권한을
+만들지 않는다. 따라서 이 Result에도 적용 후 Aircraft State나 Conflict 해소 판정을 저장하지 않는다.
 
 Phase 12-E의 `GoldenDemoApprovedManeuverApplicationResult`는 승인 전후 Actual State, 적용 후 Traffic
 Snapshot, 새 Prediction/Conflict Run, Risk/Priority, Exception Queue와 원 Pair의 재검증 결과를 연결한다.

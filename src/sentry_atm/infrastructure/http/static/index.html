@@ -292,6 +292,55 @@
               <div><dt>DECISION</dt><dd data-decision-audit>PENDING</dd></div>
             </dl>
             <p class="decision-explanation" data-decision-explanation></p>
+            <div class="decision-audit-detail" data-decision-audit-detail hidden>
+              <span>OPERATOR RECORD</span>
+              <strong data-decision-audit-summary>—</strong>
+              <p data-decision-rationale>—</p>
+            </div>
+            <div class="decision-actions" data-decision-actions hidden>
+              <button type="button" class="decision-action accept" data-decision-action="ACCEPT">
+                <small>ACCEPT</small><strong>추천안 승인</strong>
+              </button>
+              <button type="button" class="decision-action modify" data-decision-action="MODIFY">
+                <small>MODIFY</small><strong>기동 수정</strong>
+              </button>
+              <button type="button" class="decision-action reject" data-decision-action="REJECT">
+                <small>REJECT</small><strong>추천안 거절</strong>
+              </button>
+            </div>
+            <form class="decision-form" data-decision-form hidden>
+              <div class="decision-form-heading">
+                <div>
+                  <span>CONTROLLER INPUT</span>
+                  <strong data-decision-form-title>추천 기동 수정</strong>
+                </div>
+                <button type="button" class="form-cancel" data-decision-cancel>취소</button>
+              </div>
+              <div class="modified-fields" data-modified-fields>
+                <label>
+                  <span>MANEUVER TYPE</span>
+                  <select data-modified-type>
+                    <option value="ALTITUDE">ALTITUDE</option>
+                    <option value="HEADING">HEADING</option>
+                    <option value="SPEED">SPEED</option>
+                    <option value="ENTRY_DELAY">ENTRY DELAY</option>
+                    <option value="SEQUENCE_CHANGE">SEQUENCE CHANGE</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-modified-value-label>TARGET ALTITUDE</span>
+                  <span class="value-input">
+                    <input type="number" data-modified-value required />
+                    <b data-modified-unit>FT</b>
+                  </span>
+                </label>
+              </div>
+              <label class="rationale-field">
+                <span>RATIONALE</span>
+                <textarea data-decision-rationale-input required maxlength="240" rows="2" placeholder="판단 근거를 입력하세요."></textarea>
+              </label>
+              <button type="submit" class="decision-submit" data-decision-submit>수정 결정 기록</button>
+            </form>
             <div class="revalidation-result" data-revalidation hidden>
               <span>POST-ACTION REVALIDATION</span>
               <strong data-revalidation-result>RESOLVED</strong>
@@ -344,7 +393,7 @@
           <li data-stage-key="MONITORING"><span>01</span><div><strong>Monitoring</strong><small>T+00</small></div></li>
           <li data-stage-key="CONFLICT_DETECTED"><span>02</span><div><strong>Conflict</strong><small>T+70</small></div></li>
           <li data-stage-key="RECOMMENDATION_AVAILABLE"><span>03</span><div><strong>Recommend</strong><small>T+75</small></div></li>
-          <li data-stage-key="DECISION_ACCEPTED"><span>04</span><div><strong>Approve</strong><small>T+90</small></div></li>
+          <li data-stage-key="DECISION_ACCEPTED"><span>04</span><div><strong>Decision</strong><small>T+90</small></div></li>
           <li data-stage-key="CONFLICT_RESOLVED"><span>05</span><div><strong>Resolved</strong><small>T+90</small></div></li>
         </ol>
         <div class="timeline-action">

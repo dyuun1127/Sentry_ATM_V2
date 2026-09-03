@@ -59,6 +59,44 @@ def test_t_plus_90_accept_records_audit_without_applying_maneuver() -> None:
     assert runtime.simulation.engine.snapshot() == traffic_before == decision_step.traffic_snapshot
 
 
+@pytest.mark.parametrize(
+    ("decision_type", "rationale", "modified_maneuver"),
+    [
+        (
+            ControllerDecisionType.MODIFY,
+            "Maintain additional vertical margin",
+            AltitudeManeuver(8_800),
+        ),
+        (ControllerDecisionType.REJECT, "Coordinate a different sector strategy", None),
+    ],
+)
+def test_modify_and_reject_are_audited_without_applying_runtime_state(
+    decision_type: ControllerDecisionType,
+    rationale: str,
+    modified_maneuver: AltitudeManeuver | None,
+) -> None:
+    runtime, _, _, decision, _, decision_step = _at_decision_time()
+    traffic_before = runtime.simulation.engine.snapshot()
+
+    if decision_type is ControllerDecisionType.MODIFY:
+        result = decision.modify(
+            rationale=rationale,
+            modified_maneuver=modified_maneuver,  # type: ignore[arg-type]
+        )
+    else:
+        result = decision.reject(rationale=rationale)
+
+    assert result.decision_entry.decision_type is decision_type
+    assert result.decision_entry.rationale == rationale
+    assert result.decision_entry.modified_maneuver == modified_maneuver
+    assert not result.decision_entry.authorizes_application
+    assert result.decision_entry.requires_revalidation is (
+        decision_type is ControllerDecisionType.MODIFY
+    )
+    assert result.decision_entry.approved_candidate is None
+    assert runtime.simulation.engine.snapshot() == traffic_before == decision_step.traffic_snapshot
+
+
 def test_identical_decision_runs_produce_equal_audit_evidence() -> None:
     first_runtime, _, _, first, _, _ = _at_decision_time()
     second_runtime, _, _, second, _, _ = _at_decision_time()
