@@ -7,12 +7,12 @@ from sentry_atm.conflict.closest_approach import (
     ConstantVelocityClosestApproachCalculator,
 )
 from sentry_atm.domain import (
-    POC_TERMINAL_V1_RULE_PROFILE,
     AircraftState,
     ConflictEvent,
     ConflictStatus,
     SeparationRuleProfile,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 
 
 class PairwiseConflictDetector:
@@ -24,7 +24,7 @@ class PairwiseConflictDetector:
         self,
         *,
         calculator: ConstantVelocityClosestApproachCalculator | None = None,
-        rule_profile: SeparationRuleProfile = POC_TERMINAL_V1_RULE_PROFILE,
+        rule_profile: SeparationRuleProfile | None = None,
     ) -> None:
         selected_calculator = (
             ConstantVelocityClosestApproachCalculator() if calculator is None else calculator
@@ -34,6 +34,8 @@ class PairwiseConflictDetector:
             ConstantVelocityClosestApproachCalculator,
         ):
             raise TypeError("calculator must be a ConstantVelocityClosestApproachCalculator")
+        if rule_profile is None:
+            rule_profile = active_separation_profile()
         if not isinstance(rule_profile, SeparationRuleProfile):
             raise TypeError("rule_profile must be a SeparationRuleProfile")
         self._calculator = selected_calculator

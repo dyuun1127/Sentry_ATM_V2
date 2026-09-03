@@ -109,7 +109,10 @@ class Sortie:
         return self.off_station_s - self.on_station_s
 
     def describe(self) -> str:
-        return f"{self.callsign} ({self.actype}) — {self.kind.value} / {self.area.id} / {self.phase.value}"
+        return (
+            f"{self.callsign} ({self.actype}) — {self.kind.value} / "
+            f"{self.area.id} / {self.phase.value}"
+        )
 
 
 @dataclass

@@ -5,7 +5,6 @@
 중심선에 배치해 분리·후류를 다시 검사하는 테스트를 둔다.
 """
 
-import math
 
 import pytest
 
@@ -208,7 +207,7 @@ class TestAltitudeLadder:
         """인접 순번 간 1,000ft 확보 — 고시 4-5-1 이 구조적으로 만족된다."""
         arrivals = [inbound(sq, f"AC{i}", 12.0 + 6.0 * i, "B738") for i in range(3)]
         alts = [x.assigned_alt_ft for x in sq.build(arrivals).slots]
-        for lo, hi in zip(alts, alts[1:]):
+        for lo, hi in zip(alts, alts[1:], strict=False):
             assert hi - lo >= ds.airspace.sep_vertical_ft
 
     def test_ladder_exhaustion_is_flagged(self, sq):
@@ -236,7 +235,7 @@ class TestScheduleOrder:
             inbound(sq, "MED", 22.0, "B738"),
         ]
         s = sq.build(arrivals)
-        for a, b in zip(s.slots, s.slots[1:]):
+        for a, b in zip(s.slots, s.slots[1:], strict=False):
             assert b.threshold_time_s - a.threshold_time_s >= b.gap.seconds - 1e-6
 
     def test_no_delay_when_naturally_spaced(self, sq):
@@ -334,7 +333,7 @@ class TestPriorityInsertion:
         def max_gap(s):
             return max(
                 (b.threshold_time_s - a.threshold_time_s
-                 for a, b in zip(s.slots, s.slots[1:])), default=0.0
+                 for a, b in zip(s.slots, s.slots[1:], strict=False)), default=0.0
             )
         assert max_gap(after) <= max_gap(before) + 60.0, "활주로 공백이 생겼다"
 

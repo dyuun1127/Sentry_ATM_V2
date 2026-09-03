@@ -8,7 +8,6 @@
 있는 상한이고, 넘으면 체공이 아닌 다른 수단으로 풀어야 한다.
 """
 
-import math
 
 import pytest
 
@@ -89,7 +88,7 @@ class TestStackLevels:
         step = ds.airspace.raw["holding"]["level_step_ft"]
         assert step == ds.airspace.raw["separation"]["vertical"]["below_fl410_ft"]
         lv = hb.levels(hb.pattern("IKAPO"))
-        assert all(b - a == step for a, b in zip(lv, lv[1:]))
+        assert all(b - a == step for a, b in zip(lv, lv[1:], strict=False))
 
     def test_levels_start_at_the_published_altitude(self, hb):
         for p in hb.patterns:

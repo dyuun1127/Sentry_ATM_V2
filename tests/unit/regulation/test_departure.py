@@ -5,7 +5,6 @@
 학습하면 예측기가 절차를 벗어난 상승을 정상으로 배운다.
 """
 
-import math
 import random
 
 import pytest
@@ -85,7 +84,7 @@ class TestProcedureCompliance:
         """AT 제약은 그 고도로 지나야 한다 — 초과하면 절차 위반이다."""
         tj = depart(calm, ds, actype=actype, transition=transition)
         pts, cons = calm.sid_route("UPTIL1", transition)
-        for (lat, lon), c in zip(pts, cons):
+        for (lat, lon), c in zip(pts, cons, strict=False):
             if c.get("alt_cons") != "AT":
                 continue
             near = min(tj.samples, key=lambda x: separation_distance_nm(x.lat, x.lon, lat, lon))
@@ -97,7 +96,7 @@ class TestProcedureCompliance:
     def test_at_or_above_constraints_are_met(self, ds, calm, transition):
         tj = depart(calm, ds, transition=transition)
         pts, cons = calm.sid_route("UPTIL1", transition)
-        for (lat, lon), c in zip(pts, cons):
+        for (lat, lon), c in zip(pts, cons, strict=False):
             if c.get("alt_cons") != "AT_OR_ABOVE":
                 continue
             near = min(tj.samples, key=lambda x: separation_distance_nm(x.lat, x.lon, lat, lon))
@@ -118,7 +117,7 @@ class TestProcedureCompliance:
     def test_route_passes_every_published_fix(self, ds, calm):
         tj = depart(calm, ds)
         pts, cons = calm.sid_route("UPTIL1", "GUKDO")
-        for (lat, lon), c in zip(pts, cons):
+        for (lat, lon), c in zip(pts, cons, strict=False):
             d = min(separation_distance_nm(x.lat, x.lon, lat, lon) for x in tj.samples)
             assert d < 1.5, f"{c['wpt']} 를 {d:.1f}NM 빗겨갔다"
 
@@ -133,7 +132,7 @@ class TestClimbModel:
     def test_altitude_is_monotone(self, ds, calm):
         tj = depart(calm, ds)
         alts = [x.alt_ft for x in tj.samples]
-        assert all(b >= a - 1e-6 for a, b in zip(alts, alts[1:]))
+        assert all(b >= a - 1e-6 for a, b in zip(alts, alts[1:], strict=False))
 
     def test_climb_rate_follows_the_published_gradient(self, ds, calm):
         """상승률은 값을 두지 않고 AIP 구배 × 대지속도로 낸다."""

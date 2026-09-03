@@ -254,8 +254,8 @@ def test_golden_candidates_are_calculated_without_mutating_runtime_states() -> N
         ("MIL-F01", "MIL-F02"),
     )
     secondary = candidate_b.secondary_conflicts[0]
-    assert secondary.minimum_separation.horizontal_nm == pytest.approx(3.994, abs=0.001)
-    assert secondary.minimum_separation.vertical_ft == pytest.approx(406.51, abs=0.01)
+    assert secondary.minimum_separation.horizontal_nm == pytest.approx(2.394, abs=0.001)
+    assert secondary.minimum_separation.vertical_ft == pytest.approx(406.49, abs=0.01)
     assert ResolutionValidationReasonCode.SECONDARY_CONFLICT_DETECTED in candidate_b.reason_codes
     assert result_by_id["CAND-C"].verdict is ResolutionValidationVerdict.INEFFECTIVE
     assert result_by_id["CAND-D"].verdict is ResolutionValidationVerdict.UNSAFE

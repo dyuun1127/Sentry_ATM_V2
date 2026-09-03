@@ -113,7 +113,7 @@ class TestTimetableLoading:
 
     def test_scheduled_time_becomes_the_earliest_runway_time(self, ds, tt):
         ops = tt.to_runway_ops(ds.fleet)
-        for op, f in zip(ops, tt.flights):
+        for op, f in zip(ops, tt.flights, strict=False):
             assert op.earliest_s == f.scheduled_s
             assert op.callsign == f.callsign
 
@@ -197,7 +197,7 @@ class TestEmergencyHandling:
 
 class TestScheduleIntegrity:
     def test_final_schedule_meets_every_runway_requirement(self, sc):
-        for a, b in zip(sc.final.slots, sc.final.slots[1:]):
+        for a, b in zip(sc.final.slots, sc.final.slots[1:], strict=False):
             assert b.time_s - a.time_s >= b.requirement.seconds - 1e-6
 
     def test_no_slot_precedes_its_earliest_time(self, sc):

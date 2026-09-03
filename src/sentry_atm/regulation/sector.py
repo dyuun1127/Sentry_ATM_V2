@@ -17,7 +17,6 @@ T17 회랑만 쓰면 RWY 24R 최종접근(TURTU~TU746)이 전부 회랑 밖으�
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 

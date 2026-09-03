@@ -9,6 +9,7 @@ from sentry_atm.api import (
     GoldenDemoSessionStage,
     InProcessGoldenDemoSessionApi,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.runtime import (
     GoldenDemoApprovedManeuverOrchestrator,
     GoldenDemoControllerDecisionOrchestrator,
@@ -96,7 +97,8 @@ def test_session_projects_each_completed_backend_stage() -> None:
     conflict = api.get_current()
     assert conflict.stage is GoldenDemoSessionStage.CONFLICT_DETECTED
     assert conflict.step_id == "GOLDEN-STEP-000000000075"
-    assert conflict.active_exception_count == 3
+    # 고시 3NM 기준에서는 임계 근접 항목이 하나 줄어 2건이다 (test_orchestrator 참조).
+    assert conflict.active_exception_count == 2
     assert conflict.primary_conflict is not None
     assert conflict.primary_conflict.aircraft_ids == ("CIV-A02", "MIL-F01")
     assert conflict.primary_conflict.status == "PREDICTED"
@@ -105,9 +107,12 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert conflict.primary_conflict.tcpa_seconds == 85.0
     assert conflict.primary_conflict.horizontal_separation_nm == pytest.approx(2.3)
     assert conflict.primary_conflict.vertical_separation_ft == pytest.approx(500.0)
-    assert conflict.primary_conflict.horizontal_threshold_nm == 5.0
-    assert conflict.primary_conflict.vertical_threshold_ft == 1_000.0
-    assert conflict.primary_conflict.rule_profile_id == "POC_TERMINAL_V1"
+    rule = active_separation_profile()
+    assert conflict.primary_conflict.horizontal_threshold_nm == (
+        rule.horizontal_threshold_nm
+    )
+    assert conflict.primary_conflict.vertical_threshold_ft == rule.vertical_threshold_ft
+    assert conflict.primary_conflict.rule_profile_id == active_separation_profile().profile_id
     assert conflict.primary_conflict.risk_policy_profile_id == "POC_RISK_V1"
     assert conflict.deviation is not None
     assert conflict.deviation.aircraft_id == "MIL-F01"

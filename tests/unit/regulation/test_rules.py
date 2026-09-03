@@ -185,7 +185,7 @@ class TestAltitudeAssignment:
         """순번이 뒤일수록 높은 고도 — 인접 순번 간 1,000ft 가 구조적으로 확보된다."""
         alts = [rb.assigned_altitude_ft(i) for i in range(3)]
         assert alts == [4000, 5000, 6000]
-        for lo, hi in zip(alts, alts[1:]):
+        for lo, hi in zip(alts, alts[1:], strict=False):
             assert hi - lo >= rb.ds.airspace.sep_vertical_ft
 
     def test_ladder_exhaustion_flagged(self, rb):

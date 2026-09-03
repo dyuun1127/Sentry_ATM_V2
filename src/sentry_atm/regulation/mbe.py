@@ -18,7 +18,6 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 from .geometry import cpa as cpa_of
@@ -148,7 +147,7 @@ class ScoreResult:
 
 def roc_auc(scores: list[float], labels: list[bool]) -> float:
     """순위 기반 AUC (동점은 평균 순위로 처리)."""
-    pairs = sorted(zip(scores, labels))
+    pairs = sorted(zip(scores, labels, strict=False))
     ranks: list[float] = [0.0] * len(pairs)
     i = 0
     while i < len(pairs):
@@ -164,7 +163,7 @@ def roc_auc(scores: list[float], labels: list[bool]) -> float:
     neg = len(pairs) - pos
     if pos == 0 or neg == 0:
         return 0.5
-    rank_sum = sum(r for r, (_, y) in zip(ranks, pairs) if y)
+    rank_sum = sum(r for r, (_, y) in zip(ranks, pairs, strict=False) if y)
     return (rank_sum - pos * (pos + 1) / 2.0) / (pos * neg)
 
 
@@ -186,7 +185,7 @@ def evaluate_scores(
     escalated = [s >= cutoff for s in scores]
 
     pos = sum(labels)
-    missed = sum(1 for s, y in zip(escalated, labels) if y and not s)
+    missed = sum(1 for s, y in zip(escalated, labels, strict=False) if y and not s)
     return ScoreResult(
         name=name,
         miss_rate=missed / pos if pos else 0.0,
@@ -221,7 +220,7 @@ class Scorer:
             coefs = [abs(c) for c in self.model.coef_[0]]
             total = sum(coefs) or 1.0
             vals = [c / total for c in coefs]
-        return sorted(zip(FEATURE_NAMES, vals), key=lambda kv: -kv[1])
+        return sorted(zip(FEATURE_NAMES, vals, strict=False), key=lambda kv: -kv[1])
 
 
 def train_boosting(x: list[list[float]], y: list[bool], seed: int = 20260903) -> Scorer:
@@ -300,7 +299,7 @@ def derive_thresholds(
     k = max(1, int(round(n * escalation_rate)))
     danger = sorted(scores, reverse=True)[k - 1]
 
-    order = sorted(zip(scores, labels), key=lambda sl: -sl[0])
+    order = sorted(zip(scores, labels, strict=False), key=lambda sl: -sl[0])
     pos = sum(labels)
     caution = min(scores) if scores else 0.0
     if pos:
@@ -324,7 +323,7 @@ def level_report(
 ) -> list[tuple[str, int, float]]:
     """단계별 건수와 실제 위반율 — 임계가 타당한지 보는 표."""
     buckets: dict[str, list[bool]] = {"위험": [], "주의": [], "정상": []}
-    for s, y in zip(scores, labels):
+    for s, y in zip(scores, labels, strict=False):
         buckets[thresholds.level(s)].append(y)
     out = []
     for name in ("위험", "주의", "정상"):

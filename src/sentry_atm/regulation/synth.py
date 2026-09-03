@@ -28,12 +28,12 @@ import random
 from dataclasses import dataclass, field
 
 from .geo import (
+    M_PER_NM,
     angular_diff,
     bearing_true,
     curvature_radii,
     separation_distance_nm,
     vincenty_direct,
-    M_PER_NM,
 )
 from .rules import RuleBook
 from .state import AircraftState
@@ -764,7 +764,8 @@ class ScenarioGenerator:
             jitter_s: 계획 대비 도달시각 오차 표준편차.
             deviation_rate: 계획을 크게 벗어나는 항적의 비율.
             spacing_buffer: 최저 간격 대비 계획 여유. 기본값 1.65 는 결과 위반율이
-                시드에 따라 10~21%, 평균 약 15% 가 되는 지점으로, 기획서가 인용한 실제 개입 필요 13.8% 와
+                시드에 따라 10~21%, 평균 약 15% 가 되는 지점으로, 기획서가 인용한
+                실제 개입 필요 13.8% 와
                 부합하도록 잡았다. 1.0 으로 두면 작은 오차에도 전부 위반이 된다.
             (원문) 관제사는 최저치에 딱 맞추지
                 않고 여유를 둔다 — 1.0 으로 두면 작은 오차에도 전부 위반이 된다.

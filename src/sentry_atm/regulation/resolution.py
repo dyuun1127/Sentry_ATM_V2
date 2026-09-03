@@ -21,7 +21,7 @@ import math
 import random
 from dataclasses import dataclass, field, replace
 
-from .conflict import Conflict, ConflictKind, Detector
+from .conflict import Conflict, Detector
 from .state import AircraftState, relative_state
 
 
@@ -156,7 +156,7 @@ def collision_probability(
         # 시각마다 독립으로 다시 뽑으면 "예측보다 앞서가는 기체는 계속 앞서간다"는
         # 시간 상관이 사라져, 시간 구간을 잘게 나눌수록 확률이 부풀려진다.
         zx, zy, zz = rng.gauss(0, 1), rng.gauss(0, 1), rng.gauss(0, 1)
-        for t, rel in zip(times, rels):
+        for t, rel in zip(times, rels, strict=False):
             sh, sv = uncertainty.sigma_at(t)
             horiz = math.hypot(
                 rel.r_east_nm + zx * sh * k, rel.r_north_nm + zy * sh * k

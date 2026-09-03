@@ -103,7 +103,7 @@ class Schedule:
         """평균 착륙 간격 — 처리율 지표."""
         gaps = [
             b.threshold_time_s - a.threshold_time_s
-            for a, b in zip(self.slots, self.slots[1:])
+            for a, b in zip(self.slots, self.slots[1:], strict=False)
         ]
         return sum(gaps) / len(gaps) if gaps else 0.0
 

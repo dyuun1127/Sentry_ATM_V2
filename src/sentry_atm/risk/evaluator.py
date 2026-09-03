@@ -2,7 +2,6 @@
 
 from sentry_atm.domain import (
     POC_RISK_V1_POLICY_PROFILE,
-    POC_TERMINAL_V1_RULE_PROFILE,
     ConflictEvent,
     ConflictRiskAssessment,
     ConflictStatus,
@@ -11,6 +10,7 @@ from sentry_atm.domain import (
     RiskReasonCode,
     SeparationRuleProfile,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 
 
 class ConflictRiskEvaluator:
@@ -22,10 +22,12 @@ class ConflictRiskEvaluator:
         self,
         *,
         risk_policy: RiskPolicyProfile = POC_RISK_V1_POLICY_PROFILE,
-        separation_rule_profile: SeparationRuleProfile = POC_TERMINAL_V1_RULE_PROFILE,
+        separation_rule_profile: SeparationRuleProfile | None = None,
     ) -> None:
         if not isinstance(risk_policy, RiskPolicyProfile):
             raise TypeError("risk_policy must be a RiskPolicyProfile")
+        if separation_rule_profile is None:
+            separation_rule_profile = active_separation_profile()
         if not isinstance(separation_rule_profile, SeparationRuleProfile):
             raise TypeError("separation_rule_profile must be a SeparationRuleProfile")
         self._risk_policy = risk_policy

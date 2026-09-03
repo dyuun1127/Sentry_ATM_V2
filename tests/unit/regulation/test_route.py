@@ -10,7 +10,6 @@
 낮게 복귀하는 항적을 제한구역으로 밀어 넣는다.
 """
 
-import math
 
 import pytest
 

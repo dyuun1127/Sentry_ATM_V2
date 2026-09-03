@@ -10,10 +10,9 @@ import pytest
 
 from sentry_atm.regulation import conflict as cf
 from sentry_atm.regulation import data as sdata
-from sentry_atm.regulation import mbe
+from sentry_atm.regulation import mbe, synth
 from sentry_atm.regulation import resolution as res
 from sentry_atm.regulation import sequencing as seq
-from sentry_atm.regulation import synth
 from sentry_atm.regulation.geo import vincenty_direct
 from sentry_atm.regulation.state import AircraftState
 

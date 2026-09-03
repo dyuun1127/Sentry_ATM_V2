@@ -13,6 +13,7 @@ from sentry_atm.domain import (
     DataSource,
     SeparationRuleProfile,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.scenario import build_golden_demo_scenario
 
 NOW_UTC = datetime(2026, 9, 2, 3, 0, tzinfo=UTC)
@@ -85,7 +86,7 @@ def test_detect_returns_only_predicted_events() -> None:
     assert len(detected) == 1
     assert detected[0].pair.aircraft_ids == ("CIV-A01", "MIL-F01")
     assert detected[0].status is ConflictStatus.PREDICTED
-    assert detected[0].rule_profile_id == "POC_TERMINAL_V1"
+    assert detected[0].rule_profile_id == active_separation_profile().profile_id
 
 
 def test_assessment_ids_are_deterministic_and_include_pair_and_snapshot() -> None:
@@ -104,9 +105,12 @@ def test_custom_rule_profile_changes_assessment_without_detector_changes() -> No
         _state("CIV-A01", x_nm=0.0, y_nm=0.0, heading_deg=0.0),
         _state("CIV-A02", x_nm=4.0, y_nm=0.0, heading_deg=0.0),
     )
+    # 기본값이 고시 3NM 이므로, 대비를 보이려면 더 넓은 프로파일을 주입한다.
+    # 4NM 이격은 고시 기준으로 분리가 확보된 상태이고, 5NM 을 요구하는 프로파일
+    # 아래에서는 아니다.
     custom_rule = SeparationRuleProfile(
-        profile_id="CUSTOM-3NM",
-        horizontal_threshold_nm=3.0,
+        profile_id="CUSTOM-5NM",
+        horizontal_threshold_nm=5.0,
         vertical_threshold_ft=1_000.0,
         source_reference="test-only",
     )
@@ -114,9 +118,9 @@ def test_custom_rule_profile_changes_assessment_without_detector_changes() -> No
     default_event = PairwiseConflictDetector().assess(states)[0]
     custom_event = PairwiseConflictDetector(rule_profile=custom_rule).assess(states)[0]
 
-    assert default_event.status is ConflictStatus.PREDICTED
-    assert custom_event.status is ConflictStatus.SAFE
-    assert custom_event.rule_profile_id == "CUSTOM-3NM"
+    assert default_event.status is ConflictStatus.SAFE
+    assert custom_event.status is ConflictStatus.PREDICTED
+    assert custom_event.rule_profile_id == "CUSTOM-5NM"
 
 
 def test_exact_rule_boundaries_are_safe() -> None:

@@ -87,14 +87,16 @@ def test_t_plus_60_step_emits_event_conflict_risk_priority_and_queue() -> None:
     assert priority_by_aircraft["MIL-F01"].source_event_ids == ("EVT-MIL-F01-ENTRY-DEVIATION",)
     assert tuple(
         item.subject_aircraft_ids for item in result.exception_queue_snapshot.active_items
+    # CIV-A02/MIL-F02 는 4.37NM 이격이다. 가정값 5NM 아래에서는 "임계 근접"(비율
+    # 1.25 이내)이라 큐에 올라왔지만, 고시 3NM 기준으로는 비율 1.46 이라 근접이
+    # 아니다. 상신 대상이 줄어드는 것이 이 교체의 결과이며, 큐를 채우려고 기하를
+    # 옮기지 않는다.
     ) == (
         ("CIV-A02", "MIL-F01"),
         ("MIL-F01",),
-        ("CIV-A02", "MIL-F02"),
     )
     assert tuple(item.score for item in result.exception_queue_snapshot.active_items) == (
         75.0,
-        40.0,
         40.0,
     )
     assert runtime.recommendation_catalog.get_current_recommendation() is None

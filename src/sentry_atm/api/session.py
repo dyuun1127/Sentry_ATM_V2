@@ -9,7 +9,6 @@ from sentry_atm.api.controller_decision import ControllerDecisionAuditLogReadMod
 from sentry_atm.api.exception_queue import ExceptionQueueSnapshotReadModel
 from sentry_atm.api.recommendation import ResolutionRecommendationSetReadModel
 from sentry_atm.domain import (
-    POC_TERMINAL_V1_RULE_PROFILE,
     AircraftState,
     AltitudeManeuver,
     CandidateSafetyValidationResult,
@@ -29,6 +28,7 @@ from sentry_atm.domain import (
     SpeedManeuver,
 )
 from sentry_atm.domain.time_policy import to_utc
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.scenario import (
     EntryConformanceDeviationPayload,
     ScenarioDefinition,
@@ -826,7 +826,9 @@ def _map_primary_conflict(
         return None
 
     event = _matching_conflict_event(step_result, risk)
-    rule = POC_TERMINAL_V1_RULE_PROFILE
+    # 사건을 실제로 분류한 기준과 같아야 한다. 여기서만 다른 값을 쓰면
+    # 위험평가기의 프로파일 일치 검사에 걸린다.
+    rule = active_separation_profile()
     minimum_horizontal_nm = (
         event.minimum_separation.horizontal_nm
         if event is not None

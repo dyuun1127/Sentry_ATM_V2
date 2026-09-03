@@ -248,7 +248,7 @@ class RoutePlanner:
         chain.reverse()
 
         legs: list[RouteLeg] = []
-        for a_name, b_name in zip(chain, chain[1:]):
+        for a_name, b_name in zip(chain, chain[1:], strict=False):
             a, b = coords[a_name], coords[b_name]
             legs.append(
                 RouteLeg(

@@ -9,7 +9,6 @@ import math
 
 import pytest
 
-from sentry_atm.regulation import conflict as cf
 from sentry_atm.regulation import data as sdata
 from sentry_atm.regulation import resolution as res
 from sentry_atm.regulation import sequencing as seq
@@ -369,7 +368,7 @@ class TestArrivalStreamDeconfliction:
                 break
             schedule = res._push_slot(sq, schedule, found[0], traffic, 0.0)
 
-        for prev, nxt in zip(counts, counts[1:]):
+        for prev, nxt in zip(counts, counts[1:], strict=False):
             assert nxt <= prev, f"위반이 늘었다 (발산): {counts}"
 
     def test_schedule_stays_feasible_after_pushing(self, resolver, sq):

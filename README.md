@@ -13,11 +13,15 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 
 | 계층 | 원본 PoC | 이 저장소 |
 |---|---|---|
-| 수평 분리 | 5 NM (`POC_TERMINAL_V1`) | 3 NM (고시 5-5-4 가) |
+| 수평 분리 | 5 NM (`POC_TERMINAL_V1`) | **3 NM (고시 5-5-4 가) — 현재 기본값** |
 | 기종 | 합성 3종 | AIP·공개 제원 기반 16종, 후류등급 포함 |
 | 활주로 | 도메인 개념 없음 | 출발·도착 자원 경합 (고시 3-9-6 / 3-10-3) |
 | 체공 | 없음 | AIP 공고 장주 (고시 4-6-1 ~ 4-6-7) |
 | 관할 이양 | 없음 | TWR → GCA → 상위섹터 → ACC (고시 2-1-15) |
+
+분리 판정의 기본값은 `sentry_atm.regulation.policy.active_separation_profile()` 이
+정한다. 탐지기·위험평가기·세션 읽기모델이 모두 이 한 곳을 따르며, 다른 기준이
+필요하면 여전히 생성자로 주입할 수 있다.
 
 `sentry_atm.regulation` 의 **결정론 판정 경로는 외부 의존성이 없다.** 학습(`predict`,
 `mbe`)과 해석적 확률(`resolution`) 계층만 numpy·scipy·scikit-learn·torch 를 쓰며 그
@@ -29,7 +33,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 0~16 구현 및 `main` 통합 완료
 - Golden Demo Release Preflight `5/5` 통과
 - 실제 Loopback HTTP Multi-Path Regression `10/10` 통과
-- 전체 자동 테스트 `826 passed`
+- 전체 자동 테스트 `1322 passed`
 - 인터넷, Docker, PostgreSQL/PostGIS, Node.js 없이 로컬 실행 가능
 
 ## 핵심 기능

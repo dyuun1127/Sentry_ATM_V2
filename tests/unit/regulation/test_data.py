@@ -23,7 +23,7 @@ class TestProcedures:
         """RNP RWY 24R 의 FAF 는 APAKI, 고시고도 2,100 ft."""
         iap = ds.procedures.iap("RNP_24R")
         assert iap["faf"] == "APAKI"
-        faf_leg = next(l for l in iap["final"] if l.get("role") == "FAF")
+        faf_leg = next(leg for leg in iap["final"] if leg.get("role") == "FAF")
         assert faf_leg["alt_ft"] == 2100
 
     def test_runway_24r(self, ds):

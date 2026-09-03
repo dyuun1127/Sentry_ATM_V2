@@ -4,7 +4,6 @@ import pytest
 
 from sentry_atm.domain import (
     POC_RISK_V1_POLICY_PROFILE,
-    POC_TERMINAL_V1_RULE_PROFILE,
     ConflictEvent,
     ConflictPair,
     ConflictStatus,
@@ -14,6 +13,7 @@ from sentry_atm.domain import (
     SeparationMinimum,
     SeparationRuleProfile,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.risk import ConflictRiskEvaluator
 
 EVALUATED_AT = datetime(2026, 9, 1, 3, 1, 10, tzinfo=UTC)
@@ -25,7 +25,7 @@ def _event(
     tcpa_seconds: float = 90.0,
     horizontal_nm: float = 2.3,
     vertical_ft: float = 500.0,
-    rule_profile_id: str = "POC_TERMINAL_V1",
+    rule_profile_id: str | None = None,
 ) -> ConflictEvent:
     return ConflictEvent(
         conflict_id="CONFLICT-001",
@@ -34,7 +34,7 @@ def _event(
         evaluated_at_utc=EVALUATED_AT,
         closest_approach_time_utc=EVALUATED_AT + timedelta(seconds=tcpa_seconds),
         minimum_separation=SeparationMinimum(horizontal_nm, vertical_ft),
-        rule_profile_id=rule_profile_id,
+        rule_profile_id=rule_profile_id or active_separation_profile().profile_id,
     )
 
 
@@ -42,7 +42,7 @@ def test_evaluator_exposes_injected_policies() -> None:
     evaluator = ConflictRiskEvaluator()
 
     assert evaluator.risk_policy is POC_RISK_V1_POLICY_PROFILE
-    assert evaluator.separation_rule_profile is POC_TERMINAL_V1_RULE_PROFILE
+    assert evaluator.separation_rule_profile is active_separation_profile()
 
 
 def test_predicted_conflict_within_high_window_is_high_and_explainable() -> None:
@@ -57,7 +57,9 @@ def test_predicted_conflict_within_high_window_is_high_and_explainable() -> None
     assert assessment.risk_level is RiskLevel.HIGH
     assert assessment.risk_score == 75.0
     assert assessment.tcpa_seconds == 90.0
-    assert assessment.horizontal_separation_ratio == pytest.approx(0.46)
+    assert assessment.horizontal_separation_ratio == pytest.approx(
+        2.3 / active_separation_profile().horizontal_threshold_nm
+    )
     assert assessment.vertical_separation_ratio == pytest.approx(0.5)
     assert assessment.reason_codes == (
         RiskReasonCode.PREDICTED_SEPARATION_LOSS,
@@ -91,11 +93,14 @@ def test_predicted_conflict_beyond_high_window_is_medium() -> None:
 
 
 def test_safe_near_threshold_pair_is_medium() -> None:
+    # "임계 근접"은 최저치 대비 비율(1.25 이내)로 정의되므로, 거리를 절대값으로
+    # 박아 두면 최저치가 바뀔 때 시험의 의미가 사라진다.
+    rule = active_separation_profile()
     assessment = ConflictRiskEvaluator().evaluate(
         _event(
             status=ConflictStatus.SAFE,
-            horizontal_nm=6.0,
-            vertical_ft=1_100.0,
+            horizontal_nm=1.2 * rule.horizontal_threshold_nm,
+            vertical_ft=1.1 * rule.vertical_threshold_ft,
         )
     )
 

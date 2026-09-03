@@ -10,7 +10,6 @@ Phase 5(MBE)는 이 결과에 위험 점수를 붙여 상신 여부를 판단한
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from enum import Enum
 
@@ -20,7 +19,7 @@ from .geometry import (
     along_track_separation_nm,
     pair_conflict,
 )
-from .rules import InTrailRequirement, RuleBook, SeparationStandard
+from .rules import RuleBook, SeparationStandard
 from .sector import SectorModel
 from .state import AircraftState
 
@@ -247,7 +246,7 @@ class Detector:
         if landing_sequence is not None:
             pairs = [
                 (by_cs[x], by_cs[y])
-                for x, y in zip(landing_sequence, landing_sequence[1:])
+                for x, y in zip(landing_sequence, landing_sequence[1:], strict=False)
                 if x in by_cs and y in by_cs
             ]
         else:

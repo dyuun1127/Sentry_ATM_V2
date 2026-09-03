@@ -83,8 +83,8 @@ def test_phase_9_e_calibrated_initial_states_are_explicit() -> None:
     }
 
     assert state_by_id["CIV-A02"].altitude_ft == 9_075.0
-    assert state_by_id["MIL-F02"].x_nm == pytest.approx(-11.319417382415922)
-    assert state_by_id["MIL-F02"].y_nm == pytest.approx(20.31941738241592)
+    assert state_by_id["MIL-F02"].x_nm == pytest.approx(-10.894137382415922)
+    assert state_by_id["MIL-F02"].y_nm == pytest.approx(18.77685738241592)
     assert state_by_id["MIL-F02"].altitude_ft == 6_946.25
     assert state_by_id["MIL-F02"].vertical_speed_fpm == 400.0
     assert state_by_id["MIL-F02"].flight_phase is FlightPhase.CLIMB

@@ -8,9 +8,9 @@ import pytest
 from sentry_atm.regulation.geo import (
     LocalFrame,
     angular_diff,
-    enu_offset_nm,
     bearing_true,
     distance_nm,
+    enu_offset_nm,
     magnetic_to_true,
     parse_latlon,
     separation_distance_nm,

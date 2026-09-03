@@ -194,7 +194,7 @@ class HandoffChain:
         """
         pending = pending_at or set()
         out: list[HandoffEvent] = []
-        for a, b in zip(track, track[1:]):
+        for a, b in zip(track, track[1:], strict=False):
             ev = self.transfer(a, b, conflicts_pending=b.t_s in pending)
             if ev is not None:
                 out.append(ev)

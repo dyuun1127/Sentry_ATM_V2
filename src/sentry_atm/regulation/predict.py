@@ -23,12 +23,12 @@ import math
 from dataclasses import dataclass, field
 
 from .geo import (
+    M_PER_NM,
     angular_diff,
     bearing_true,
     enu_offset_nm,
     separation_distance_nm,
     vincenty_direct,
-    M_PER_NM,
 )
 from .state import AircraftState
 
@@ -221,7 +221,7 @@ class DatasetBuilder:
                 origin = tr.samples[i]
                 targets: list[tuple[float, float]] = []
                 errors: list[float] = []
-                for h, k in zip(self.horizons_s, steps):
+                for h, k in zip(self.horizons_s, steps, strict=False):
                     truth = tr.samples[i + k]
                     pred = self.baseline.predict(origin, h)
                     targets.append(own_frame_residual(origin, pred, truth))
@@ -262,13 +262,19 @@ class Normalizer:
         return cls(scales=scales)
 
     def encode(self, targets: list[tuple[float, float]]) -> list[tuple[float, float]]:
-        return [(f / s, l / s) for (f, l), s in zip(targets, self.scales)]
+        return [
+            (fwd / s, lat / s)
+            for (fwd, lat), s in zip(targets, self.scales, strict=False)
+        ]
 
     def decode(self, values: list[tuple[float, float]]) -> list[tuple[float, float]]:
-        return [(f * s, l * s) for (f, l), s in zip(values, self.scales)]
+        return [
+            (fwd * s, lat * s)
+            for (fwd, lat), s in zip(values, self.scales, strict=False)
+        ]
 
     def decode_sigma(self, sigmas: list[float]) -> list[float]:
-        return [g * s for g, s in zip(sigmas, self.scales)]
+        return [g * s for g, s in zip(sigmas, self.scales, strict=False)]
 
 
 # ----------------------------------------------------------------------

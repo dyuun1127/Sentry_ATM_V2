@@ -162,7 +162,7 @@ class TestLearnableResidual:
 
         n = len(xs)
         mx, my = sum(xs) / n, sum(ys) / n
-        cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+        cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
         sx = math.sqrt(sum((x - mx) ** 2 for x in xs))
         sy = math.sqrt(sum((y - my) ** 2 for y in ys))
         r = cov / (sx * sy)
@@ -222,7 +222,7 @@ class TestSequencedArrivals:
         trs = gen.sequenced_arrivals(10, sq, seed=1, jitter_s=0.0, deviation_rate=0.0)
         times = [tr.samples[-1].t_s for tr in trs]
         assert times == sorted(times)
-        for a, b in zip(trs, trs[1:]):
+        for a, b in zip(trs, trs[1:], strict=False):
             gap = sq.gap_requirement(a.samples[-1], b.samples[-1])
             assert b.samples[-1].t_s - a.samples[-1].t_s >= gap.seconds - 1.0
 

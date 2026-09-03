@@ -7,6 +7,7 @@ from sentry_atm.conflict import (
     PairwiseConflictDetector,
 )
 from sentry_atm.domain import AircraftState, ConflictStatus, DataSource
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.simulation import TrafficSnapshot
 
 NOW_UTC = datetime(2026, 9, 2, 3, 0, tzinfo=UTC)
@@ -49,7 +50,7 @@ def test_service_builds_assessment_run_from_current_snapshot() -> None:
 
     assert run.assessment_run_id == "CONFLICT-0001"
     assert run.input_timestamp_utc == NOW_UTC
-    assert run.rule_profile_id == "POC_TERMINAL_V1"
+    assert run.rule_profile_id == active_separation_profile().profile_id
     assert run.horizon_seconds == 120.0
     assert len(run.assessments) == 1
     assert run.assessments[0].status is ConflictStatus.PREDICTED

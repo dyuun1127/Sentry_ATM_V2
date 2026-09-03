@@ -39,10 +39,19 @@ _MIL_F01_ACTUAL_Y_NM = 16.173656419930605
 # Phase 9-E calibration: preserve the Phase 6-E primary CPA while making the
 # 20-degree CAND-B heading change resolve that pair vertically and create one
 # calculated secondary conflict with MIL-F02.
+#
+# Recalibrated for the regulatory profile. Under the earlier 5 NM assumption the
+# secondary CPA sat at 3.994 NM, which is a conflict at 5 NM but not at the
+# 3 NM minimum of 고시 5-5-4 가. MIL-F02 is displaced 1.6 NM along the direction
+# perpendicular to the pair's relative velocity, which moves the closest-approach
+# distance without moving the time of closest approach: the secondary CPA becomes
+# 2.394 NM while the vertical component stays at 406 ft. Displacing it along the
+# relative velocity instead would only shift the CPA time and leave the distance
+# unchanged, which is why the earlier geometry had to move sideways.
 _CIV_A02_INITIAL_ALTITUDE_FT = 9_075.0
 _MIL_F01_ACTUAL_VERTICAL_SPEED_FPM = 185.0
-_MIL_F02_INITIAL_X_NM = -11.319417382415922
-_MIL_F02_INITIAL_Y_NM = 20.31941738241592
+_MIL_F02_INITIAL_X_NM = -10.894137382415922
+_MIL_F02_INITIAL_Y_NM = 18.77685738241592
 _MIL_F02_INITIAL_ALTITUDE_FT = 6_946.25
 _MIL_F02_VERTICAL_SPEED_FPM = 400.0
 

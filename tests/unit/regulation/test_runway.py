@@ -154,7 +154,7 @@ class TestLayout:
             op(ds, "AC3", "KF16", Op.DEPARTURE, earliest=30),
         ]
         sched = sq.lay_out(ops)
-        for a, b in zip(sched.slots, sched.slots[1:]):
+        for a, b in zip(sched.slots, sched.slots[1:], strict=False):
             assert b.time_s - a.time_s >= b.requirement.seconds - 1e-6
 
     def test_first_slot_has_no_requirement(self, ds, sq):

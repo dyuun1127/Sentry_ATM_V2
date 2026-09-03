@@ -260,7 +260,7 @@ class RunwaySchedule:
         if len(self.slots) < 2:
             return 0.0
         return max(
-            b.time_s - a.time_s for a, b in zip(self.slots, self.slots[1:])
+            b.time_s - a.time_s for a, b in zip(self.slots, self.slots[1:], strict=False)
         )
 
 

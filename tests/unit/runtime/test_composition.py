@@ -32,6 +32,7 @@ from sentry_atm.infrastructure.http import (
     ExceptionQueueWsgiApp,
     RecommendationWsgiApp,
 )
+from sentry_atm.regulation.policy import active_separation_profile
 from sentry_atm.runtime import (
     InMemoryRecommendationCatalog,
     build_golden_demo_runtime,
@@ -63,7 +64,7 @@ def _recommendation_set(
         evaluated_at_utc=EVALUATED_AT,
         closest_approach_time_utc=EVALUATED_AT + timedelta(seconds=120),
         minimum_separation=SeparationMinimum(1.356, 1_016.25),
-        rule_profile_id="POC_TERMINAL_V1",
+        rule_profile_id=active_separation_profile().profile_id,
     )
     validation = CandidateSafetyValidationResult(
         validation_result_id=f"VALIDATION-{suffix}",
@@ -116,7 +117,10 @@ def test_composition_wires_one_shared_clock_and_all_core_services() -> None:
     assert runtime.prediction_scheduler.clock is clock
     assert runtime.conflict_scheduler.clock is clock
     assert runtime.prediction_scheduler.service.predictor.CONFIGURATION_ID == "BASELINE-CV-V1"
-    assert runtime.conflict_scheduler.service.detector.rule_profile.profile_id == "POC_TERMINAL_V1"
+    assert (
+        runtime.conflict_scheduler.service.detector.rule_profile.profile_id
+        == active_separation_profile().profile_id
+    )
     assert runtime.risk_evaluator.risk_policy.profile_id == "POC_RISK_V1"
     assert runtime.priority_evaluator.policy.profile_id == "POC_OPERATIONAL_PRIORITY_V1"
     assert runtime.exception_queue_service.policy.profile_id == "POC_EXCEPTION_QUEUE_V1"

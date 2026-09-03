@@ -114,7 +114,7 @@ class AircraftState:
         물리 예측의 기준선이자 CPA 해석해의 전제이기도 하다. 선회·강하 프로파일은
         상위 계층(항적예측)이 침로·상승률을 갱신해 반영한다.
         """
-        from .geo import curvature_radii, M_PER_NM
+        from .geo import M_PER_NM, curvature_radii
 
         r_mer, r_pri = curvature_radii(self.lat)
         d_north_nm = self.v_north_kt * dt_s * KT_TO_NM_PER_S

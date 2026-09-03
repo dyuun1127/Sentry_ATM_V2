@@ -147,7 +147,7 @@ class TestNormalizer:
         nz = pr.Normalizer(scales=[0.5, 2.0, 8.0, 20.0])
         targets = [(1.0, -0.5), (3.0, 2.0), (-4.0, 1.0), (10.0, -3.0)]
         back = nz.decode(nz.encode(targets))
-        for (a, b), (c, d) in zip(targets, back):
+        for (a, b), (c, d) in zip(targets, back, strict=False):
             assert a == pytest.approx(c)
             assert b == pytest.approx(d)
 

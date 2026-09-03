@@ -1,6 +1,6 @@
 """충돌 기하 검증 — CPA 해석해와 보호실린더 침범 구간."""
 
-import math
+import dataclasses
 
 import pytest
 
@@ -212,7 +212,7 @@ class TestAircraftState:
 
     def test_state_is_immutable(self):
         a = ac("AAA", 0, 0, 5000, 90.0, 360.0)
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             a.alt_ft = 6000  # type: ignore[misc]
 
     def test_rejects_unknown_wake_category(self):

@@ -164,9 +164,15 @@ class TestDetectorIntegration:
         detector = PairwiseConflictDetector(rule_profile=profile)
         assert detector.rule_profile.profile_id == profile.profile_id
 
-    def test_detector_defaults_are_unchanged(self):
-        """기본값을 아직 바꾸지 않았다 — 교체는 별도 단계에서 한다."""
-        assert PairwiseConflictDetector().rule_profile is POC_TERMINAL_V1_RULE_PROFILE
+    def test_detector_now_defaults_to_the_regulation(self):
+        """기본값이 고시 프로파일이다. 주입하면 여전히 덮어쓸 수 있다."""
+        from sentry_atm.regulation.policy import active_separation_profile
+
+        assert PairwiseConflictDetector().rule_profile is active_separation_profile()
+        assert (
+            PairwiseConflictDetector(rule_profile=POC_TERMINAL_V1_RULE_PROFILE).rule_profile
+            is POC_TERMINAL_V1_RULE_PROFILE
+        )
 
     def test_events_carry_the_regulatory_profile_id(self, profile):
         from datetime import UTC, datetime

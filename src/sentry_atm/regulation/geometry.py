@@ -141,7 +141,7 @@ def _vertical_intervals_piecewise(
     회피안이 실제보다 훨씬 효과적으로 보인다.
     """
     out: list[tuple[float, float]] = []
-    for t0, t1 in zip(bp := _vertical_breakpoints(a, b, horizon_s), bp[1:]):
+    for t0, t1 in zip(bp := _vertical_breakpoints(a, b, horizon_s), bp[1:], strict=False):
         rz0 = b.altitude_at(t0) - a.altitude_at(t0)
         span = t1 - t0
         if span <= 0.0:
