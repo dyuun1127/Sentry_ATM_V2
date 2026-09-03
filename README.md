@@ -60,7 +60,8 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 13-D: Loopback-only Local Golden Demo HTTP Server 구현 완료
 - Phase 14-A: Golden Demo Web UI Shell 구현 완료
 - Phase 14-B: Deterministic Demo Command Controls 구현 완료
-- Modify/Reject Decision UI와 고급 시각화: 아직 구현하지 않음
+- Phase 14-C: Conflict & Resolution Explainability Visualization 구현 완료
+- Modify/Reject Decision UI: 아직 구현하지 않음
 
 ## 핵심 문서
 

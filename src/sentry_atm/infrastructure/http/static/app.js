@@ -51,6 +51,10 @@ const elements = {
   elapsedTime: document.querySelector("[data-elapsed-time]"),
   clockState: document.querySelector("[data-clock-state]"),
   aircraftLayer: document.querySelector("[data-aircraft-layer]"),
+  conflictOverlay: document.querySelector("[data-conflict-overlay]"),
+  conflictLine: document.querySelector("[data-conflict-line]"),
+  conflictPointA: document.querySelector("[data-conflict-point-a]"),
+  conflictPointB: document.querySelector("[data-conflict-point-b]"),
   trafficBody: document.querySelector("[data-traffic-body]"),
   stageItems: [...document.querySelectorAll("[data-stage-key]")],
   sessionId: document.querySelector("[data-session-id]"),
@@ -74,6 +78,26 @@ const elements = {
   decisionExplanation: document.querySelector("[data-decision-explanation]"),
   revalidation: document.querySelector("[data-revalidation]"),
   revalidationResult: document.querySelector("[data-revalidation-result]"),
+  conflictExplainability: document.querySelector("[data-conflict-explainability]"),
+  conflictPair: document.querySelector("[data-conflict-pair]"),
+  conflictStatus: document.querySelector("[data-conflict-status]"),
+  conflictRiskScore: document.querySelector("[data-conflict-risk-score]"),
+  conflictRiskLevel: document.querySelector("[data-conflict-risk-level]"),
+  conflictTcpa: document.querySelector("[data-conflict-tcpa]"),
+  conflictRule: document.querySelector("[data-conflict-rule]"),
+  conflictHorizontal: document.querySelector("[data-conflict-horizontal]"),
+  conflictHorizontalThreshold: document.querySelector("[data-conflict-horizontal-threshold]"),
+  conflictHorizontalRatio: document.querySelector("[data-conflict-horizontal-ratio]"),
+  conflictVertical: document.querySelector("[data-conflict-vertical]"),
+  conflictVerticalThreshold: document.querySelector("[data-conflict-vertical-threshold]"),
+  conflictVerticalRatio: document.querySelector("[data-conflict-vertical-ratio]"),
+  conflictReasons: document.querySelector("[data-conflict-reasons]"),
+  beforeOutcome: document.querySelector("[data-before-outcome]"),
+  beforeSeparation: document.querySelector("[data-before-separation]"),
+  afterCard: document.querySelector("[data-after-card]"),
+  afterLabel: document.querySelector("[data-after-label]"),
+  afterOutcome: document.querySelector("[data-after-outcome]"),
+  afterSeparation: document.querySelector("[data-after-separation]"),
   toast: document.querySelector("[data-toast]"),
 };
 
@@ -114,15 +138,48 @@ function isMilitary(aircraft) {
   return String(aircraft.aircraft_id).startsWith("MIL-");
 }
 
+function mapPosition(aircraft) {
+  const x = Math.max(-25, Math.min(25, Number(aircraft.x_nm)));
+  const y = Math.max(-25, Math.min(25, Number(aircraft.y_nm)));
+  return { left: 50 + x * 1.6, top: 50 - y * 1.6 };
+}
+
+function renderConflictOverlay(traffic) {
+  const conflictIds = currentSession?.primary_conflict?.aircraft_ids ?? [];
+  const focused = conflictIds.map((aircraftId) =>
+    traffic.find((aircraft) => aircraft.aircraft_id === aircraftId),
+  );
+  if (focused.length !== 2 || focused.some((aircraft) => !aircraft)) {
+    elements.conflictOverlay.hidden = true;
+    return;
+  }
+  const first = mapPosition(focused[0]);
+  const second = mapPosition(focused[1]);
+  for (const [name, value] of Object.entries({
+    x1: first.left,
+    y1: first.top,
+    x2: second.left,
+    y2: second.top,
+  })) {
+    elements.conflictLine.setAttribute(name, String(value));
+  }
+  elements.conflictPointA.setAttribute("cx", String(first.left));
+  elements.conflictPointA.setAttribute("cy", String(first.top));
+  elements.conflictPointB.setAttribute("cx", String(second.left));
+  elements.conflictPointB.setAttribute("cy", String(second.top));
+  elements.conflictOverlay.hidden = false;
+}
+
 function renderAircraftMap(traffic) {
   elements.aircraftLayer.replaceChildren();
+  const conflictIds = currentSession?.primary_conflict?.aircraft_ids ?? [];
   for (const aircraft of traffic) {
     const track = document.createElement("div");
     track.className = `aircraft-track${isMilitary(aircraft) ? " military" : ""}`;
-    const x = Math.max(-25, Math.min(25, Number(aircraft.x_nm)));
-    const y = Math.max(-25, Math.min(25, Number(aircraft.y_nm)));
-    track.style.left = `${50 + x * 1.6}%`;
-    track.style.top = `${50 - y * 1.6}%`;
+    track.classList.toggle("conflict-focus", conflictIds.includes(aircraft.aircraft_id));
+    const position = mapPosition(aircraft);
+    track.style.left = `${position.left}%`;
+    track.style.top = `${position.top}%`;
 
     const symbol = document.createElement("span");
     symbol.className = "track-symbol";
@@ -138,6 +195,7 @@ function renderAircraftMap(traffic) {
     track.append(symbol, label);
     elements.aircraftLayer.append(track);
   }
+  renderConflictOverlay(traffic);
 }
 
 function cell(text, className = "") {
@@ -269,6 +327,85 @@ function renderDecisionSupport(session) {
   elements.revalidationResult.textContent = revalidation?.resolved ? "RESOLVED" : "RECHECK";
 }
 
+function primaryRecommendation(session) {
+  const recommendationSet = session.recommendation;
+  const recommendations = Array.isArray(recommendationSet?.recommendations)
+    ? recommendationSet.recommendations
+    : [];
+  return (
+    recommendations.find(
+      (item) => item.recommendation_id === recommendationSet?.primary_recommendation_id,
+    ) ?? recommendations[0]
+  );
+}
+
+function setRatioBar(element, ratio) {
+  const normalized = Math.max(0, Math.min(1, Number(ratio) / 1.25));
+  element.style.width = `${normalized * 100}%`;
+}
+
+function renderConflictExplainability(session) {
+  const conflict = session.primary_conflict;
+  elements.conflictExplainability.hidden = !conflict;
+  if (!conflict) {
+    return;
+  }
+
+  elements.conflictPair.textContent = (conflict.aircraft_ids ?? []).join(" / ");
+  elements.conflictStatus.textContent = conflict.status ?? "UNKNOWN";
+  elements.conflictRiskScore.textContent = formatNumber(conflict.risk_score);
+  elements.conflictRiskLevel.textContent = conflict.risk_level ?? "—";
+  elements.conflictTcpa.textContent = formatNumber(conflict.tcpa_seconds);
+  elements.conflictRule.textContent = `${conflict.rule_profile_id} · ${conflict.risk_policy_profile_id}`;
+  elements.conflictHorizontal.textContent = formatNumber(conflict.horizontal_separation_nm, 2);
+  elements.conflictHorizontalThreshold.textContent = formatNumber(
+    conflict.horizontal_threshold_nm,
+    2,
+  );
+  elements.conflictVertical.textContent = formatNumber(conflict.vertical_separation_ft);
+  elements.conflictVerticalThreshold.textContent = formatNumber(conflict.vertical_threshold_ft);
+  setRatioBar(elements.conflictHorizontalRatio, conflict.horizontal_separation_ratio);
+  setRatioBar(elements.conflictVerticalRatio, conflict.vertical_separation_ratio);
+  elements.conflictReasons.textContent = (conflict.risk_reason_codes ?? [])
+    .map((code) => String(code).replaceAll("_", " "))
+    .join(" · ");
+  elements.beforeOutcome.textContent = conflict.status === "PREDICTED"
+    ? "LOSS OF SEPARATION"
+    : conflict.status;
+  elements.beforeSeparation.textContent = `H ${formatNumber(
+    conflict.horizontal_separation_nm,
+    2,
+  )} NM · V ${formatNumber(conflict.vertical_separation_ft)} FT · ${conflict.risk_level}`;
+
+  const recommendation = primaryRecommendation(session);
+  const candidateConflict = recommendation?.safety?.primary_conflict;
+  const after = session.revalidation ?? candidateConflict;
+  elements.afterCard.classList.toggle("is-safe", Boolean(after));
+  if (session.revalidation) {
+    elements.afterLabel.textContent = "AFTER · POST-ACTION REVALIDATION";
+    elements.afterOutcome.textContent = session.revalidation.resolved
+      ? "SEPARATION RESTORED"
+      : session.revalidation.conflict_status;
+    elements.afterSeparation.textContent = `H ${formatNumber(
+      session.revalidation.horizontal_separation_nm,
+      2,
+    )} NM · V ${formatNumber(session.revalidation.vertical_separation_ft)} FT · ${
+      session.revalidation.risk_level
+    }`;
+  } else if (candidateConflict) {
+    elements.afterLabel.textContent = "AFTER · VALIDATED CANDIDATE";
+    elements.afterOutcome.textContent = recommendation.safety?.verdict ?? "VALIDATED";
+    elements.afterSeparation.textContent = `H ${formatNumber(
+      candidateConflict.horizontal_separation_nm,
+      2,
+    )} NM · V ${formatNumber(candidateConflict.vertical_separation_ft)} FT`;
+  } else {
+    elements.afterLabel.textContent = "AFTER · AWAITING ACTION";
+    elements.afterOutcome.textContent = "NOT YET VALIDATED";
+    elements.afterSeparation.textContent = "추천 후보 생성 대기";
+  }
+}
+
 function updateCommandControl(stage) {
   const config = COMMAND_BY_STAGE[stage];
   elements.primaryCommand.dataset.command = config?.command ?? "";
@@ -318,6 +455,7 @@ function renderSession(session) {
   renderStage(String(session.stage ?? "READY"));
   renderExceptionQueue(session.exception_queue);
   renderDecisionSupport(session);
+  renderConflictExplainability(session);
   updateCommandControl(String(session.stage ?? "READY"));
 }
 

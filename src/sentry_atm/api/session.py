@@ -1,7 +1,7 @@
 """JSON-ready Golden Demo Session views and a read-only in-process API."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -9,11 +9,15 @@ from sentry_atm.api.controller_decision import ControllerDecisionAuditLogReadMod
 from sentry_atm.api.exception_queue import ExceptionQueueSnapshotReadModel
 from sentry_atm.api.recommendation import ResolutionRecommendationSetReadModel
 from sentry_atm.domain import (
+    POC_TERMINAL_V1_RULE_PROFILE,
     AircraftState,
+    ConflictEvent,
+    ConflictRiskAssessment,
     ConflictStatus,
     ExceptionStatus,
     OperationalPriorityLevel,
     RiskLevel,
+    SeparationMinimum,
 )
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.scenario import ScenarioDefinition
@@ -133,6 +137,50 @@ class GoldenDemoRevalidationReadModel:
 
 
 @dataclass(frozen=True, slots=True)
+class GoldenDemoConflictEvidenceReadModel:
+    """Explainable baseline evidence for the Golden Demo's primary conflict."""
+
+    conflict_id: str
+    aircraft_ids: tuple[str, str]
+    status: str
+    evaluated_at_utc: str
+    closest_approach_time_utc: str
+    tcpa_seconds: float
+    horizontal_separation_nm: float
+    vertical_separation_ft: float
+    horizontal_threshold_nm: float
+    vertical_threshold_ft: float
+    horizontal_separation_ratio: float
+    vertical_separation_ratio: float
+    risk_score: float
+    risk_level: str
+    risk_reason_codes: tuple[str, ...]
+    rule_profile_id: str
+    risk_policy_profile_id: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "conflict_id": self.conflict_id,
+            "aircraft_ids": list(self.aircraft_ids),
+            "status": self.status,
+            "evaluated_at_utc": self.evaluated_at_utc,
+            "closest_approach_time_utc": self.closest_approach_time_utc,
+            "tcpa_seconds": self.tcpa_seconds,
+            "horizontal_separation_nm": self.horizontal_separation_nm,
+            "vertical_separation_ft": self.vertical_separation_ft,
+            "horizontal_threshold_nm": self.horizontal_threshold_nm,
+            "vertical_threshold_ft": self.vertical_threshold_ft,
+            "horizontal_separation_ratio": self.horizontal_separation_ratio,
+            "vertical_separation_ratio": self.vertical_separation_ratio,
+            "risk_score": self.risk_score,
+            "risk_level": self.risk_level,
+            "risk_reason_codes": list(self.risk_reason_codes),
+            "rule_profile_id": self.rule_profile_id,
+            "risk_policy_profile_id": self.risk_policy_profile_id,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class GoldenDemoSessionReadModel:
     """One complete JSON-compatible view of current Golden Demo backend state."""
 
@@ -149,6 +197,7 @@ class GoldenDemoSessionReadModel:
     resolution_step_id: str | None
     decision_step_id: str | None
     application_step_id: str | None
+    primary_conflict: GoldenDemoConflictEvidenceReadModel | None
     exception_queue: ExceptionQueueSnapshotReadModel | None
     recommendation: ResolutionRecommendationSetReadModel | None
     controller_decision: ControllerDecisionAuditLogReadModel | None
@@ -169,6 +218,9 @@ class GoldenDemoSessionReadModel:
             "resolution_step_id": self.resolution_step_id,
             "decision_step_id": self.decision_step_id,
             "application_step_id": self.application_step_id,
+            "primary_conflict": (
+                self.primary_conflict.to_dict() if self.primary_conflict is not None else None
+            ),
             "traffic": [item.to_dict() for item in self.traffic],
             "exception_queue": (
                 self.exception_queue.to_dict() if self.exception_queue is not None else None
@@ -275,6 +327,10 @@ class InProcessGoldenDemoSessionApi:
             application_step_id=(
                 application_result.application_step_id if application_result is not None else None
             ),
+            primary_conflict=_map_primary_conflict(
+                step_result=step_result,
+                resolution_result=resolution_result,
+            ),
             exception_queue=queue,
             recommendation=recommendation,
             controller_decision=controller_decision,
@@ -338,6 +394,98 @@ def _map_aircraft(state: AircraftState, metadata) -> GoldenDemoAircraftReadModel
         flight_phase=state.flight_phase.value,
         emergency_status=state.emergency_status.value,
         emergency_type=(state.emergency_type.value if state.emergency_type is not None else None),
+    )
+
+
+def _map_primary_conflict(
+    *,
+    step_result,
+    resolution_result,
+) -> GoldenDemoConflictEvidenceReadModel | None:
+    """Keep the pre-maneuver conflict evidence stable through the decision chain."""
+
+    risk = (
+        resolution_result.source_exception.assessment
+        if resolution_result is not None
+        else _highest_actionable_risk(step_result)
+    )
+    if risk is None:
+        return None
+
+    event = _matching_conflict_event(step_result, risk)
+    rule = POC_TERMINAL_V1_RULE_PROFILE
+    minimum_horizontal_nm = (
+        event.minimum_separation.horizontal_nm
+        if event is not None
+        else risk.horizontal_separation_ratio * rule.horizontal_threshold_nm
+    )
+    minimum_vertical_ft = (
+        event.minimum_separation.vertical_ft
+        if event is not None
+        else risk.vertical_separation_ratio * rule.vertical_threshold_ft
+    )
+    closest_approach_time = (
+        event.closest_approach_time_utc
+        if event is not None
+        else risk.evaluated_at_utc + timedelta(seconds=risk.tcpa_seconds)
+    )
+    status = (
+        event.status
+        if event is not None
+        else rule.classify(
+            SeparationMinimum(minimum_horizontal_nm, minimum_vertical_ft)
+        )
+    )
+    return GoldenDemoConflictEvidenceReadModel(
+        conflict_id=risk.conflict_id,
+        aircraft_ids=risk.pair.aircraft_ids,
+        status=status.value,
+        evaluated_at_utc=_utc_text(risk.evaluated_at_utc),
+        closest_approach_time_utc=_utc_text(closest_approach_time),
+        tcpa_seconds=risk.tcpa_seconds,
+        horizontal_separation_nm=minimum_horizontal_nm,
+        vertical_separation_ft=minimum_vertical_ft,
+        horizontal_threshold_nm=rule.horizontal_threshold_nm,
+        vertical_threshold_ft=rule.vertical_threshold_ft,
+        horizontal_separation_ratio=risk.horizontal_separation_ratio,
+        vertical_separation_ratio=risk.vertical_separation_ratio,
+        risk_score=risk.risk_score,
+        risk_level=risk.risk_level.value,
+        risk_reason_codes=tuple(item.value for item in risk.reason_codes),
+        rule_profile_id=rule.profile_id,
+        risk_policy_profile_id=risk.policy_profile_id,
+    )
+
+
+def _highest_actionable_risk(step_result) -> ConflictRiskAssessment | None:
+    if step_result is None:
+        return None
+    actionable = tuple(
+        item
+        for item in step_result.risk_assessments
+        if item.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL)
+    )
+    if not actionable:
+        return None
+    return sorted(
+        actionable,
+        key=lambda item: (-item.risk_score, item.tcpa_seconds, item.conflict_id),
+    )[0]
+
+
+def _matching_conflict_event(
+    step_result,
+    risk: ConflictRiskAssessment,
+) -> ConflictEvent | None:
+    if step_result is None or step_result.conflict_run is None:
+        return None
+    return next(
+        (
+            item
+            for item in step_result.conflict_run.assessments
+            if item.conflict_id == risk.conflict_id
+        ),
+        None,
     )
 
 

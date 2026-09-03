@@ -45,6 +45,15 @@ Phase 14-B는 Session Stage를 backend의 고정 Command와 일대일로 연결�
 Recommendation, Decision과 Revalidation Panel 전체에 즉시 투영한다. 409 응답 시 최신 Session을 다시
 조회해 화면과 backend를 동기화한다.
 
+Phase 14-C는 backend가 계산한 `primary_conflict` 증거를 설명 가능성 영역에 투영한다. 화면에서
+충돌쌍, CPA/TCPA, 수평·수직 분리값과 PoC 기준 대비 비율, Risk Score/Level, Rule/Policy Profile과
+Reason Code를 함께 제시한다. Tactical View에서는 해당 두 항공기를 붉은 Marker와 연결선으로 강조한다.
+
+추천 생성 전에는 적용 후 결과를 `NOT YET VALIDATED`로 명시한다. 추천 생성 후에는 Safety Validator가
+검증한 Primary Candidate 결과를, 승인 기동 적용 후에는 Post-action Revalidation 결과를 원래 충돌
+증거와 나란히 표시한다. 따라서 후보 검증을 실제 적용 결과처럼 표현하지 않으며, Human-in-the-loop
+경계를 유지한다.
+
 ## 4. 보안·접근성 경계
 
 - `default-src 'self'` 기반 Content Security Policy
@@ -62,5 +71,5 @@ Recommendation, Decision과 Revalidation Panel 전체에 즉시 투영한다. 40
 
 ## 6. 다음 단계
 
-다음 단계는 Golden Demo 전 구간의 화면 전환을 재검증하고 Conflict Risk, 추천 근거, 적용 전후 결과를
-심사자가 더 빠르게 비교할 수 있도록 설명 가능성 시각화를 보강한다.
+다음 단계는 Golden Demo 전 구간의 브라우저 회귀 검증을 자동화하고, 발표 환경 실행 절차와 장애 시
+복구 절차를 정리하는 것이다.

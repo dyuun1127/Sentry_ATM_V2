@@ -52,6 +52,7 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
     assert current.resolution_step_id is None
     assert current.decision_step_id is None
     assert current.application_step_id is None
+    assert current.primary_conflict is None
     assert current.exception_queue is None
     assert current.recommendation is None
     assert current.controller_decision is None
@@ -82,6 +83,18 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert conflict.stage is GoldenDemoSessionStage.CONFLICT_DETECTED
     assert conflict.step_id == "GOLDEN-STEP-000000000075"
     assert conflict.active_exception_count == 3
+    assert conflict.primary_conflict is not None
+    assert conflict.primary_conflict.aircraft_ids == ("CIV-A02", "MIL-F01")
+    assert conflict.primary_conflict.status == "PREDICTED"
+    assert conflict.primary_conflict.risk_level == "HIGH"
+    assert conflict.primary_conflict.risk_score == 75.0
+    assert conflict.primary_conflict.tcpa_seconds == 85.0
+    assert conflict.primary_conflict.horizontal_separation_nm == pytest.approx(2.3)
+    assert conflict.primary_conflict.vertical_separation_ft == pytest.approx(500.0)
+    assert conflict.primary_conflict.horizontal_threshold_nm == 5.0
+    assert conflict.primary_conflict.vertical_threshold_ft == 1_000.0
+    assert conflict.primary_conflict.rule_profile_id == "POC_TERMINAL_V1"
+    assert conflict.primary_conflict.risk_policy_profile_id == "POC_RISK_V1"
     assert conflict.exception_queue is not None
     assert conflict.exception_queue.top_exception_id == ("EXCEPTION-CONFLICT-7-CIV-A02-7-MIL-F01")
     assert conflict.recommendation is None
@@ -92,6 +105,8 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert recommended.resolution_step_id == resolution_result.resolution_step_id
     assert recommended.recommendation is not None
     assert recommended.recommendation.availability == "AVAILABLE"
+    assert recommended.primary_conflict is not None
+    assert recommended.primary_conflict.conflict_id.endswith("CIV-A02-MIL-F01")
     assert tuple(item.candidate_id for item in recommended.recommendation.recommendations) == (
         "CAND-A",
     )
@@ -117,6 +132,7 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert resolved.revalidation.risk_level == "LOW"
     assert resolved.revalidation.source_exception_status == "RESOLVED"
     assert resolved.revalidation.resolved
+    assert resolved.primary_conflict == recommended.primary_conflict
     assert resolved.exception_queue is not None
     source_item = next(
         item
@@ -130,6 +146,10 @@ def test_session_projects_each_completed_backend_stage() -> None:
     )
     payload = resolved.to_dict()
     assert payload["revalidation"]["resolved"] is True  # type: ignore[index]
+    assert payload["primary_conflict"]["aircraft_ids"] == [  # type: ignore[index]
+        "CIV-A02",
+        "MIL-F01",
+    ]
     assert json.loads(json.dumps(payload))["controller_decision"]["revision"] == 1
     assert conflict_step.traffic_snapshot != application_result.traffic_snapshot
 
@@ -171,6 +191,7 @@ def test_reset_returns_a_new_empty_session_run_with_initial_traffic() -> None:
     assert current.exception_queue is None
     assert current.recommendation is None
     assert current.controller_decision is None
+    assert current.primary_conflict is None
     assert current.revalidation is None
     assert next(item for item in current.traffic if item.aircraft_id == "MIL-F01").altitude_ft == (
         13_000.0

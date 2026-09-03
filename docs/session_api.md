@@ -30,6 +30,7 @@ Application을 실행하지 않는다.
 - 8대 Traffic의 Metadata, 위치 NM, 고도 ft, 속도 kt, Heading, 수직속도와 운항 상태
 - 해결 항목을 포함한 현재 Exception Queue와 활성 개수
 - 현재 Recommendation Set과 Controller Decision Audit Log
+- HIGH/CRITICAL 원 충돌의 항공기쌍, CPA/TCPA, 분리기준 대비 비율, Risk Score/Reason/Profile 증거
 - 적용 전후 고도, Post-apply Prediction/Conflict Run과 원 Conflict의 SAFE/LOW/RESOLVED 요약
 
 모든 중첩 객체는 기존 Queue, Recommendation 및 Decision Read Model을 재사용한다. `to_dict()`는 tuple,
@@ -111,8 +112,13 @@ Runtime Dependency가 없다. `Ctrl+C`로 종료하면 Listening Socket을 닫�
 - Authentication, authorization, streaming과 다중 동시 Session을 제공하지 않는다.
 - Trajectory Point 전체와 Candidate A~E 전체 검증표는 아직 Session 요약에 포함하지 않는다.
 
-## 9. 다음 단계
+## 9. Phase 14-C Explainability Projection
 
-Phase 14-B는 UI의 Stage별 Primary Action을 기존 Command Endpoint와 연결한다. 중복 요청을 막고 409가
-발생하면 최신 Session을 다시 조회한다. 다음 단계에서는 관제사 선택을 확장하기 전에 Golden Demo
-화면의 단계 전환과 설명 가능성 시각화를 보강한다.
+`primary_conflict`는 최신 Step의 HIGH/CRITICAL Risk 중 Risk Score 내림차순, TCPA 오름차순,
+Conflict ID 오름차순으로 기준 충돌을 선택한다. Resolution이 생성된 뒤에는 Source Exception의 평가를
+사용하므로 이후 T+90 Step이나 승인 기동으로 화면의 원 충돌 근거가 바뀌지 않는다. READY·MONITORING과
+같이 조치 가능한 Risk가 없는 Stage에서는 `null`이다.
+
+이 필드는 원 충돌 증거이며 `revalidation`과 의미가 다르다. `primary_conflict`는 승인 전 기준선을,
+`revalidation`은 승인 기동을 실제 Runtime에 적용한 후의 결과를 나타낸다. UI는 둘을 BEFORE/AFTER로
+비교하되, 적용 전 Candidate Safety는 `VALIDATED CANDIDATE`로 별도 표기한다.

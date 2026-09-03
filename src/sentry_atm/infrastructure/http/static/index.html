@@ -90,6 +90,56 @@
         </article>
       </section>
 
+      <section class="conflict-explainability" data-conflict-explainability hidden aria-labelledby="conflict-explainability-title">
+        <header class="explainability-header">
+          <div>
+            <p class="eyebrow">EXPLAINABLE CONFLICT EVIDENCE</p>
+            <h2 id="conflict-explainability-title">
+              <span data-conflict-pair>— / —</span>
+              <small data-conflict-status>PREDICTED</small>
+            </h2>
+          </div>
+          <div class="risk-score-block">
+            <span>RISK SCORE</span>
+            <strong data-conflict-risk-score>--</strong><small>/100</small>
+          </div>
+        </header>
+        <div class="explainability-body">
+          <div class="conflict-facts">
+            <div><span>RISK LEVEL</span><strong data-conflict-risk-level>—</strong></div>
+            <div><span>TIME TO CPA</span><strong><b data-conflict-tcpa>—</b> SEC</strong></div>
+            <div><span>RULE PROFILE</span><strong data-conflict-rule>—</strong></div>
+          </div>
+          <div class="separation-evidence">
+            <div class="separation-row">
+              <div><span>HORIZONTAL CPA</span><strong><b data-conflict-horizontal>—</b> / <b data-conflict-horizontal-threshold>—</b> NM</strong></div>
+              <div class="ratio-track"><i data-conflict-horizontal-ratio></i><em>LIMIT</em></div>
+            </div>
+            <div class="separation-row">
+              <div><span>VERTICAL CPA</span><strong><b data-conflict-vertical>—</b> / <b data-conflict-vertical-threshold>—</b> FT</strong></div>
+              <div class="ratio-track"><i data-conflict-vertical-ratio></i><em>LIMIT</em></div>
+            </div>
+          </div>
+          <div class="evidence-reasons">
+            <span>WHY FLAGGED</span>
+            <p data-conflict-reasons>—</p>
+          </div>
+          <div class="outcome-comparison">
+            <article>
+              <span>BEFORE · PREDICTED CPA</span>
+              <strong data-before-outcome>LOSS OF SEPARATION</strong>
+              <small data-before-separation>—</small>
+            </article>
+            <i aria-hidden="true">→</i>
+            <article data-after-card>
+              <span data-after-label>AFTER · AWAITING ACTION</span>
+              <strong data-after-outcome>NOT YET VALIDATED</strong>
+              <small data-after-separation>추천 후보 생성 대기</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <div class="dashboard-grid">
         <section class="panel tactical-panel" aria-labelledby="tactical-title">
           <header class="panel-header">
@@ -116,6 +166,11 @@
             <div class="north-mark" aria-hidden="true">N</div>
             <div class="range-label range-10" aria-hidden="true">10 NM</div>
             <div class="range-label range-20" aria-hidden="true">20 NM</div>
+            <svg class="conflict-overlay" data-conflict-overlay viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden>
+              <line data-conflict-line x1="0" y1="0" x2="0" y2="0"></line>
+              <circle data-conflict-point-a cx="0" cy="0" r="1.2"></circle>
+              <circle data-conflict-point-b cx="0" cy="0" r="1.2"></circle>
+            </svg>
             <div class="aircraft-layer" data-aircraft-layer></div>
             <div class="map-coordinate">ARP 36°43′01″N / 127°29′56″E</div>
           </div>

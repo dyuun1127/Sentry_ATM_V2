@@ -34,6 +34,7 @@ from sentry_atm.api.recommendation import (
 )
 from sentry_atm.api.session import (
     GoldenDemoAircraftReadModel,
+    GoldenDemoConflictEvidenceReadModel,
     GoldenDemoRevalidationReadModel,
     GoldenDemoSessionApiContract,
     GoldenDemoSessionCommand,
@@ -56,6 +57,7 @@ __all__ = [
     "ExceptionQueueReadModelMapper",
     "ExceptionQueueSnapshotReadModel",
     "GoldenDemoAircraftReadModel",
+    "GoldenDemoConflictEvidenceReadModel",
     "GoldenDemoRevalidationReadModel",
     "GoldenDemoSessionApiContract",
     "GoldenDemoSessionCommand",
