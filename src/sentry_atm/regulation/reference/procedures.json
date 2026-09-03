@@ -1,0 +1,294 @@
+{
+  "_meta": {
+    "aerodrome": "RKTU",
+    "description": "청주 국제공항 계기비행절차 — AIP Republic of Korea 원문 전사. 좌표는 AIP 고시 표기(DMS) 그대로 두고 로더가 십진도로 변환한다. AIRAC 개정 시 이 파일만 교체한다.",
+    "sources": {
+      "AD_2.12": "RKTU AD 2-5, RUNWAY PHYSICAL CHARACTERISTICS, AIP AMDT 1/26 (8 JAN 2026)",
+      "AD_2.2": "RKTU AD 2-1, AERODROME GEOGRAPHICAL AND ADMINISTRATIVE DATA, AIRAC AIP AMDT 6/26 (28 MAY 2026)",
+      "SID": "RKTU AD CHART 2-11-1 / 2-12-1 / 2-15, AIP AMDT 6/25 (29 MAY 2025)",
+      "STAR": "RKTU AD CHART 2-15-2 / 2-15-3, AIP AMDT 6/25 (29 MAY 2025)",
+      "IAP_RNP_24R": "RKTU AD CHART 2-25 / 2-25-1, AIP AMDT 7/25 (26 JUN 2025)",
+      "IAP_ILS_Y_24R": "RKTU AD CHART 2-27, AIP AMDT 8/25 (24 JUL 2025)",
+      "IAP_ILS_Z_24R": "RKTU AD CHART 2-28, AIP AMDT 8/25 (24 JUL 2025)"
+    },
+    "mag_var_deg_west": 9.0,
+    "transition_altitude_ft": 14000,
+    "transition_level": "FL140",
+    "_note_var": "MAG VAR 9°W (2025), 연 0.040° 증가 — AD 2.2. 차트의 방위는 자방위, 괄호 안이 진방위."
+  },
+
+  "aerodrome": {
+    "icao": "RKTU",
+    "name": "청주/Cheongju INTL",
+    "arp": { "lat": "364259N", "lon": "1272957E" },
+    "elev_ft": 192,
+    "geoid_undulation_m": 25
+  },
+
+  "runways": {
+    "24R": {
+      "true_brg": 232.43,
+      "length_m": 2744,
+      "width_m": 60,
+      "thr": { "lat": "364330.38N", "lon": "1273040.05E" },
+      "thr_elev_ft": 185.4,
+      "thr_elev_ft_chart": 187,
+      "tdz_elev_ft": 182.1,
+      "surface": "Concrete",
+      "pcr": "1006 R/B/W/T",
+      "_source": "AD 2.12"
+    },
+    "06L": {
+      "true_brg": 52.42,
+      "length_m": 2744,
+      "width_m": 60,
+      "thr": { "lat": "364236.10N", "lon": "1272912.46E" },
+      "thr_elev_ft": 166.0,
+      "tdz_elev_ft": 165.7,
+      "surface": "Concrete",
+      "pcr": "1006 R/B/W/T",
+      "_source": "AD 2.12"
+    },
+    "24L": {
+      "true_brg": 232.43,
+      "length_m": 2744,
+      "width_m": 45,
+      "thr": { "lat": "364322.53N", "lon": "1273042.46E" },
+      "thr_elev_ft": 191.46,
+      "tdz_elev_ft": 191.46,
+      "pcr": "959 R/B/W/T",
+      "_source": "AD 2.12"
+    },
+    "06R": {
+      "true_brg": 52.43,
+      "length_m": 2744,
+      "width_m": 45,
+      "thr": { "lat": "364228.26N", "lon": "1272914.84E" },
+      "thr_elev_ft": 171.27,
+      "tdz_elev_ft": 172.80,
+      "pcr": "959 R/B/W/T",
+      "_source": "AD 2.12"
+    }
+  },
+
+  "navaids": {
+    "CHO": {
+      "type": "VOR/DME",
+      "name": "CHEONGJU",
+      "freq_mhz": 109.0,
+      "channel": "27Y",
+      "lat": "36°43'05\"N",
+      "lon": "127°29'39\"E",
+      "_source": "AD CHART 2-15 (SID), 2-27 (ILS Y 24R)"
+    },
+    "I-CHG": {
+      "type": "ILS/LOC/DME",
+      "name": "RWY 24R LOC",
+      "freq_mhz": 111.7,
+      "gs_angle_deg": 3.0,
+      "tch_ft": 51,
+      "_note": "좌표 미고시 — 활주로 24R 중심선 기준 DME. FAF ZENZA = I-CHG D6.",
+      "_source": "AD CHART 2-27 / 2-28"
+    }
+  },
+
+  "waypoints": {
+    "BUKIL": { "lat": "36°48'23.2\"N", "lon": "127°38'33.7\"E", "_source": "SID" },
+    "GUKDO": { "lat": "37°01'10.9\"N", "lon": "127°38'22.9\"E", "_source": "SID" },
+    "TUTAE": { "lat": "36°54'44.4\"N", "lon": "127°32'29.4\"E", "_source": "SID" },
+    "OWING": { "lat": "36°43'43.8\"N", "lon": "127°14'44.4\"E", "_source": "SID" },
+    "OLMEN": { "lat": "36°44'13.4\"N", "lon": "126°59'27.6\"E", "_source": "SID" },
+    "BULTI": { "lat": "36°43'22.3\"N", "lon": "126°49'29.7\"E", "_source": "SID" },
+    "UPTIL": { "lat": "36°38'59.7\"N", "lon": "127°23'23.8\"E", "_source": "SID" },
+    "TU521": { "lat": "36°45'19.8\"N", "lon": "127°17'19.1\"E", "_source": "SID" },
+
+    "OSPOT": { "lat": "36°50'18.1\"N", "lon": "127°20'54.9\"E", "_source": "STAR" },
+    "MATIZ": { "lat": "36°50'34.9\"N", "lon": "127°25'46.1\"E", "_source": "STAR" },
+    "ESBOS": { "lat": "36°46'44.7\"N", "lon": "127°47'14.2\"E", "_source": "STAR" },
+    "IKAPO": { "lat": "36°40'16.6\"N", "lon": "127°45'26.2\"E", "_source": "STAR / IAP RNP 24R (두 출처 일치)" },
+    "JIKJI": { "lat": "36°41'21.7\"N", "lon": "127°39'22.1\"E", "_source": "STAR" },
+    "HYEIN": { "lat": "36°57'47.1\"N", "lon": "127°37'29.7\"E", "_source": "STAR / IAP RNP 24R (두 출처 일치)" },
+
+    "MENOL": { "lat": "36°47'25.1\"N", "lon": "127°47'22.5\"E", "_source": "IAP RNP 24R" },
+    "TURTU": { "lat": "36°51'27.0\"N", "lon": "127°43'32.3\"E", "_source": "IAP RNP 24R" },
+    "TU743": { "lat": "36°48'05.3\"N", "lon": "127°38'04.9\"E", "_source": "IAP RNP 24R" },
+    "APAKI": { "lat": "36°47'03.7\"N", "lon": "127°36'25.0\"E", "_source": "IAP RNP 24R" },
+    "TU746": { "lat": "36°45'20.2\"N", "lon": "127°33'37.6\"E", "_source": "IAP RNP 24R" },
+    "SURAX": { "lat": "36°44'00.5\"N", "lon": "127°31'28.6\"E", "_source": "IAP RNP 24R" },
+    "KADEV": { "lat": "36°41'40.5\"N", "lon": "127°27'42.6\"E", "_source": "IAP RNP 24R" },
+    "COWON": { "lat": "36°39'13.6\"N", "lon": "127°18'14.5\"E", "_source": "IAP RNP 24R" },
+
+    "ZENZA": { "lat": "36°47'05\"N", "lon": "127°36'26\"E", "_source": "IAP ILS Z 24R (I-CHG D6, FAF)" }
+  },
+
+  "star": {
+    "MATIZ1_24R": {
+      "name": "MATIZ 1",
+      "runway": "24R",
+      "notes": ["ATC surveillance service & GNSS required", "RNAV 1.0 Required", "DME/DME/IRU N/A"],
+      "legs": [
+        { "wpt": "OSPOT", "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE", "role": null },
+        { "wpt": "MATIZ", "course_mag": 94, "course_true": 85.9, "dist_nm": 3.9, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE" },
+        { "wpt": "HYEIN", "course_mag": 60, "course_true": 52.53, "dist_nm": 11.84, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE", "role": "IAF" }
+      ],
+      "_source": "AD CHART 2-15-3, MATIZ 1 RWY 24R"
+    },
+    "MATIZ1_06L": {
+      "name": "MATIZ 1",
+      "runway": "06L",
+      "notes": ["Do not exceed 210 kt IAS from ESBOS to IKAPO"],
+      "legs": [
+        { "wpt": "OSPOT", "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE" },
+        { "wpt": "MATIZ", "course_mag": 94, "course_true": 85.9, "dist_nm": 3.9, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE" },
+        { "wpt": "ESBOS", "course_mag": 110, "course_true": 102.4, "dist_nm": 17.66, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 210 },
+        { "wpt": "IKAPO", "course_mag": 200, "course_true": 192.6, "dist_nm": 6.6, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 210 },
+        { "wpt": "JIKJI", "course_mag": 290, "course_true": 282.5, "dist_nm": 5.0, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE", "role": "IAF" }
+      ],
+      "_source": "AD CHART 2-15-3, MATIZ 1 RWY 06L"
+    }
+  },
+
+  "sid": {
+    "BUKIL2": {
+      "name": "RNAV BUKIL 2",
+      "runway": "06L",
+      "climb_gradient_ft_per_nm": 370,
+      "climb_gradient_to_ft": 6000,
+      "transitions": {
+        "GUKDO": [
+          { "wpt": "BUKIL", "leg_type": "CF", "course_mag": 60, "course_true": 52.41, "dist_nm": 8.0, "speed_max_kt": 220 },
+          { "wpt": "GUKDO", "leg_type": "TF", "course_mag": 7, "course_true": 359.35, "dist_nm": 12.78 }
+        ],
+        "OLMEN": [
+          { "wpt": "BUKIL", "leg_type": "CF", "course_mag": 60, "course_true": 52.41, "dist_nm": 8.0, "speed_max_kt": 220 },
+          { "wpt": "TUTAE", "leg_type": "TF", "course_mag": 330, "course_true": 322.50, "dist_nm": 8.0, "alt_ft": 6000, "alt_cons": "AT", "speed_max_kt": 220 },
+          { "wpt": "OWING", "leg_type": "TF", "course_mag": 240, "course_true": 232.44, "dist_nm": 18.0, "alt_ft": 6000, "alt_cons": "AT" },
+          { "wpt": "OLMEN", "leg_type": "TF", "course_mag": 280, "course_true": 272.37, "dist_nm": 12.29, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" }
+        ],
+        "BULTI": [
+          { "wpt": "BUKIL", "leg_type": "CF", "course_mag": 60, "course_true": 52.41, "dist_nm": 8.0, "speed_max_kt": 220 },
+          { "wpt": "TUTAE", "leg_type": "TF", "course_mag": 330, "course_true": 322.50, "dist_nm": 8.0, "alt_ft": 6000, "alt_cons": "AT", "speed_max_kt": 220 },
+          { "wpt": "OWING", "leg_type": "TF", "course_mag": 240, "course_true": 232.44, "dist_nm": 18.0, "alt_ft": 6000, "alt_cons": "AT" },
+          { "wpt": "BULTI", "leg_type": "TF", "course_mag": 277, "course_true": 269.11, "dist_nm": 20.3, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" }
+        ]
+      },
+      "_source": "AD CHART 2-11-1"
+    },
+    "UPTIL1": {
+      "name": "RNAV UPTIL 1",
+      "runway": "24R",
+      "climb_gradient_ft_per_nm": 430,
+      "climb_gradient_to_ft": 6000,
+      "transitions": {
+        "GUKDO": [
+          { "wpt": "UPTIL", "leg_type": "CF", "course_mag": 240, "course_true": 232.4, "dist_nm": 5.9, "speed_max_kt": 220 },
+          { "wpt": "TU521", "leg_type": "TF", "course_mag": 330, "course_true": 322.34, "dist_nm": 8.0, "speed_max_kt": 220 },
+          { "wpt": "TUTAE", "leg_type": "TF", "course_mag": 60, "course_true": 52.27, "dist_nm": 15.38, "alt_ft": 6000, "alt_cons": "AT" },
+          { "wpt": "GUKDO", "leg_type": "TF", "course_mag": 44, "course_true": 36.24, "dist_nm": 7.98, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" }
+        ],
+        "OLMEN": [
+          { "wpt": "UPTIL", "leg_type": "CF", "course_mag": 240, "course_true": 232.4, "dist_nm": 5.9, "speed_max_kt": 220 },
+          { "wpt": "OLMEN", "leg_type": "TF", "course_mag": 293, "course_true": 285.29, "dist_nm": 19.95, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" }
+        ],
+        "BULTI": [
+          { "wpt": "UPTIL", "leg_type": "CF", "course_mag": 240, "course_true": 232.4, "dist_nm": 5.9, "speed_max_kt": 220 },
+          { "wpt": "BULTI", "leg_type": "TF", "course_mag": 287, "course_true": 279.28, "dist_nm": 27.62, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" }
+        ]
+      },
+      "_source": "AD CHART 2-12-1"
+    },
+    "CHEONGJU1D": {
+      "name": "CHEONGJU 1D (레이더 유도)",
+      "runway": "06/24",
+      "climb_gradient_ft_per_nm": 420,
+      "climb_gradient_to_ft": 5000,
+      "radar_required": true,
+      "description": [
+        "TAKE-OFF RWY 06R/L : Climb HDG 060°, thence expect radar vectors to intercept filed Enroute fix or Navaid.",
+        "TAKE-OFF RWY 24R/L : Climb HDG 240°, thence expect radar vectors to intercept filed Enroute fix or Navaid.",
+        "Maintain 6 000 ft or assigned altitude(flight level)."
+      ],
+      "initial_alt_ft": 6000,
+      "_source": "AD CHART 2-15"
+    }
+  },
+
+  "iap": {
+    "RNP_24R": {
+      "name": "RNP RWY 24R",
+      "runway": "24R",
+      "type": "RNAV(RNP)",
+      "gs_angle_deg": 3.0,
+      "tch_ft": 59,
+      "faf": "APAKI",
+      "faf_to_thr_nm": 5.83,
+      "_faf_to_thr_source": "AIP 미고시 — 좌표로 산출(5.827 NM). APAKI 고시고도 2,100ft가 3° 활공로(TCH 59, THR 185.4ft) 값과 정확히 일치하므로 좌표가 옳음이 교차확인된다.",
+      "profile_dist_nm": {
+        "TURTU-TU743": 5.52,
+        "TU743-APAKI": 1.67,
+        "APAKI-TU746": 2.83,
+        "TU746-SURAX": 2.18,
+        "SURAX-THR": 0.94
+      },
+      "_profile_note": "AD CHART 2-25 프로파일 고시값(우→좌 판독). 앞의 네 구간은 좌표 실측과 0.02NM 이내 일치. 마지막 SURAX-THR 만 고시 0.94 vs 실측 0.82 로 0.12NM 차이 — MAPt 기준점이 THR 과 다른 것으로 보이나 AIP에 명시가 없어 실측값을 사용한다.",
+      "notes": ["ATC surveillance service & GNSS required", "RNAV 1.0 Required", "DME/DME/IRU N/A"],
+      "minima": {
+        "LNAV/VNAV": { "da_ft": 602, "hat_ft": 415 },
+        "LNAV": { "mda_ft": 620, "hat_ft": 433 },
+        "circling": null
+      },
+      "transitions": {
+        "IKAPO": [
+          { "wpt": "IKAPO", "role": "IAF", "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE" },
+          { "wpt": "MENOL", "course_mag": 20, "course_true": 12.32, "dist_nm": 7.3, "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE" },
+          { "wpt": "TURTU", "role": "IF", "course_mag": 330, "course_true": 322.61, "dist_nm": 5.1, "alt_ft": 3700, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 230 }
+        ],
+        "HYEIN": [
+          { "wpt": "HYEIN", "role": "IAF", "alt_ft": 6000, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 230 },
+          { "wpt": "TURTU", "role": "IF", "course_mag": 150, "course_true": 142.51, "dist_nm": 8.0, "alt_ft": 3700, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 230 }
+        ]
+      },
+      "final": [
+        { "wpt": "TURTU", "role": "IF", "alt_ft": 3700, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 230 },
+        { "wpt": "TU743", "course_mag": 240, "course_true": 232.56, "dist_nm": 5.5, "alt_ft": 2500, "alt_cons": "AT_OR_ABOVE" },
+        { "wpt": "APAKI", "role": "FAF", "course_mag": 240, "course_true": 232.51, "dist_nm": 1.7, "alt_ft": 2100, "alt_cons": "AT_OR_ABOVE" },
+        { "wpt": "TU746", "course_mag": 240, "course_true": 232.49, "dist_nm": 2.8, "alt_ft": 1200, "alt_cons": "AT_OR_ABOVE", "lnav_only": true },
+        { "wpt": "SURAX", "role": "MAPt", "course_mag": 240, "course_true": 232.46, "dist_nm": 2.2, "alt_ft": 620, "alt_cons": "AT_OR_ABOVE", "lnav_only": true, "fly_over": true }
+      ],
+      "missed_approach": {
+        "description": "Climb to 6 000 ft via on track 240° to KADEV, then track 260° to COWON, then continue climb to 6 000 ft and hold.",
+        "legs": [
+          { "wpt": "KADEV", "course_mag": 240, "course_true": 232.44, "dist_nm": 3.8, "climb_gradient_ft_per_nm": 340, "climb_to_ft": 6000 },
+          { "wpt": "COWON", "course_mag": 260, "course_true": 252.25, "dist_nm": 8.0, "alt_ft": 6000, "alt_cons": "AT" }
+        ]
+      },
+      "holdings": [
+        { "fix": "IKAPO", "inbound_course_mag": 110, "inbound_course_true": 102.15, "leg_nm": 5.0, "alt_ft": 7000, "alt_cons": "AT_OR_ABOVE", "speed_max_kt": 230, "max_alt_ft": 10000 },
+        { "fix": "COWON", "inbound_course_mag": 80, "inbound_course_true": 72.25, "leg_nm": 5.0, "alt_ft": 6000, "alt_cons": "AT", "max_alt_ft": 10000 }
+      ],
+      "_source": "AD CHART 2-25 / 2-25-1"
+    },
+    "ILS_Z_24R": {
+      "name": "ILS Z RWY 24R",
+      "runway": "24R",
+      "type": "ILS",
+      "loc_freq_mhz": 111.7,
+      "gs_angle_deg": 3.0,
+      "tch_ft": 51,
+      "faf": "ZENZA",
+      "faf_dme": "I-CHG D6",
+      "faf_to_thr_nm": 5.85,
+      "_faf_to_thr_source": "AD CHART 2-28 프로파일 고시값. 좌표 실측 5.851 NM 로 일치.",
+      "notes": ["ATC surveillance service & GNSS required", "RNAV 1.0 Required"],
+      "minima": { "S-ILS 24R": { "da_ft": 387, "hat_ft": 200, "rvr_m": 800 } },
+      "profile": [
+        { "wpt": "TURTU", "role": "IF", "alt_ft": 3700 },
+        { "wpt": "TU743", "alt_ft": 2500, "dist_from_prev_nm": 5.52 },
+        { "wpt": "ZENZA", "role": "FAF", "alt_ft": 2100, "dist_from_prev_nm": 1.66 },
+        { "wpt": "THR_24R", "dist_from_prev_nm": 5.85 }
+      ],
+      "_note": "ZENZA(ILS FAF)와 APAKI(RNP FAF)는 사실상 동일 지점 — 두 좌표의 거리차를 tools/validate_aip.py 가 확인한다.",
+      "_source": "AD CHART 2-28"
+    }
+  }
+}

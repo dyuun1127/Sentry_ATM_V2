@@ -18,6 +18,15 @@ dependencies = []
 persistence = [
     "SQLAlchemy>=2.0.52,<2.1",
 ]
+# 규정 엔진(sentry_atm.regulation)의 결정론 판정은 표준 라이브러리만 쓴다.
+# 학습·해석적 확률 계층만 아래 패키지를 필요로 하며, 전부 함수 안에서 지연
+# 임포트하므로 이 그룹 없이도 모듈 임포트와 규정 판정은 그대로 동작한다.
+learning = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "torch>=2.4",
+]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
@@ -29,6 +38,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "sentry_atm.infrastructure.http" = ["static/*"]
+"sentry_atm.regulation" = ["reference/*.json"]
 
 [tool.pytest.ini_options]
 addopts = [

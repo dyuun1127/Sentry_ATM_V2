@@ -1,0 +1,756 @@
+{
+  "_meta": {
+    "description": "청주 접근관제구역 공역 형상과 관제 분리기준. 코드에 상수를 하드코딩하지 않고 이 파일만 참조한다.",
+    "sources": {
+      "ENR_2.1": "AIP Republic of Korea, ENR 2.1 — JUNGWON Terminal Control Area (1 MAY 2025)",
+      "AD_2.17": "RKTU AD 2.17 ATS AIRSPACE (관제권)",
+      "고시": "국토교통부고시 제2022-534호 「항공교통관제절차」",
+      "항공안전법": "항공안전법 시행규칙 [별표 2] 항공기준사고의 범위(제9조 관련)"
+    },
+    "_note_alt_ref": "고도 기준이 AGL/AMSL 혼재한다. T17 하한은 1,000ft AGL(공항표고 192ft 기준 약 1,192ft AMSL), 상한은 6,500ft AMSL."
+  },
+  "ctr": {
+    "name": "청주 관제권 (Cheongju CTR)",
+    "unit": "CHEONGJU TWR",
+    "freq_mhz": [
+      118.7,
+      126.2,
+      249.6
+    ],
+    "class": "C",
+    "_class_note": "AD 2.17 (AIP AMDT 1/26, 8 JAN 2026) 에서 Class D → Class C 로 변경됨. Class C 는 IFR-VFR 분리를 제공한다 — T17 회랑(Class D/E)과 다르다.",
+    "center": {
+      "lat": "364259N",
+      "lon": "1272957E"
+    },
+    "radius_nm": 5.0,
+    "lower": {
+      "ref": "SFC"
+    },
+    "upper": {
+      "ft": 5000,
+      "ref": "AGL"
+    },
+    "_source": "AD 2.17"
+  },
+  "cheongju_terminal": {
+    "_description": "청주 터미널 Class C 공역. T17 회랑만으로는 RWY 24R 최종접근이 덮이지 않는다 — 접근 경로는 이 5~10NM 링과 관제권이 담당한다.",
+    "_source": "ENR 2.1 비고란 'Class C : Cheongju' + AD 2.17",
+    "unit": "CHEONGJU GCA",
+    "freq_mhz": [
+      134.4,
+      134.1
+    ],
+    "class": "C",
+    "provides_ifr_vfr_separation": true,
+    "center": {
+      "lat": "364259N",
+      "lon": "1272957E"
+    },
+    "volumes": [
+      {
+        "id": "CTR_CORE",
+        "shape": "circle",
+        "radius_nm": 5.0,
+        "lower": {
+          "ref": "SFC"
+        },
+        "upper": {
+          "ft": 5000,
+          "ref": "AGL"
+        }
+      },
+      {
+        "id": "CTR_EXT_SW",
+        "shape": "polygon",
+        "polygon": [
+          {
+            "lat": "364140N",
+            "lon": "1272357E"
+          },
+          {
+            "lat": "363949N",
+            "lon": "1272108E"
+          },
+          {
+            "lat": "363642N",
+            "lon": "1272415E"
+          },
+          {
+            "lat": "363833N",
+            "lon": "1272705E"
+          }
+        ],
+        "lower": {
+          "ref": "SFC"
+        },
+        "upper": {
+          "ft": 5000,
+          "ref": "AGL"
+        }
+      },
+      {
+        "id": "CTR_EXT_NE",
+        "shape": "polygon",
+        "polygon": [
+          {
+            "lat": "364725N",
+            "lon": "1273250E"
+          },
+          {
+            "lat": "364915N",
+            "lon": "1273539E"
+          },
+          {
+            "lat": "364608N",
+            "lon": "1273847E"
+          },
+          {
+            "lat": "364418N",
+            "lon": "1273557E"
+          }
+        ],
+        "lower": {
+          "ref": "SFC"
+        },
+        "upper": {
+          "ft": 5000,
+          "ref": "AGL"
+        }
+      },
+      {
+        "id": "RING_5_10",
+        "shape": "annulus",
+        "inner_nm": 5.0,
+        "outer_nm": 10.0,
+        "lower": {
+          "ft": 1000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 5000,
+          "ref": "AGL"
+        },
+        "_note": "RWY 24R 의 FAF(APAKI, ARP 6.6NM/2,100ft)와 TU743(8.3NM/2,500ft)이 이 링 안에 든다."
+      }
+    ],
+    "excludes": [
+      {
+        "id": "SEONGMU_CLASS_D",
+        "shape": "circle",
+        "center": {
+          "lat": "363405N",
+          "lon": "1273000E"
+        },
+        "radius_nm": 5.0,
+        "lower": {
+          "ref": "GND"
+        },
+        "upper": {
+          "ft": 4000,
+          "ref": "AGL"
+        },
+        "_aip": "Excluding the overlapping area of Seongmu Class D airspace"
+      }
+    ]
+  },
+  "tma": {
+    "name": "JUNGWON Terminal Control Area",
+    "_source": "ENR 2.1",
+    "blocks": [
+      {
+        "id": "T17",
+        "unit": "CHEONGJU GCA",
+        "freq_mhz": [
+          134.4,
+          134.1
+        ],
+        "freq_mhz_aip": [
+          134.0,
+          265.75
+        ],
+        "class": "D, E",
+        "lower": {
+          "ft": 1000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 6500,
+          "ref": "AMSL"
+        },
+        "ifr_vfr_separation": false,
+        "is_target_sector": true,
+        "polygon": [
+          {
+            "lat": "370210N",
+            "lon": "1273952E"
+          },
+          {
+            "lat": "365010N",
+            "lon": "1273952E"
+          },
+          {
+            "lat": "362311N",
+            "lon": "1270352E"
+          },
+          {
+            "lat": "364010N",
+            "lon": "1270452E"
+          }
+        ],
+        "_note": "본 과제 대상 섹터. Class D/E 이므로 이 회랑 안에서는 IFR-VFR 분리 미제공(교통정보만). 단 청주 터미널 Class C 구역(cheongju_terminal)에서는 분리를 제공한다 — 두 공역의 등급이 다르다."
+      },
+      {
+        "id": "T17_UPPER",
+        "unit": "OSAN APP",
+        "freq_mhz": [
+          127.9,
+          363.1
+        ],
+        "class": "D, E",
+        "lower": {
+          "ft": 6500,
+          "ref": "AMSL"
+        },
+        "upper": {
+          "fl": 145
+        },
+        "ifr_vfr_separation": false,
+        "same_polygon_as": "T17",
+        "_note": "ENR 2.1 은 T17 폴리곤을 두 번 고시한다 — OSAN Terminal Control Area 항의 T17(FL145~6,500ft, Osan APP)과 Jungwon Terminal Control Area 항의 T17(6,500ft~1,000ft AGL, Cheongju GCA). 즉 T17 상한을 넘는 항적의 인수처는 중원 APP 이 아니라 OSAN APP 이다."
+      },
+      {
+        "id": "T18",
+        "unit": "JUNGWON APP",
+        "freq_mhz": [
+          132.55,
+          306.7
+        ],
+        "class": "C, E",
+        "lower": {
+          "ft": 1000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "fl": 175
+        },
+        "ifr_vfr_separation": true
+      },
+      {
+        "id": "T19",
+        "unit": "JUNGWON APP",
+        "class": "D, E",
+        "lower": {
+          "ft": 1000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "fl": 145
+        },
+        "ifr_vfr_separation": false,
+        "polygon": [
+          {
+            "lat": "370640N",
+            "lon": "1273952E"
+          },
+          {
+            "lat": "365010N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "364458N",
+            "lon": "1275752E"
+          },
+          {
+            "lat": "362911N",
+            "lon": "1275052E"
+          },
+          {
+            "lat": "362911N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "362311N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "360711N",
+            "lon": "1274952E"
+          },
+          {
+            "lat": "361211N",
+            "lon": "1273652E"
+          },
+          {
+            "lat": "362311N",
+            "lon": "1270352E"
+          },
+          {
+            "lat": "365010N",
+            "lon": "1273952E"
+          }
+        ],
+        "_note": "T17 의 남동측 경계(365010N 1273952E ~ 362311N 1270352E)를 공유한다. RNP 24R 의 IAF/IF(IKAPO, MENOL, TURTU)가 이 안에 있으므로, 도착기는 중원 APP 에서 청주 GCA 로 인수된다."
+      },
+      {
+        "id": "T20",
+        "unit": "JUNGWON APP",
+        "class": "D, E",
+        "lower": {
+          "ft": 5500,
+          "ref": "AMSL"
+        },
+        "upper": {
+          "fl": 145
+        },
+        "ifr_vfr_separation": false
+      },
+      {
+        "id": "T21",
+        "unit": "JUNGWON APP",
+        "class": "C, E",
+        "lower": {
+          "ft": 1000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 3500,
+          "ref": "AMSL"
+        },
+        "ifr_vfr_separation": true
+      },
+      {
+        "id": "T22",
+        "unit": "JUNGWON APP",
+        "class": "E",
+        "lower": {
+          "ft": 9500,
+          "ref": "AMSL"
+        },
+        "upper": {
+          "fl": 175
+        },
+        "ifr_vfr_separation": false
+      }
+    ]
+  },
+  "separation": {
+    "_source": "고시 「항공교통관제절차」",
+    "radar_horizontal": {
+      "within_40nm_of_asr_nm": 3.0,
+      "beyond_40nm_of_asr_nm": 5.0,
+      "final_approach_within_10nm_nm": 2.5,
+      "_clause": "5-5-4",
+      "_applies": "T17 전 구간은 ASR 안테나 40마일 미만 → 3NM 적용"
+    },
+    "vertical": {
+      "below_fl410_ft": 1000,
+      "above_fl410_ft": 2000,
+      "_clause": "4-5-1"
+    },
+    "cruising_altitude": {
+      "_clause": "4-5-2",
+      "rule": "자침 0~179°는 홀수 고도, 180~359°는 짝수 고도"
+    },
+    "wake_turbulence": {
+      "_note": "A~G 항적난기류 그룹은 고시 1-2-1 라항에 따라 민간공항 전용. 청주는 민·군 공용이므로 초대형/대형/중형/소형 등급 기준을 사용한다.",
+      "_key_format": "선행기|후행기. 표에 없는 조합은 항적난기류 추가분리 불요 → 레이더 최저치 적용.",
+      "categories": [
+        "초대형",
+        "대형",
+        "중형",
+        "소형"
+      ],
+      "in_flight": {
+        "_clause": "5-5-4 사",
+        "_text": "정 후방에 있거나 계기접근 항공기를 뒤따르는 항공기에게 적용. 지표상 앞서가는 항공기의 비행경로의 2,500피트 이내이면서 앞서가는 항공기 아래로 1,000피트 미만의 고도로 비행하는 경우.",
+        "lateral_gate_ft": 2500,
+        "below_gate_ft": 1000,
+        "minima_nm": {
+          "초대형|대형": 5.0,
+          "초대형|중형": 7.0,
+          "초대형|소형": 8.0,
+          "대형|대형": 4.0,
+          "대형|중형": 5.0,
+          "대형|소형": 5.0
+        }
+      },
+      "landing": {
+        "_clause": "5-5-4 아",
+        "_text": "위 사항에 부가하여, 동일 활주로에 착륙하는 항공기 뒤의 다른 항공기 간에 선행항공기가 착륙활주로 시단에 도착할 때 적용.",
+        "_note": "'부가하여'이므로 실제 적용치는 사항과 아항의 큰 값이다. 평행활주로 간격이 2,500ft 미만이면 단일 활주로로 간주 — 청주 06L/24R 과 06R/24L 은 약 190m(623ft) 간격이라 단일 활주로로 본다.",
+        "same_runway_if_parallel_within_ft": 2500,
+        "minima_nm": {
+          "중형|소형": 4.0,
+          "대형|소형": 6.0
+        }
+      },
+      "unknown_weight": {
+        "_clause": "5-5-4 자",
+        "_text": "항적자료군에 무게/항적난기류등급 미결정(NOWGT)이 전시될 때 앞뒤로 10마일.",
+        "minimum_nm": 10.0
+      }
+    },
+    "reduced_final": {
+      "_clause": "5-5-4 차",
+      "value_nm": 2.5,
+      "enabled": false,
+      "_text": "단일 센서 빗변거리 모드 운영 중, 안테나 40마일 내, 착륙활주로로부터 10마일 안쪽 최종접근로상의 항공기 간 2.5마일 허가 가능.",
+      "_conditions": [
+        "선행항공기의 중량등급이 뒤따르는 항공기의 중량등급 이하일 것",
+        "초대형/그룹A 및 대형/그룹B,C 는 후방 항공기로서만 분리감소에 참여",
+        "활주로 평균점유시간이 50초 이하로 문서화된 경우"
+      ],
+      "_why_disabled": "세 번째 조건(활주로 평균점유시간 50초 이하 문서화)은 시설이 문서로 입증해야 하는 요건이다. 청주는 민·군 공용에 제동장치(BAK-12/14) 운용 활주로라 이 값을 공개자료로 확인할 수 없다. 확인되지 않은 조건 위에서 분리를 줄이는 것은 안전필수 판정에서 허용될 수 없으므로 기본값을 3NM 으로 두고, 시설 자료가 확보되면 enabled 를 켠다."
+    },
+    "formation": {
+      "_clause": "5-5-8",
+      "_text": "편대비행을 위한 추가분리. 군 운용 공역에서 실제로 발생한다.",
+      "standard_vs_other_add_nm": 1.0,
+      "standard_vs_standard_add_nm": 2.0,
+      "_note": "편대가 대형 항공기 뒤를 따를 경우 항적난기류 분리에는 통상 가산하지 않는다 (5-5-8 라 주기)."
+    },
+    "adjacent_airspace": {
+      "_clause": "5-5-10",
+      "_text": "관련 관제사 간 협의되지 않은 경우, 레이더 분리가 적용되는 인접공역 경계선으로부터 유지할 최소 간격.",
+      "within_40nm_nm": 1.5,
+      "beyond_40nm_nm": 2.5
+    },
+    "obstruction": {
+      "_clause": "5-5-9",
+      "within_40nm_nm": 3.0,
+      "beyond_40nm_nm": 5.0
+    },
+    "runway": {
+      "_description": "활주로를 자원으로 보는 분리 — 출발과 도착이 같은 활주로를 두고 경합할 때의 최저 간격. 공중 분리(5-5-4)와 근거 조항이 다르므로 따로 둔다.",
+      "_source": "고시 3-9-6 (동일 활주로 상 분리, 출발), 3-10-3 (동일 활주로 상 분리, 도착), 5-8-3 (연속 또는 동시 출발)",
+      "srs_categories": {
+        "_clause": "3-9-6 주기 가",
+        "_note": "군 공항 기준. 민간전용공항 기준(주기 나)과 다르며 청주는 군 공항이므로 이쪽을 쓴다.",
+        "CAT_I": "단발 프로펠러 12,500 LBS 이하 경량급 항공기 및 모든 헬리콥터",
+        "CAT_II": "쌍발 프로펠러 12,500 LBS 이하 경량급 항공기",
+        "CAT_III": "기타 모든 항공기",
+        "_implication": "청주 운용 기종(전투기·수송기·민항기)은 전부 CAT III 이다. SRS 범주가 이 공항에서는 기종을 구분하지 못하므로 거리 최저치가 6,000ft 로 일괄 적용된다."
+      },
+      "same_runway_distance_ft": {
+        "_clause": "3-9-6 가, 3-10-3 가",
+        "_note": "관제사가 지상 표지로 거리를 확인할 수 있을 때, 선행기가 활주로를 개방하거나 종단을 통과하기 전이라도 이 거리가 확보되면 후행기를 진행시킬 수 있다.",
+        "cat1_behind_cat1_or_cat2": 3000,
+        "cat2_behind_cat1_or_cat2": 4500,
+        "either_is_cat3": 6000,
+        "civil_only_aerodrome_cat3": 8000,
+        "_applies_here": "either_is_cat3"
+      },
+      "departure_wake_time_s": {
+        "_clause": "3-9-6 바 1), 2)",
+        "_note": "동일활주로 또는 2,500ft 미만 평행활주로에서 이륙할 때. 선행기가 이륙활주를 시작한 시점부터 센다. 3-9-6 마항에 따라 이 시간간격 대신 5-5-4 사항의 거리 기준을 적용할 수도 있다.",
+        "초대형": { "대형": 180, "중형": 180, "소형": 180 },
+        "대형": { "대형": 120, "중형": 120, "소형": 120 }
+      },
+      "arrival_then_departure": {
+        "_clause": "3-9-6 나",
+        "_rule": "선행 착륙기가 활주로를 개방한 후에 후행기를 이륙활주시킬 수 있다.",
+        "_basis": "runway_occupancy_s"
+      },
+      "departure_then_arrival": {
+        "_clause": "3-10-3 가 2) 다)",
+        "_rule": "선행 이륙기가 활주로 종단을 통과했거나, 착륙활주로 시단으로부터 6,000ft 가 확보되어야 도착기가 시단을 통과할 수 있다.",
+        "_basis": "either_is_cat3"
+      },
+      "line_up_and_wait_restriction": {
+        "_clause": "3-9-6 라",
+        "_rule": "초대형 또는 대형 항공기 다음에 동일활주로 상으로 소형 항공기에게 이륙위치 진입 후 대기허가를 발부해서는 안 된다.",
+        "_note": "후류 시간간격을 지상에서 소진하지 못하게 하는 조항이다. 대기 중에는 간격이 줄지 않는다."
+      },
+      "successive_departure_radar_nm": {
+        "_clause": "5-8-3 가, 다 1)",
+        "_note": "레이더 식별이 활주로 종단 1마일 이내에 이루어지고 진로가 분기될 때. 후류요란 분리가 필요한 경우에는 적용하지 않는다(5-8-3 다 1) 주기).",
+        "value_nm": 1.0,
+        "course_divergence_deg": 15.0,
+        "rnav_sid_course_divergence_deg": 10.0
+      }
+    }
+  },
+  "holding": {
+    "_description": "체공(홀딩) 파라미터. 장주 자체는 AIP 에 공고되어 있으므로(procedures.json 의 iap.*.holdings) 여기에는 장주를 재현하는 데 필요한 절차 상수만 둔다.",
+    "_source": "고시 4-6-1 ~ 4-6-7 (제4장 제6절 체공항공기), ICAO Doc 8168 (선회율)",
+    "standard_rate_deg_per_s": 3.0,
+    "max_bank_deg": 25.0,
+    "_turn_note": "선회율은 표준선회율(3°/s)과 최대 뱅크각 25° 중 **느린 쪽**을 쓴다. 230kt 에서 25° 뱅크는 약 2.2°/s 라 표준선회율보다 느리므로, 빠른 기종일수록 장주 한 바퀴가 길어진다.",
+    "level_step_ft": 1000,
+    "_level_note": "같은 픽스에 여러 대를 쌓을 때의 수직 간격. 고시 4-5-1 의 FL410 이하 1,000ft 를 그대로 쓴다.",
+    "delay_info_threshold_min": 30,
+    "_delay_clause": "4-6-3 나 — 도착지연이 30분이 되거나 될 것으로 예상되면 지연정보를 발부한다.",
+    "default_turns": "우선회",
+    "_turn_direction_clause": "4-6-4 마 — 좌측선회를 하여야 하거나 관제사가 필요하다고 판단할 때만 선회방향을 발부한다. 공고에 명시가 없으면 우선회가 기본이다.",
+    "published_phraseology": "AS PUBLISHED",
+    "_phraseology_clause": "4-6-1 나 2) — 체공장주가 비행정보간행물에 공고되었을 때는 공고된 체공방향과 'AS PUBLISHED' 만 쓰고 나머지 체공지시를 생략할 수 있다."
+  },
+
+  "priority": {
+    "_clause": "2-1-4",
+    "principle": "First Come, First Served",
+    "emergency_first": true,
+    "_note": "가항 — 조난 항공기에 최우선 통행권. 그 외에는 선착순이 원칙이므로 순서 조정은 제한을 두고 수행한다."
+  },
+  "workload": {
+    "_clause": "2-1-2",
+    "_quote_summary": "모든 상황에 통일적으로 적용되는 업무 우선순위의 표준 목록 설정은 불가능하며, 관제사가 자신의 기량으로 판단하여야 한다.",
+    "_implication": "예외 기반 관리(MBE)와 학습 기반 위험 스코어링의 근거 조항."
+  },
+  "handoff": {
+    "_clause": "2-1-15",
+    "conditions": [
+      "합의된 위치·고도에서 이양",
+      "충돌요인 제거 후 이양",
+      "통신 인수가 곧 관제책임 인수"
+    ],
+    "t17_upper_ft_amsl": 6500,
+    "upper_unit": "OSAN APP",
+    "chain": {
+      "_description": "출발기가 고도를 올리며 거치는 관제기관 순서. 각 단계의 상한은 공역 블록에서 그대로 온다 — 이양 고도를 따로 지어내지 않는다.",
+      "_clause": "2-1-15 — 합의된 위치·고도에서, 충돌요인 제거 후 이양하며 통신 인수가 곧 관제책임 인수다.",
+      "steps": [
+        { "unit": "CHEONGJU TWR", "from": "ctr", "_note": "관제권 5NM, SFC~5,000ft AGL (AD 2.17). 이륙 후 초기 상승까지." },
+        { "unit": "CHEONGJU GCA", "from": "tma:T17", "_note": "접근관제. T17 회랑 + 터미널 Class C." },
+        { "unit": "OSAN APP", "from": "tma:T17_UPPER", "_note": "T17 상한 6,500ft 초과 시 수직 인수처 (ENR 2.1)." },
+        { "unit": "ACC", "from": "above", "_note": "T17_UPPER 상한(FL145) 위. 기관명은 ENR 2.1 대조 전이므로 일반명으로 둔다." }
+      ],
+      "lateral_unit_block": "T19",
+      "_lateral_note": "남동측으로 벗어나면 고도와 무관하게 중원 APP(T19) 이 인수한다. 수직 사슬과 별개 경로다.",
+      "_acc_source_note": "ACC 경계 고도는 T17_UPPER 의 상한(FL145) 전사값에서 온다. 기관 명칭만 AIP ENR 2.1 대조가 남아 있어 'ACC' 로 표기한다."
+    },
+    "lateral_unit": "JUNGWON APP",
+    "_note": "T17 상한 6,500ft 통과 시점을 관제이양 이벤트로 기록한다. 수직 인수처는 OSAN APP(ENR 2.1 OSAN TMA 의 T17, FL145~6,500ft), 남동측 측방 인수처는 중원 APP(T19)이다."
+  },
+  "incident_criteria": {
+    "_source": "항공안전법 시행규칙 [별표 2]",
+    "vfr_proximity_ft": 500,
+    "_note": "VFR 항공기 간 500ft 이내 근접은 항공기준사고."
+  },
+  "assigned_altitudes": {
+    "_note": "T17 상한 6,500ft AMSL 때문에 배정고도 사다리는 3층만 들어간다. 그 위 대기 항적은 중원 APP 관할.",
+    "ladder_ft": [
+      4000,
+      5000,
+      6000
+    ],
+    "above_t17_owner": "OSAN APP"
+  },
+  "adjacent": {
+    "_note": "인접 공역 — 표출용. 경계 좌표는 ENR 5 확보 시 보강한다.",
+    "moa": [
+      "MOA 2H",
+      "MOA 2L",
+      "MOA 3A",
+      "MOA 4",
+      "MOA 5",
+      "MOA 11"
+    ],
+    "restricted": [
+      "R19",
+      "R139",
+      "R152",
+      "RK R17",
+      "RK R35",
+      "RK R122"
+    ],
+    "ctr_nearby": [
+      "SEONGMU CTR (RKTE)",
+      "OSAN",
+      "SUWON"
+    ]
+  },
+  "hazards": {
+    "bird_concentration": {
+      "_source": "AD CHART 2-34 BIRD CONCENTRATION CHART, SID 차트 주기",
+      "_note": "RWY 24R threshold 남서 4~12km 조류 서식지"
+    },
+    "takeoff_obstacle": {
+      "_source": "AD CHART 2-15",
+      "rwy_06": "HILL 4,346 ft from DER, 908 ft left of centerline, 38 ft AGL / 230 ft AMSL"
+    }
+  },
+  "special_use": {
+    "_description": "청주 접근관제구역 인근 특수사용공역. 관제 스코프에 실제로 표시되는 정보이며, 접근로 바로 옆에 붙어 있어 이 공역이 까다로운 이유를 설명한다.",
+    "_source": {
+      "restricted": "AIP ENR 5.1 — 금지·제한·위험구역",
+      "moa": "AIP ENR 5.2 — 군작전구역(MOA)",
+      "seongmu": "AIP ENR 2.1 비고란 Class D : Seongmu"
+    },
+    "restricted": [
+      {
+        "id": "RK R19",
+        "name": "조치원",
+        "shape": "circle",
+        "center": {
+          "lat": "363640N",
+          "lon": "1271328E"
+        },
+        "radius_nm": 2.0,
+        "lower": {
+          "ref": "GND"
+        },
+        "upper": {
+          "ft": 3400,
+          "ref": "AMSL"
+        },
+        "activity": "지대지 고각사격",
+        "authority": "SROKA G-3AIR",
+        "note": "NOTAM 에 의함"
+      },
+      {
+        "id": "RK R139",
+        "name": "진천",
+        "shape": "circle",
+        "center": {
+          "lat": "365026N",
+          "lon": "1272425E"
+        },
+        "radius_nm": 0.7,
+        "lower": {
+          "ref": "GND"
+        },
+        "upper": {
+          "ft": 5400,
+          "ref": "AMSL"
+        },
+        "activity": "전자방해구역",
+        "note": "근접·진입 시 항공기 전자장비가 방해받는다"
+      },
+      {
+        "id": "RK R152",
+        "name": "괴산",
+        "shape": "circle",
+        "center": {
+          "lat": "365225N",
+          "lon": "1274819E"
+        },
+        "radius_nm": 2.0,
+        "lower": {
+          "ref": "SFC"
+        },
+        "upper": {
+          "ft": 2100,
+          "ref": "AMSL"
+        },
+        "activity": "강하훈련",
+        "authority": "제13특수임무여단",
+        "note": "주야간 VMC, NOTAM 에 의함"
+      }
+    ],
+    "moa": [
+      {
+        "id": "MOA 2H",
+        "lower": {
+          "ft": 10000,
+          "ref": "AMSL"
+        },
+        "upper": {
+          "fl": 400
+        },
+        "polygon": [
+          "363500N 1270700E",
+          "363500N 1272200E",
+          "362959N 1273007E",
+          "355800N 1272200E",
+          "355900N 1270400E",
+          "360836N 1270448E",
+          "362302N 1270625E",
+          "362637N 1270618E"
+        ]
+      },
+      {
+        "id": "MOA 2L",
+        "lower": {
+          "ft": 3000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 9000,
+          "ref": "AMSL"
+        },
+        "polygon": [
+          "363500N 1270700E",
+          "363500N 1272200E",
+          "355800N 1272200E",
+          "355900N 1270400E"
+        ]
+      },
+      {
+        "id": "MOA 3A",
+        "lower": {
+          "ft": 3000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 7000,
+          "ref": "AMSL"
+        },
+        "polygon": [
+          "363400N 1273200E",
+          "363500N 1274300E",
+          "362300N 1275700E",
+          "361800N 1275100E",
+          "362700N 1273700E"
+        ]
+      },
+      {
+        "id": "MOA 4",
+        "lower": {
+          "ft": 3000,
+          "ref": "AGL"
+        },
+        "upper": {
+          "ft": 9000,
+          "ref": "AMSL"
+        },
+        "polygon": [
+          "364500N 1274000E",
+          "365100N 1274600E",
+          "363500N 1281400E",
+          "362700N 1280500E"
+        ]
+      },
+      {
+        "id": "MOA 11",
+        "lower": {
+          "ft": 12000,
+          "ref": "AMSL"
+        },
+        "upper": {
+          "fl": 400
+        },
+        "polygon": [
+          "370600N 1275900E",
+          "371200N 1283100E",
+          "371300N 1284100E",
+          "365500N 1284100E",
+          "364300N 1283000E",
+          "365600N 1280300E"
+        ]
+      }
+    ],
+    "neighbour_ctr": [
+      {
+        "id": "SEONGMU CTR",
+        "name": "성무",
+        "shape": "circle",
+        "center": {
+          "lat": "363405N",
+          "lon": "1273000E"
+        },
+        "radius_nm": 5.0,
+        "class": "D",
+        "lower": {
+          "ref": "GND"
+        },
+        "upper": {
+          "ft": 4000,
+          "ref": "AGL"
+        },
+        "_note": "청주 Class C 에서 중첩분은 제외된다 (ENR 2.1)"
+      }
+    ]
+  }
+}
