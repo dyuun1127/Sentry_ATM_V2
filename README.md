@@ -4,7 +4,26 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 
 > 이 프로젝트는 실제 관제 시스템이 아니며, 실제 공역 책임·공식 분리기준·군 운용절차를 대체하지 않는다.
 
-## 현재 상태
+## 현재 릴리스 상태
+
+- Phase 0~16 구현 및 `main` 통합 완료
+- Golden Demo Release Preflight `5/5` 통과
+- 실제 Loopback HTTP Multi-Path Regression `10/10` 통과
+- 전체 자동 테스트 `826 passed`
+- 인터넷, Docker, PostgreSQL/PostGIS, Node.js 없이 로컬 실행 가능
+
+## 핵심 기능
+
+1. RKTU ARP 기준 위경도와 Local x/y NM 좌표를 상호 변환한다.
+2. UTC 결정론적 Clock에서 Playback 및 Synthetic 항공기 8대를 재현한다.
+3. 미래 4DT와 연속 상대운동 CPA/TCPA를 계산해 충돌을 탐지한다.
+4. 충돌 위험도와 작전 우선순위를 분리해 예외 Queue를 구성한다.
+5. 대응 후보 생성, 격리 안전성 검증, 설명 가능한 추천 순위를 제공한다.
+6. 관제사의 `ACCEPT`, `MODIFY`, `REJECT` 결정을 Audit하고 승인된 기동만 적용한다.
+7. 적용 후 동일한 계산 경로로 충돌 해소 여부를 재검증한다.
+8. 단일 화면 Golden Demo에서 계획·실제·예측 항적과 판단 근거를 시각화한다.
+
+## 구현 이력
 
 - Phase 0-A: Golden Demo Scenario Contract 작성 완료
 - Phase 0-B: Python 프로젝트 및 테스트 기반 구성 완료
@@ -130,15 +149,22 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.persistence seed
 ```
 
-## Golden Demo API 실행
+## Golden Demo 빠른 실행
 
 별도 Web Framework 없이 Python 표준 라이브러리 서버를 로컬 Loopback에 실행한다.
 
-발표 전 전체 Golden Demo 계약을 먼저 자동 점검한다.
+발표 전 전체 Golden Demo 계약을 먼저 자동 점검한다. 다음 두 성공 문구와 종료 코드 `0`을 확인한다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
 ```
+
+```text
+SENTRY ATM RELEASE PREFLIGHT PASSED (5 checks)
+SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
+```
+
+점검이 통과하면 서버를 시작한다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http
@@ -148,6 +174,17 @@ python -m venv .venv
 필요하면 `--port 8123`처럼 지정한다.
 서버를 종료하려면 `Ctrl+C`를 누른다. 외부 장치에서 접속할 수 있도록 Bind하는 기능은 제공하지 않는다.
 
+### Golden Demo 흐름
+
+| 단계 | 화면과 시스템 동작 |
+|---|---|
+| 감시 시작 | T+0, 8대 Traffic을 동일한 초기 상태로 재현 |
+| 충돌 시점 진행 | T+70, `CIV-A02 / MIL-F01` 미래 충돌과 HIGH 위험 표시 |
+| 대응 후보 생성 | T+75, CAND-A~E의 적용 전 안전성 비교와 추천 생성 |
+| 관제사 결정 | T+90, ACCEPT/MODIFY/REJECT와 판단 근거 Audit |
+| 승인 기동 적용 | 승인된 기동만 Runtime에 반영하고 CPA·위험도 재검증 |
+| Run Reset | 파생 상태를 제거하고 깨끗한 `READY` Session 재생성 |
+
 ## 테스트 및 정적 검사
 
 ```powershell
@@ -155,28 +192,41 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
+최종 `main` 통합 시점의 기준 결과는 Ruff 통과, `826 passed`다. 발표 전 점검과 병합 절차는
+[Golden Demo Release Readiness](docs/release_readiness.md)와
+[Final Release & Main Merge Checklist](docs/final_release.md)를 따른다.
+
 ## 현재 프로젝트 구조
 
 ```text
 .
 ├─ docs/
-│  ├─ assumptions.md
-│  ├─ data_model.md
-│  ├─ scenarios.md
-│  └─ simulation.md
+│  ├─ scenarios.md             # Golden Demo 계약
+│  ├─ assumptions.md           # PoC 가정과 비공식 임계값
+│  ├─ demo_runbook.md          # 발표 실행·복구 절차
+│  └─ final_release.md         # 최종 검증·병합 체크리스트
 ├─ src/
 │  └─ sentry_atm/
-│     ├─ domain/
-│     ├─ geo/
+│     ├─ domain/               # 항공기·충돌·위험·추천·결정 계약
+│     ├─ geo/                  # RKTU 좌표 및 거리 계산
+│     ├─ simulation/           # Clock과 Aircraft Runtime
+│     ├─ prediction/           # 4DT 예측과 Rolling Scheduler
+│     ├─ conflict/             # CPA/TCPA 및 충돌 탐지
+│     ├─ risk/                 # 위험도 평가
+│     ├─ priority/             # 작전 우선순위 평가
+│     ├─ exception_queue/      # 관제 예외 Queue Lifecycle
+│     ├─ resolution/           # 후보 생성과 격리 검증
+│     ├─ recommendation/       # 설명 가능한 후보 순위
+│     ├─ controller_decision/  # Human-in-the-loop 결정 Audit
+│     ├─ runtime/              # Golden Demo 조립과 Orchestrator
 │     ├─ infrastructure/
-│     ├─ simulation/
+│     │  ├─ http/              # WSGI API, Web UI, 자동 Demo 점검
+│     │  └─ persistence/       # SQLite Adapter
 │     └─ __init__.py
 ├─ tests/
-│  └─ unit/
-│     ├─ domain/
-│     ├─ geo/
-│     ├─ simulation/
-│     └─ test_package.py
+│  ├─ unit/
+│  └─ integration/
+├─ migrations/                # SQLite Schema Migration
 ├─ .gitattributes
 ├─ .gitignore
 ├─ AGENTS.md
@@ -184,7 +234,13 @@ python -m venv .venv
 └─ README.md
 ```
 
-디렉터리는 Phase별 최소 구현에 맞춰 필요한 시점에 추가한다. 빈 모듈을 미리 대량 생성하지 않는다.
+## 현재 범위와 제한
+
+- Golden Demo는 단일 사용자·단일 프로세스·메모리 내 Session을 전제로 한다.
+- 항적은 공개 자료를 참고한 Synthetic/Playback 데이터이며 실제 군 레이더 Feed가 아니다.
+- 예측 및 성능 Profile은 결정론적 PoC Baseline이며 공식 BADA 인증 모델이 아니다.
+- 충돌·위험·우선순위 임계값은 시연 가정이며 공식 관제 기준이 아니다.
+- 인증, 외부 공개 Bind, 다중 사용자 동시성, 장기 Audit 저장은 현재 범위에 포함하지 않는다.
 
 ## 개발 원칙
 
