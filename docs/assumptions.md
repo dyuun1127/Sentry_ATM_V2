@@ -433,6 +433,9 @@
   `127.0.0.1:8000`에만 Bind한다. CLI는 Port만 변경할 수 있고 외부 Interface Bind는 허용하지 않는다.
 - Web UI: Phase 14-A는 별도 Frontend Build Tool 없이 동일 Origin의 정적 HTML/CSS/JavaScript를
   제공한다. UI는 Session GET 결과만 읽으며 Command 실행과 Runtime 변경 기능은 포함하지 않는다.
+- UI Command: Phase 14-B는 Session Stage별 다음 고정 Command 하나만 Primary Action으로 노출한다.
+  사용자가 Click한 경우에만 POST하고 요청 중 모든 Control을 잠근다. `RESET`은 READY를 제외한 Stage의
+  보조 Action 및 CONFLICT_RESOLVED의 Primary Action으로 제공한다.
 - 검증: 모든 단계의 JSON 직렬화, Reset 격리 및 동일 실행 결정론 테스트
 
 ## 5. Phase별 확정 시점

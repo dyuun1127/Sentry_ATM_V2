@@ -46,6 +46,7 @@
         <div class="mission-status">
           <span class="status-label">SESSION STATE</span>
           <strong class="stage-badge" data-session-stage>READY</strong>
+          <button class="reset-button" type="button" data-reset-command hidden>RESET RUN</button>
           <button class="icon-button" type="button" data-refresh aria-label="세션 새로고침">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" />
@@ -178,10 +179,31 @@
               <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" /></svg>
             </span>
           </header>
-          <div class="decision-empty">
+          <div class="decision-empty" data-decision-empty>
             <span class="decision-code">AWAITING PREDICTION CYCLE</span>
             <strong>추천 후보는 아직 생성되지 않았습니다.</strong>
             <p>시뮬레이션 진행 후 충돌 탐지와 안전성 검증 결과가 이 영역에 표시됩니다.</p>
+          </div>
+          <div class="decision-card" data-decision-card hidden>
+            <div class="decision-card-topline">
+              <span data-decision-status>VALIDATED SAFE</span>
+              <span data-decision-rank>RANK 01</span>
+            </div>
+            <div class="maneuver-summary">
+              <span data-decision-target>MIL-F01</span>
+              <strong data-decision-maneuver>ALTITUDE 9,000 FT</strong>
+            </div>
+            <dl class="safety-evidence">
+              <div><dt>VERDICT</dt><dd data-safety-verdict>SAFE</dd></div>
+              <div><dt>HORIZONTAL</dt><dd data-safety-horizontal>2.30 NM</dd></div>
+              <div><dt>VERTICAL</dt><dd data-safety-vertical>1,792 FT</dd></div>
+              <div><dt>DECISION</dt><dd data-decision-audit>PENDING</dd></div>
+            </dl>
+            <p class="decision-explanation" data-decision-explanation></p>
+            <div class="revalidation-result" data-revalidation hidden>
+              <span>POST-ACTION REVALIDATION</span>
+              <strong data-revalidation-result>RESOLVED</strong>
+            </div>
           </div>
           <div class="authority-note">
             <span>AUTHORITY</span>
@@ -204,9 +226,11 @@
           <li data-stage-key="CONFLICT_RESOLVED"><span>05</span><div><strong>Resolved</strong><small>T+90</small></div></li>
         </ol>
         <div class="timeline-action">
-          <span>NEXT ACTION</span>
-          <strong>COMMAND CONTROL</strong>
-          <small>Phase 14-B에서 활성화</small>
+          <span>NEXT AUTHORIZED ACTION</span>
+          <button class="command-button" type="button" data-primary-command>
+            <small data-command-code>START · T+00</small>
+            <strong data-command-label>감시 시작</strong>
+          </button>
         </div>
       </section>
     </main>

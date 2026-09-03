@@ -151,4 +151,5 @@ Source의 Read/Command를 최소 WSGI HTTP Adapter로 노출하고 Factory가 HT
 Phase 13-D는 매 실행마다 새 Session Runtime을 만들고 HTTP App을 IPv4 Loopback Port에 Bind한다.
 서버는 Domain이나 Orchestrator를 직접 조립하지 않으며 종료 시 Listening Socket을 닫는다. Phase
 14-A의 `GoldenDemoWebWsgiApp`은 정적 UI Route만 소유하고 나머지 Route를 동일 Session HTTP App에
-위임한다. 다음 Phase 14-B는 고정 Command를 화면 Control과 연결한다.
+위임한다. Phase 14-B는 브라우저가 현재 Session Stage에서 허용된 고정 Command만 POST하게 하고 응답
+Session 전체를 다시 투영한다. Command 순서 검증과 실제 상태 변경 권한은 계속 backend에 있다.

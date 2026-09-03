@@ -27,9 +27,23 @@ Frontend Framework 또는 CDN 없이 Python Package에 포함된 HTML/CSS/JavaSc
 - READY부터 CONFLICT_RESOLVED까지 Deterministic Timeline
 - Session ID와 비운영 PoC 고지
 
-JavaScript는 `GET /api/v1/golden-demo/session`만 호출한다. Aircraft Marker와 표를 DOM API와
-`textContent`로 생성하며 API 문자열을 HTML로 삽입하지 않는다. 새로고침 버튼도 같은 Read API만 다시
-호출한다.
+Phase 14-A의 JavaScript는 `GET /api/v1/golden-demo/session`으로 초기 상태를 읽는다. Aircraft Marker와
+표를 DOM API와 `textContent`로 생성하며 API 문자열을 HTML로 삽입하지 않는다.
+
+Phase 14-B는 Session Stage를 backend의 고정 Command와 일대일로 연결한다.
+
+| 현재 Stage | Primary Command |
+|---|---|
+| `READY` | `START` |
+| `MONITORING` | `ADVANCE_TO_CONFLICT` |
+| `CONFLICT_DETECTED` | `GENERATE_RECOMMENDATION` |
+| `RECOMMENDATION_AVAILABLE` | `ACCEPT_RECOMMENDATION` |
+| `DECISION_ACCEPTED` | `APPLY_APPROVED_MANEUVER` |
+| `CONFLICT_RESOLVED` | `RESET` |
+
+요청 중에는 새로고침·Primary·Reset Control을 모두 잠근다. 성공 응답은 Traffic, Queue,
+Recommendation, Decision과 Revalidation Panel 전체에 즉시 투영한다. 409 응답 시 최신 Session을 다시
+조회해 화면과 backend를 동기화한다.
 
 ## 4. 보안·접근성 경계
 
@@ -42,10 +56,11 @@ JavaScript는 `GET /api/v1/golden-demo/session`만 호출한다. Aircraft Marker
 ## 5. 현재 제한사항
 
 - 지도는 실제 항법 Chart가 아닌 RKTU ARP 중심 PoC Local Coordinate View다.
-- Command Button, 단계 진행, 추천 상세와 승인 Control은 아직 연결하지 않는다.
+- Modify/Reject 및 Recommendation 선택 UI는 아직 제공하지 않는다. Golden Demo Primary 후보의 고정
+  Accept 흐름만 사용한다.
 - UI는 Process-local 단일 Session만 읽고 Browser 상태를 영속화하지 않는다.
 
 ## 6. 다음 단계
 
-Phase 14-B는 backend가 허용한 다음 고정 Command만 활성화하고, 요청 중 중복 입력 방지·409 오류 표시·
-단계별 Exception/Recommendation/Decision Panel 갱신을 구현한다.
+다음 단계는 Golden Demo 전 구간의 화면 전환을 재검증하고 Conflict Risk, 추천 근거, 적용 전후 결과를
+심사자가 더 빠르게 비교할 수 있도록 설명 가능성 시각화를 보강한다.

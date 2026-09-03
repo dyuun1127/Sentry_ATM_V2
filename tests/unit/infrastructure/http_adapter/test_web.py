@@ -53,6 +53,9 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b'<html lang="ko">' in body
     assert b"SENTRY ATM" in body
     assert b"data-aircraft-layer" in body
+    assert b"data-primary-command" in body
+    assert b"data-reset-command" in body
+    assert b"data-decision-card" in body
     assert b"/assets/app.css" in body
     assert app.api_app is runtime.http_app
 
@@ -65,7 +68,7 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
         (
             "/assets/app.js",
             "text/javascript; charset=utf-8",
-            b"/api/v1/golden-demo/session",
+            b"/api/v1/golden-demo/session/commands",
         ),
     ],
 )
@@ -81,6 +84,24 @@ def test_static_assets_have_exact_content_types(
     assert status == 200
     assert headers["Content-Type"] == content_type
     assert content in body
+
+
+def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> None:
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+
+    for command in (
+        b'command: "START"',
+        b'command: "ADVANCE_TO_CONFLICT"',
+        b'command: "GENERATE_RECOMMENDATION"',
+        b'command: "ACCEPT_RECOMMENDATION"',
+        b'command: "APPLY_APPROVED_MANEUVER"',
+        b'command: "RESET"',
+    ):
+        assert command in script
+    assert b"if (requestBusy || !command)" in script
+    assert b"error.status === 409" in script
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:

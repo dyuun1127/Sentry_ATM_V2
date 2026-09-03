@@ -113,4 +113,6 @@ Runtime Dependency가 없다. `Ctrl+C`로 종료하면 Listening Socket을 닫�
 
 ## 9. 다음 단계
 
-Phase 14-B는 현재 Read-only UI에 고정 Session Command Control과 단계별 화면 상태를 연결한다.
+Phase 14-B는 UI의 Stage별 Primary Action을 기존 Command Endpoint와 연결한다. 중복 요청을 막고 409가
+발생하면 최신 Session을 다시 조회한다. 다음 단계에서는 관제사 선택을 확장하기 전에 Golden Demo
+화면의 단계 전환과 설명 가능성 시각화를 보강한다.
