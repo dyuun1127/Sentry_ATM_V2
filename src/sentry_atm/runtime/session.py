@@ -374,7 +374,11 @@ def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
         modified_application,
         read_api,
     )
-    http_app = GoldenDemoSessionWsgiApp(read_api, command_service)
+    http_app = GoldenDemoSessionWsgiApp(
+        read_api,
+        command_service,
+        runtime.playback_api,
+    )
     return GoldenDemoSessionRuntime(
         runtime=runtime,
         step_orchestrator=steps,

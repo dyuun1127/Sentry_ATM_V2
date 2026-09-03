@@ -1,11 +1,20 @@
 """Transport-neutral contract for the animated Golden Demo timeline."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from math import isfinite
+from typing import Protocol, runtime_checkable
 
+from sentry_atm.domain import AircraftState
+from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
-from sentry_atm.scenario import GOLDEN_DEMO_SCENARIO_ID
+from sentry_atm.scenario import (
+    GOLDEN_DEMO_SCENARIO_ID,
+    ScenarioDefinition,
+    build_golden_demo_scenario,
+    build_scenario_simulation,
+)
 
 
 class GoldenDemoPlaybackCueType(StrEnum):
@@ -205,6 +214,216 @@ def build_golden_demo_playback_contract() -> GoldenDemoPlaybackContract:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class GoldenDemoPlaybackAircraftFrame:
+    """One browser-ready Aircraft state at an authoritative simulation second."""
+
+    aircraft_id: str
+    category: str
+    x_nm: float
+    y_nm: float
+    altitude_ft: float
+    ground_speed_kt: float
+    heading_deg: float
+    vertical_speed_fpm: float
+    flight_phase: str
+    emergency_status: str
+    emergency_type: str | None
+
+    @classmethod
+    def from_state(cls, state: AircraftState, *, category: str):
+        if not isinstance(state, AircraftState):
+            raise TypeError("state must be an AircraftState")
+        if not isinstance(category, str) or not category.strip():
+            raise ValueError("category must be a non-empty string")
+        return cls(
+            aircraft_id=state.aircraft_id,
+            category=category.strip(),
+            x_nm=state.x_nm,
+            y_nm=state.y_nm,
+            altitude_ft=state.altitude_ft,
+            ground_speed_kt=state.ground_speed_kt,
+            heading_deg=state.heading_deg,
+            vertical_speed_fpm=state.vertical_speed_fpm,
+            flight_phase=state.flight_phase.value,
+            emergency_status=state.emergency_status.value,
+            emergency_type=state.emergency_type.value if state.emergency_type is not None else None,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "aircraft_id": self.aircraft_id,
+            "category": self.category,
+            "x_nm": self.x_nm,
+            "y_nm": self.y_nm,
+            "altitude_ft": self.altitude_ft,
+            "ground_speed_kt": self.ground_speed_kt,
+            "heading_deg": self.heading_deg,
+            "vertical_speed_fpm": self.vertical_speed_fpm,
+            "flight_phase": self.flight_phase,
+            "emergency_status": self.emergency_status,
+            "emergency_type": self.emergency_type,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class GoldenDemoPlaybackFrame:
+    """All ordered Aircraft states rendered at one simulation offset."""
+
+    sequence_index: int
+    offset_seconds: float
+    timestamp_utc: datetime
+    aircraft: tuple[GoldenDemoPlaybackAircraftFrame, ...]
+    cue_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if type(self.sequence_index) is not int or self.sequence_index < 0:
+            raise ValueError("sequence_index must be a non-negative integer")
+        offset = _non_negative_number(self.offset_seconds, field_name="offset_seconds")
+        object.__setattr__(self, "offset_seconds", offset)
+        object.__setattr__(
+            self,
+            "timestamp_utc",
+            to_utc(self.timestamp_utc, field_name="timestamp_utc"),
+        )
+        aircraft = tuple(self.aircraft)
+        if not aircraft or not all(
+            isinstance(item, GoldenDemoPlaybackAircraftFrame) for item in aircraft
+        ):
+            raise TypeError("aircraft must contain playback Aircraft frames")
+        aircraft_ids = tuple(item.aircraft_id for item in aircraft)
+        if len(set(aircraft_ids)) != len(aircraft_ids):
+            raise ValueError("playback frame Aircraft IDs must be unique")
+        object.__setattr__(self, "aircraft", aircraft)
+        cue_ids = tuple(
+            require_identifier(cue_id, field_name="cue_id") for cue_id in self.cue_ids
+        )
+        if len(set(cue_ids)) != len(cue_ids):
+            raise ValueError("playback frame cue IDs must be unique")
+        object.__setattr__(self, "cue_ids", cue_ids)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "sequence_index": self.sequence_index,
+            "offset_seconds": self.offset_seconds,
+            "timestamp_utc": _utc_text(self.timestamp_utc),
+            "aircraft": [item.to_dict() for item in self.aircraft],
+            "cue_ids": list(self.cue_ids),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class GoldenDemoPlaybackReadModel:
+    """Self-contained immutable manifest fetched once by the animated UI."""
+
+    contract: GoldenDemoPlaybackContract
+    frames: tuple[GoldenDemoPlaybackFrame, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.contract, GoldenDemoPlaybackContract):
+            raise TypeError("contract must be a GoldenDemoPlaybackContract")
+        frames = tuple(self.frames)
+        if not frames or not all(isinstance(frame, GoldenDemoPlaybackFrame) for frame in frames):
+            raise TypeError("frames must contain GoldenDemoPlaybackFrame instances")
+        expected_indices = tuple(range(len(frames)))
+        if tuple(frame.sequence_index for frame in frames) != expected_indices:
+            raise ValueError("playback frame sequence indices must be contiguous from zero")
+        expected_offsets = tuple(
+            index * self.contract.frame_interval_seconds for index in expected_indices
+        )
+        if tuple(frame.offset_seconds for frame in frames) != expected_offsets:
+            raise ValueError("playback frame offsets must match the configured interval")
+        if frames[-1].offset_seconds != self.contract.duration_seconds:
+            raise ValueError("playback frames must include the configured duration endpoint")
+        object.__setattr__(self, "frames", frames)
+
+    @property
+    def frame_count(self) -> int:
+        return len(self.frames)
+
+    @property
+    def aircraft_count(self) -> int:
+        return len(self.frames[0].aircraft)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "contract": self.contract.to_dict(),
+            "frame_count": self.frame_count,
+            "aircraft_count": self.aircraft_count,
+            "frames": [frame.to_dict() for frame in self.frames],
+        }
+
+
+@runtime_checkable
+class GoldenDemoPlaybackApiContract(Protocol):
+    """Synchronous read-only animated playback boundary."""
+
+    def get_playback(self) -> GoldenDemoPlaybackReadModel: ...
+
+
+class InProcessGoldenDemoPlaybackApi:
+    """Generate playback on an isolated Simulation and return one cached manifest."""
+
+    __slots__ = ("_read_model",)
+
+    def __init__(
+        self,
+        definition: ScenarioDefinition | None = None,
+        contract: GoldenDemoPlaybackContract | None = None,
+    ) -> None:
+        resolved_definition = definition or build_golden_demo_scenario()
+        resolved_contract = contract or build_golden_demo_playback_contract()
+        if not isinstance(resolved_definition, ScenarioDefinition):
+            raise TypeError("definition must be a ScenarioDefinition")
+        if not isinstance(resolved_contract, GoldenDemoPlaybackContract):
+            raise TypeError("contract must be a GoldenDemoPlaybackContract")
+        if resolved_definition.scenario_id != resolved_contract.scenario_id:
+            raise ValueError("definition and playback contract scenario IDs must match")
+        if resolved_contract.frame_interval_seconds != 1.0:
+            raise ValueError("Phase 17-B supports exactly one-second Simulation frames")
+        self._read_model = _generate_playback(resolved_definition, resolved_contract)
+
+    def get_playback(self) -> GoldenDemoPlaybackReadModel:
+        return self._read_model
+
+
+def _generate_playback(
+    definition: ScenarioDefinition,
+    contract: GoldenDemoPlaybackContract,
+) -> GoldenDemoPlaybackReadModel:
+    simulation = build_scenario_simulation(definition)
+    categories = {item.aircraft_id: item.metadata.category.value for item in definition.aircraft}
+    cues_by_offset: dict[float, list[str]] = {}
+    for cue in contract.cues:
+        cues_by_offset.setdefault(cue.offset_seconds, []).append(cue.cue_id)
+
+    total_steps = int(contract.duration_seconds / contract.frame_interval_seconds)
+    frames: list[GoldenDemoPlaybackFrame] = []
+    for sequence_index in range(total_steps + 1):
+        if sequence_index == 0:
+            snapshot = simulation.engine.snapshot()
+            simulation.clock.play()
+        else:
+            snapshot = simulation.engine.tick()
+        offset_seconds = sequence_index * contract.frame_interval_seconds
+        frames.append(
+            GoldenDemoPlaybackFrame(
+                sequence_index=sequence_index,
+                offset_seconds=offset_seconds,
+                timestamp_utc=snapshot.timestamp_utc,
+                aircraft=tuple(
+                    GoldenDemoPlaybackAircraftFrame.from_state(
+                        state,
+                        category=categories[state.aircraft_id],
+                    )
+                    for state in snapshot.states
+                ),
+                cue_ids=tuple(cues_by_offset.get(offset_seconds, ())),
+            )
+        )
+    return GoldenDemoPlaybackReadModel(contract=contract, frames=tuple(frames))
+
+
 def _positive_number(value: float, *, field_name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError(f"{field_name} must be a finite positive number")
@@ -212,3 +431,16 @@ def _positive_number(value: float, *, field_name: str) -> float:
     if not isfinite(result) or result <= 0.0:
         raise ValueError(f"{field_name} must be a finite positive number")
     return result
+
+
+def _non_negative_number(value: float, *, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be a finite non-negative number")
+    result = float(value)
+    if not isfinite(result) or result < 0.0:
+        raise ValueError(f"{field_name} must be a finite non-negative number")
+    return result
+
+
+def _utc_text(value: datetime) -> str:
+    return to_utc(value).isoformat(timespec="microseconds").replace("+00:00", "Z")

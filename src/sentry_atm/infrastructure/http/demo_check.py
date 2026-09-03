@@ -14,6 +14,7 @@ from sentry_atm.infrastructure.http.server import (
 
 _SESSION_PATH = "/api/v1/golden-demo/session"
 _COMMAND_PATH = "/api/v1/golden-demo/session/commands"
+_PLAYBACK_PATH = "/api/v1/golden-demo/playback"
 
 
 class GoldenDemoRegressionFailure(RuntimeError):
@@ -68,10 +69,33 @@ def run_golden_demo_regression(
     try:
         checkpoints: list[GoldenDemoRegressionCheckpoint] = []
         _verify_ui_assets(connection)
+        playback = _get_json(connection, _PLAYBACK_PATH)
+        _require(playback.get("frame_count") == 301, "playback must contain 301 frames")
+        _require(playback.get("aircraft_count") == 8, "playback must contain 8 aircraft")
+        playback_contract = _mapping(playback, "contract")
+        _require(
+            playback_contract.get("duration_seconds") == 300.0,
+            "playback duration must be 300 seconds",
+        )
+        playback_frames = playback.get("frames")
+        _require(
+            isinstance(playback_frames, list) and len(playback_frames) == 301,
+            "playback frame payload must be complete",
+        )
+        _require(
+            playback_frames[70].get("cue_ids") == ["CUE-T070-CONFLICT"],
+            "playback T+70 conflict cue is required",
+        )
         ready = _get_json(connection, _SESSION_PATH)
         _require_session(ready, expected_stage="READY", expected_elapsed=0.0)
         initial_session_id = _text(ready, "session_id")
-        checkpoints.append(_checkpoint("UI_READY", ready, "UI shell and assets available"))
+        checkpoints.append(
+            _checkpoint(
+                "UI_READY",
+                ready,
+                "UI shell, assets and 301 playback frames available",
+            )
+        )
 
         monitoring = _post_command(connection, "START")
         _require_session(monitoring, expected_stage="MONITORING", expected_elapsed=0.0)

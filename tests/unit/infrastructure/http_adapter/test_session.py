@@ -9,6 +9,7 @@ from sentry_atm.runtime import build_golden_demo_session_runtime
 
 _SESSION_PATH = "/api/v1/golden-demo/session"
 _COMMAND_PATH = "/api/v1/golden-demo/session/commands"
+_PLAYBACK_PATH = "/api/v1/golden-demo/playback"
 
 
 def _request(
@@ -88,6 +89,26 @@ def test_get_returns_deterministic_ready_session_json() -> None:
     assert payload["recommendation"] is None
     assert payload["deviation"] is None
     assert payload["candidate_comparisons"] == []
+
+
+def test_get_playback_returns_deterministic_cached_frame_manifest() -> None:
+    session = build_golden_demo_session_runtime()
+    active_before = session.runtime.simulation.engine.snapshot()
+
+    status, headers, body = _request(session.http_app, path=_PLAYBACK_PATH)
+    repeated = _request(session.http_app, path=_PLAYBACK_PATH)[2]
+    payload = json.loads(body)
+
+    assert status == 200
+    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["Cache-Control"] == "no-store"
+    assert body == repeated
+    assert payload["frame_count"] == 301
+    assert payload["aircraft_count"] == 8
+    assert payload["contract"]["duration_seconds"] == 300.0
+    assert payload["frames"][70]["cue_ids"] == ["CUE-T070-CONFLICT"]
+    assert session.runtime.simulation.engine.snapshot() == active_before
+    assert session.read_api.get_current().stage is GoldenDemoSessionStage.READY
 
 
 def test_post_commands_run_full_session_and_get_returns_latest_state() -> None:
@@ -344,6 +365,7 @@ def test_invalid_modify_payload_returns_422_without_advancing(fields: dict[str, 
         ("GET", "/missing", 404, "ROUTE_NOT_FOUND", None),
         ("POST", _SESSION_PATH, 405, "METHOD_NOT_ALLOWED", "GET"),
         ("GET", _COMMAND_PATH, 405, "METHOD_NOT_ALLOWED", "POST"),
+        ("POST", _PLAYBACK_PATH, 405, "METHOD_NOT_ALLOWED", "GET"),
     ],
 )
 def test_route_and_method_errors_are_explicit(
@@ -365,7 +387,7 @@ def test_route_and_method_errors_are_explicit(
 
 @pytest.mark.parametrize(
     ("method", "path"),
-    [("GET", _SESSION_PATH), ("POST", _COMMAND_PATH)],
+    [("GET", _SESSION_PATH), ("POST", _COMMAND_PATH), ("GET", _PLAYBACK_PATH)],
 )
 def test_query_parameters_are_rejected(method: str, path: str) -> None:
     app = build_golden_demo_session_runtime().http_app
@@ -460,11 +482,23 @@ def test_adapter_validates_dependencies_and_wsgi_environment() -> None:
     first = build_golden_demo_session_runtime()
     second = build_golden_demo_session_runtime()
     with pytest.raises(TypeError, match="GoldenDemoSessionApiContract"):
-        GoldenDemoSessionWsgiApp(object(), first.command_service)  # type: ignore[arg-type]
+        GoldenDemoSessionWsgiApp(  # type: ignore[arg-type]
+            object(), first.command_service, first.runtime.playback_api
+        )
     with pytest.raises(TypeError, match="GoldenDemoSessionCommandApiContract"):
-        GoldenDemoSessionWsgiApp(first.read_api, object())  # type: ignore[arg-type]
+        GoldenDemoSessionWsgiApp(  # type: ignore[arg-type]
+            first.read_api, object(), first.runtime.playback_api
+        )
+    with pytest.raises(TypeError, match="GoldenDemoPlaybackApiContract"):
+        GoldenDemoSessionWsgiApp(  # type: ignore[arg-type]
+            first.read_api, first.command_service, object()
+        )
     with pytest.raises(ValueError, match="share one Session source"):
-        GoldenDemoSessionWsgiApp(first.read_api, second.command_service)
+        GoldenDemoSessionWsgiApp(
+            first.read_api,
+            second.command_service,
+            first.runtime.playback_api,
+        )
 
     status, _, body = _request(first.http_app, method=object())
     assert status == 400

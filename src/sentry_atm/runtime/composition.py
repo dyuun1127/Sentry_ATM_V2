@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from sentry_atm.api import (
     InProcessControllerDecisionApi,
     InProcessExceptionQueueApi,
+    InProcessGoldenDemoPlaybackApi,
     InProcessRecommendationApi,
 )
 from sentry_atm.conflict import (
@@ -114,6 +115,7 @@ class GoldenDemoRuntime:
     exception_queue_api: InProcessExceptionQueueApi
     recommendation_api: InProcessRecommendationApi
     controller_decision_api: InProcessControllerDecisionApi
+    playback_api: InProcessGoldenDemoPlaybackApi
     exception_queue_http_app: ExceptionQueueWsgiApp
     recommendation_http_app: RecommendationWsgiApp
     controller_decision_http_app: ControllerDecisionWsgiApp
@@ -152,6 +154,7 @@ def build_golden_demo_runtime() -> GoldenDemoRuntime:
         controller_decision_service,
         recommendation_catalog,
     )
+    playback_api = InProcessGoldenDemoPlaybackApi(definition)
 
     return GoldenDemoRuntime(
         simulation=simulation,
@@ -169,6 +172,7 @@ def build_golden_demo_runtime() -> GoldenDemoRuntime:
         exception_queue_api=exception_queue_api,
         recommendation_api=recommendation_api,
         controller_decision_api=controller_decision_api,
+        playback_api=playback_api,
         exception_queue_http_app=ExceptionQueueWsgiApp(exception_queue_api),
         recommendation_http_app=RecommendationWsgiApp(recommendation_api),
         controller_decision_http_app=ControllerDecisionWsgiApp(controller_decision_api),

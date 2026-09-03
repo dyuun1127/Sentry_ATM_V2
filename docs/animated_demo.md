@@ -57,9 +57,23 @@ JSON-ready 구조로 제공한다.
 ## 6. Phase 경계
 
 - Phase 17-A: Playback Contract와 Storyboard — 현재 단계
-- Phase 17-B: 결정론적 1초 Aircraft Frame 생성 및 Read API
+- Phase 17-B: 결정론적 1초 Aircraft Frame 생성 및 Read API — 구현 완료
 - Phase 17-C: Radar Marker/Trail의 연속 브라우저 애니메이션
 - Phase 17-D: PLAY/PAUSE, 배속, Timeline, 자동 일시정지 제어
 
 Phase 17-A 완료만으로 현재 Dashboard가 움직이지는 않는다. 애니메이션이 사용자에게 보이는 완료
 시점은 Phase 17-C이며 전체 조작 계약 완료 시점은 Phase 17-D다.
+
+## 7. Playback Read API
+
+Phase 17-B는 활성 Session과 분리된 Simulation 복사본에서 T+0부터 T+300까지 양 끝을 포함한
+301개 Frame을 생성한다. 각 Frame은 순서 인덱스, 경과시간, UTC 시각, Cue ID와 8대 항공기의
+위치·고도·속도·침로·비행단계·비상 상태를 포함한다.
+
+```http
+GET /api/v1/golden-demo/playback
+```
+
+응답은 `contract`, `frame_count`, `aircraft_count`, `frames`를 포함하며 동일 프로세스에서는 생성된
+불변 Read Model을 재사용한다. Playback 조회는 활성 Session의 Clock, Traffic, Decision 또는 Audit을
+변경하지 않는다. 브라우저는 Phase 17-C에서 이 1초 Frame 사이의 화면 좌표만 보간한다.

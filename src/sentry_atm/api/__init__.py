@@ -21,9 +21,14 @@ from sentry_atm.api.exception_queue import (
     OperationalPriorityExceptionReadModel,
 )
 from sentry_atm.api.playback import (
+    GoldenDemoPlaybackAircraftFrame,
+    GoldenDemoPlaybackApiContract,
     GoldenDemoPlaybackContract,
     GoldenDemoPlaybackCue,
     GoldenDemoPlaybackCueType,
+    GoldenDemoPlaybackFrame,
+    GoldenDemoPlaybackReadModel,
+    InProcessGoldenDemoPlaybackApi,
     build_golden_demo_playback_contract,
 )
 from sentry_atm.api.recommendation import (
@@ -71,9 +76,13 @@ __all__ = [
     "GoldenDemoConflictEvidenceReadModel",
     "GoldenDemoDeviationReadModel",
     "GoldenDemoModifiedRevalidationReadModel",
+    "GoldenDemoPlaybackAircraftFrame",
+    "GoldenDemoPlaybackApiContract",
     "GoldenDemoPlaybackContract",
     "GoldenDemoPlaybackCue",
     "GoldenDemoPlaybackCueType",
+    "GoldenDemoPlaybackFrame",
+    "GoldenDemoPlaybackReadModel",
     "GoldenDemoRevalidationReadModel",
     "GoldenDemoSessionApiContract",
     "GoldenDemoSessionCommand",
@@ -82,6 +91,7 @@ __all__ = [
     "GoldenDemoSessionReadModel",
     "GoldenDemoSessionStage",
     "InProcessExceptionQueueApi",
+    "InProcessGoldenDemoPlaybackApi",
     "InProcessGoldenDemoSessionApi",
     "InProcessControllerDecisionApi",
     "InProcessRecommendationApi",

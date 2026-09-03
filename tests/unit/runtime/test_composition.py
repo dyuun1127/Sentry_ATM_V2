@@ -5,6 +5,7 @@ import pytest
 from sentry_atm.api import (
     ControllerDecisionApiContract,
     ExceptionQueueApiContract,
+    GoldenDemoPlaybackApiContract,
     RecommendationApiContract,
     RecommendationSetLookup,
     RecommendationSetSource,
@@ -132,6 +133,7 @@ def test_composition_connects_catalog_services_apis_and_http_adapters() -> None:
     assert isinstance(runtime.exception_queue_api, ExceptionQueueApiContract)
     assert isinstance(runtime.recommendation_api, RecommendationApiContract)
     assert isinstance(runtime.controller_decision_api, ControllerDecisionApiContract)
+    assert isinstance(runtime.playback_api, GoldenDemoPlaybackApiContract)
     assert isinstance(runtime.exception_queue_http_app, ExceptionQueueWsgiApp)
     assert isinstance(runtime.recommendation_http_app, RecommendationWsgiApp)
     assert isinstance(runtime.controller_decision_http_app, ControllerDecisionWsgiApp)
@@ -150,6 +152,11 @@ def test_build_does_not_start_clock_or_calculate_or_mutate_initial_traffic() -> 
     assert runtime.exception_queue_service.last_snapshot is None
     assert runtime.controller_decision_service.last_audit_log is None
     assert runtime.recommendation_catalog.recommendation_sets == ()
+
+    before_playback_read = runtime.simulation.engine.snapshot()
+    assert runtime.playback_api.get_playback().frame_count == 301
+    assert runtime.simulation.engine.snapshot() == before_playback_read
+    assert runtime.simulation.clock.state is ClockState.READY
 
 
 def test_repeated_builds_are_equal_at_boundary_but_have_independent_state() -> None:

@@ -6,6 +6,7 @@ from http import HTTPStatus
 
 from sentry_atm.api import (
     ControllerDecisionManeuverModel,
+    GoldenDemoPlaybackApiContract,
     GoldenDemoSessionApiContract,
     GoldenDemoSessionCommand,
     GoldenDemoSessionCommandApiContract,
@@ -18,6 +19,7 @@ type WsgiResponse = Iterable[bytes]
 
 _SESSION_PATH = "/api/v1/golden-demo/session"
 _COMMAND_PATH = "/api/v1/golden-demo/session/commands"
+_PLAYBACK_PATH = "/api/v1/golden-demo/playback"
 _MAX_REQUEST_BODY_BYTES = 16_384
 _MANEUVER_FIELDS = {
     "maneuver_type",
@@ -32,12 +34,13 @@ _MANEUVER_FIELDS = {
 class GoldenDemoSessionWsgiApp:
     """Expose current Session state and fixed checkpoint Commands through WSGI."""
 
-    __slots__ = ("_command_api", "_read_api")
+    __slots__ = ("_command_api", "_playback_api", "_read_api")
 
     def __init__(
         self,
         read_api: GoldenDemoSessionApiContract,
         command_api: GoldenDemoSessionCommandApiContract,
+        playback_api: GoldenDemoPlaybackApiContract,
     ) -> None:
         if not isinstance(read_api, GoldenDemoSessionApiContract):
             raise TypeError("read_api must implement GoldenDemoSessionApiContract")
@@ -45,8 +48,11 @@ class GoldenDemoSessionWsgiApp:
             raise TypeError("command_api must implement GoldenDemoSessionCommandApiContract")
         if command_api.read_api is not read_api:
             raise ValueError("read_api and command_api must share one Session source")
+        if not isinstance(playback_api, GoldenDemoPlaybackApiContract):
+            raise TypeError("playback_api must implement GoldenDemoPlaybackApiContract")
         self._read_api = read_api
         self._command_api = command_api
+        self._playback_api = playback_api
 
     def __call__(
         self,
@@ -74,6 +80,15 @@ class GoldenDemoSessionWsgiApp:
                         headers=(("Allow", "POST"),),
                     )
                 return self._execute(environ, start_response)
+            if path == _PLAYBACK_PATH:
+                if method != "GET":
+                    raise _HttpError(
+                        HTTPStatus.METHOD_NOT_ALLOWED,
+                        "METHOD_NOT_ALLOWED",
+                        "use GET",
+                        headers=(("Allow", "GET"),),
+                    )
+                return self._get_playback(environ, start_response)
             raise _HttpError(HTTPStatus.NOT_FOUND, "ROUTE_NOT_FOUND", "route not found")
         except _HttpError as error:
             return _json_response(
@@ -139,6 +154,18 @@ class GoldenDemoSessionWsgiApp:
                 str(error),
             ) from None
         return _json_response(start_response, HTTPStatus.OK, current.to_dict())
+
+    def _get_playback(
+        self,
+        environ: dict[str, object],
+        start_response: StartResponse,
+    ) -> WsgiResponse:
+        _reject_query(environ)
+        return _json_response(
+            start_response,
+            HTTPStatus.OK,
+            self._playback_api.get_playback().to_dict(),
+        )
 
 
 def _parse_command_inputs(

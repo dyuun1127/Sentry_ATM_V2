@@ -89,6 +89,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 16-A: Demo Release Preflight 구현 완료
 - Phase 16-B: Release Documentation & Main Merge Readiness 구현 완료
 - Phase 17-A: Animated Demo Playback Contract & Storyboard 구현 완료
+- Phase 17-B: Deterministic Aircraft Frames & Playback Read API 구현 완료
 
 ## 핵심 문서
 
