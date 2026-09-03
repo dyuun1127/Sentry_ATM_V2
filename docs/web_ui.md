@@ -54,6 +54,18 @@ Reason Code를 함께 제시한다. Tactical View에서는 해당 두 항공기�
 증거와 나란히 표시한다. 따라서 후보 검증을 실제 적용 결과처럼 표현하지 않으며, Human-in-the-loop
 경계를 유지한다.
 
+Phase 15-A는 T+60 이후 Planned-vs-Actual Entry Conformance Panel을 표시한다. 예상 Entry Point,
+고도·침로와 실제 값, 수평·수직·시간 편차를 같이 보여 편차가 미래 충돌로 이어지는 흐름을 설명한다.
+Resolution 이후에는 CAND-A~E 전체를 한 표에 표시하며 다음 결과를 구분한다.
+
+- `CAND-A`: 원 충돌 해소, `SAFE`, 추천 후보
+- `CAND-B`: 원 충돌은 해소하지만 `MIL-F02`와 2차 충돌, `UNSAFE`
+- `CAND-C`: 원 충돌 미해소, `INEFFECTIVE`
+- `CAND-D`: 원 충돌 미해소 및 최저고도 Rule 위반, `UNSAFE`
+- `CAND-E`: No-action 원 충돌 지속, `UNSAFE`
+
+표는 Safety Validator의 결과를 표시할 뿐 후보를 선택하거나 Runtime에 적용하지 않는다.
+
 ## 4. 보안·접근성 경계
 
 - `default-src 'self'` 기반 Content Security Policy

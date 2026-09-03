@@ -86,6 +86,16 @@ def run_golden_demo_regression(
         )
         _require(conflict_evidence.get("status") == "PREDICTED", "conflict must be predicted")
         _require(conflict_evidence.get("risk_level") == "HIGH", "conflict risk must be HIGH")
+        deviation = _mapping(conflict, "deviation")
+        _require(deviation.get("aircraft_id") == "MIL-F01", "MIL-F01 deviation is required")
+        _require(
+            deviation.get("vertical_deviation_ft") == -1_600.0,
+            "entry vertical deviation must be -1,600 ft",
+        )
+        _require(
+            deviation.get("lateral_deviation_nm") == 2.1,
+            "entry lateral deviation must be 2.1 NM",
+        )
         checkpoints.append(
             _checkpoint(
                 "CONFLICT",
@@ -103,6 +113,26 @@ def run_golden_demo_regression(
         recommendation = _primary_recommendation(recommended)
         safety = _mapping(recommendation, "safety")
         _require(safety.get("verdict") == "SAFE", "primary candidate must be SAFE")
+        comparisons = tuple(
+            _mapping_value(item) for item in _list(recommended, "candidate_comparisons")
+        )
+        _require(
+            tuple(item.get("candidate_id") for item in comparisons)
+            == ("CAND-A", "CAND-B", "CAND-C", "CAND-D", "CAND-E"),
+            "candidate comparison must contain CAND-A through CAND-E",
+        )
+        verdict_by_id = {item["candidate_id"]: item.get("verdict") for item in comparisons}
+        _require(
+            verdict_by_id
+            == {
+                "CAND-A": "SAFE",
+                "CAND-B": "UNSAFE",
+                "CAND-C": "INEFFECTIVE",
+                "CAND-D": "UNSAFE",
+                "CAND-E": "UNSAFE",
+            },
+            "candidate verdict matrix does not match the Golden Demo contract",
+        )
         baseline_conflict_id = _text(_mapping(recommended, "primary_conflict"), "conflict_id")
         checkpoints.append(
             _checkpoint("RECOMMENDATION", recommended, "CAND-A | altitude 9,000 ft | SAFE")

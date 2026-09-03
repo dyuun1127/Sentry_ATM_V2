@@ -53,6 +53,8 @@ def test_ready_session_is_complete_json_ready_and_read_only() -> None:
     assert current.decision_step_id is None
     assert current.application_step_id is None
     assert current.primary_conflict is None
+    assert current.deviation is None
+    assert current.candidate_comparisons == ()
     assert current.exception_queue is None
     assert current.recommendation is None
     assert current.controller_decision is None
@@ -95,6 +97,18 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert conflict.primary_conflict.vertical_threshold_ft == 1_000.0
     assert conflict.primary_conflict.rule_profile_id == "POC_TERMINAL_V1"
     assert conflict.primary_conflict.risk_policy_profile_id == "POC_RISK_V1"
+    assert conflict.deviation is not None
+    assert conflict.deviation.aircraft_id == "MIL-F01"
+    assert conflict.deviation.expected_entry_point == "ENTRY-A"
+    assert conflict.deviation.expected_altitude_ft == 9_000.0
+    assert conflict.deviation.actual_altitude_ft == 7_400.0
+    assert conflict.deviation.vertical_deviation_ft == -1_600.0
+    assert conflict.deviation.expected_heading_deg == 210.0
+    assert conflict.deviation.actual_heading_deg == 180.0
+    assert conflict.deviation.heading_deviation_deg == -30.0
+    assert conflict.deviation.lateral_deviation_nm == 2.1
+    assert conflict.deviation.time_deviation_seconds == 25.0
+    assert conflict.candidate_comparisons == ()
     assert conflict.exception_queue is not None
     assert conflict.exception_queue.top_exception_id == ("EXCEPTION-CONFLICT-7-CIV-A02-7-MIL-F01")
     assert conflict.recommendation is None
@@ -107,6 +121,28 @@ def test_session_projects_each_completed_backend_stage() -> None:
     assert recommended.recommendation.availability == "AVAILABLE"
     assert recommended.primary_conflict is not None
     assert recommended.primary_conflict.conflict_id.endswith("CIV-A02-MIL-F01")
+    assert recommended.deviation == conflict.deviation
+    assert tuple(item.candidate_id for item in recommended.candidate_comparisons) == (
+        "CAND-A",
+        "CAND-B",
+        "CAND-C",
+        "CAND-D",
+        "CAND-E",
+    )
+    comparison_by_id = {
+        item.candidate_id: item for item in recommended.candidate_comparisons
+    }
+    assert comparison_by_id["CAND-A"].recommended
+    assert comparison_by_id["CAND-A"].verdict == "SAFE"
+    assert comparison_by_id["CAND-A"].target_altitude_ft == 9_000.0
+    assert comparison_by_id["CAND-B"].secondary_conflict_aircraft_ids == (
+        ("MIL-F01", "MIL-F02"),
+    )
+    assert comparison_by_id["CAND-C"].verdict == "INEFFECTIVE"
+    assert comparison_by_id["CAND-D"].rule_violation_ids == (
+        "POC-MINIMUM-CANDIDATE-ALTITUDE-V1",
+    )
+    assert comparison_by_id["CAND-E"].maneuver_type == "NO_ACTION"
     assert tuple(item.candidate_id for item in recommended.recommendation.recommendations) == (
         "CAND-A",
     )
@@ -150,6 +186,8 @@ def test_session_projects_each_completed_backend_stage() -> None:
         "CIV-A02",
         "MIL-F01",
     ]
+    assert payload["deviation"]["vertical_deviation_ft"] == -1_600.0  # type: ignore[index]
+    assert len(payload["candidate_comparisons"]) == 5  # type: ignore[arg-type]
     assert json.loads(json.dumps(payload))["controller_decision"]["revision"] == 1
     assert conflict_step.traffic_snapshot != application_result.traffic_snapshot
 
@@ -192,6 +230,8 @@ def test_reset_returns_a_new_empty_session_run_with_initial_traffic() -> None:
     assert current.recommendation is None
     assert current.controller_decision is None
     assert current.primary_conflict is None
+    assert current.deviation is None
+    assert current.candidate_comparisons == ()
     assert current.revalidation is None
     assert next(item for item in current.traffic if item.aircraft_id == "MIL-F01").altitude_ft == (
         13_000.0

@@ -26,6 +26,9 @@ process-local 단일 Session이며 외부 네트워크, Docker, PostgreSQL/PostG
 7. 승인 기동 적용 후 SAFE/LOW/RESOLVED 및 원 충돌 증거 보존
 8. Reset 후 새 Run ID와 빈 증거 상태
 
+T+70 Checkpoint에서는 `MIL-F01`의 진입 고도·침로·수평·시간 편차도 확인하고, T+75 Checkpoint에서는
+CAND-A~E 전체 판정 행렬이 Golden Scenario Contract와 일치하는지 검증한다.
+
 정상 종료 기준은 마지막 줄이다.
 
 ```text

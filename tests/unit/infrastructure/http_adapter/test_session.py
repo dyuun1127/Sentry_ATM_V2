@@ -74,6 +74,8 @@ def test_get_returns_deterministic_ready_session_json() -> None:
     assert payload["clock_state"] == "READY"
     assert payload["traffic_count"] == 8
     assert payload["recommendation"] is None
+    assert payload["deviation"] is None
+    assert payload["candidate_comparisons"] == []
 
 
 def test_post_commands_run_full_session_and_get_returns_latest_state() -> None:
@@ -101,6 +103,14 @@ def test_post_commands_run_full_session_and_get_returns_latest_state() -> None:
     final = json.loads(_request(session.http_app)[2])
     assert final["revalidation"]["resolved"] is True
     assert final["controller_decision"]["entries"][0]["decision_type"] == "ACCEPT"
+    assert final["deviation"]["aircraft_id"] == "MIL-F01"
+    assert [item["candidate_id"] for item in final["candidate_comparisons"]] == [
+        "CAND-A",
+        "CAND-B",
+        "CAND-C",
+        "CAND-D",
+        "CAND-E",
+    ]
 
     reset_status, _, reset_body = _post(session.http_app, "RESET")
     reset = json.loads(reset_body)

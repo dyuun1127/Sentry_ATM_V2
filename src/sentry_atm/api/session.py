@@ -11,16 +11,28 @@ from sentry_atm.api.recommendation import ResolutionRecommendationSetReadModel
 from sentry_atm.domain import (
     POC_TERMINAL_V1_RULE_PROFILE,
     AircraftState,
+    AltitudeManeuver,
+    CandidateSafetyValidationResult,
     ConflictEvent,
     ConflictRiskAssessment,
     ConflictStatus,
+    EntryDelayManeuver,
     ExceptionStatus,
+    HeadingManeuver,
     OperationalPriorityLevel,
+    ResolutionCandidate,
     RiskLevel,
     SeparationMinimum,
+    SequenceChangeManeuver,
+    SpeedManeuver,
 )
 from sentry_atm.domain.time_policy import to_utc
-from sentry_atm.scenario import ScenarioDefinition
+from sentry_atm.scenario import (
+    EntryConformanceDeviationPayload,
+    ScenarioDefinition,
+    ScenarioEvent,
+    ScenarioEventType,
+)
 from sentry_atm.simulation import TrafficSnapshot
 
 if TYPE_CHECKING:
@@ -181,6 +193,90 @@ class GoldenDemoConflictEvidenceReadModel:
 
 
 @dataclass(frozen=True, slots=True)
+class GoldenDemoDeviationReadModel:
+    """Expected-versus-actual evidence for the emitted entry deviation."""
+
+    event_id: str
+    detected_at_utc: str
+    aircraft_id: str
+    expected_entry_point: str
+    expected_altitude_ft: float
+    actual_altitude_ft: float
+    vertical_deviation_ft: float
+    expected_heading_deg: float
+    actual_heading_deg: float
+    heading_deviation_deg: float
+    lateral_deviation_nm: float
+    time_deviation_seconds: float
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "event_id": self.event_id,
+            "detected_at_utc": self.detected_at_utc,
+            "aircraft_id": self.aircraft_id,
+            "expected_entry_point": self.expected_entry_point,
+            "expected_altitude_ft": self.expected_altitude_ft,
+            "actual_altitude_ft": self.actual_altitude_ft,
+            "vertical_deviation_ft": self.vertical_deviation_ft,
+            "expected_heading_deg": self.expected_heading_deg,
+            "actual_heading_deg": self.actual_heading_deg,
+            "heading_deviation_deg": self.heading_deviation_deg,
+            "lateral_deviation_nm": self.lateral_deviation_nm,
+            "time_deviation_seconds": self.time_deviation_seconds,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class GoldenDemoCandidateComparisonReadModel:
+    """One candidate joined with its isolated Safety Validation evidence."""
+
+    candidate_id: str
+    target_aircraft_id: str | None
+    maneuver_type: str
+    target_heading_deg: float | None
+    target_altitude_ft: float | None
+    target_ground_speed_kt: float | None
+    delay_seconds: float | None
+    target_sequence_position: int | None
+    operational_cost_score: float
+    verdict: str
+    primary_conflict_status: str
+    primary_horizontal_separation_nm: float
+    primary_vertical_separation_ft: float
+    secondary_conflict_aircraft_ids: tuple[tuple[str, str], ...]
+    performance_feasible: bool
+    rule_violation_ids: tuple[str, ...]
+    reason_codes: tuple[str, ...]
+    validation_profile_id: str
+    recommended: bool
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "candidate_id": self.candidate_id,
+            "target_aircraft_id": self.target_aircraft_id,
+            "maneuver_type": self.maneuver_type,
+            "target_heading_deg": self.target_heading_deg,
+            "target_altitude_ft": self.target_altitude_ft,
+            "target_ground_speed_kt": self.target_ground_speed_kt,
+            "delay_seconds": self.delay_seconds,
+            "target_sequence_position": self.target_sequence_position,
+            "operational_cost_score": self.operational_cost_score,
+            "verdict": self.verdict,
+            "primary_conflict_status": self.primary_conflict_status,
+            "primary_horizontal_separation_nm": self.primary_horizontal_separation_nm,
+            "primary_vertical_separation_ft": self.primary_vertical_separation_ft,
+            "secondary_conflict_aircraft_ids": [
+                list(aircraft_ids) for aircraft_ids in self.secondary_conflict_aircraft_ids
+            ],
+            "performance_feasible": self.performance_feasible,
+            "rule_violation_ids": list(self.rule_violation_ids),
+            "reason_codes": list(self.reason_codes),
+            "validation_profile_id": self.validation_profile_id,
+            "recommended": self.recommended,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class GoldenDemoSessionReadModel:
     """One complete JSON-compatible view of current Golden Demo backend state."""
 
@@ -198,6 +294,8 @@ class GoldenDemoSessionReadModel:
     decision_step_id: str | None
     application_step_id: str | None
     primary_conflict: GoldenDemoConflictEvidenceReadModel | None
+    deviation: GoldenDemoDeviationReadModel | None
+    candidate_comparisons: tuple[GoldenDemoCandidateComparisonReadModel, ...]
     exception_queue: ExceptionQueueSnapshotReadModel | None
     recommendation: ResolutionRecommendationSetReadModel | None
     controller_decision: ControllerDecisionAuditLogReadModel | None
@@ -221,6 +319,10 @@ class GoldenDemoSessionReadModel:
             "primary_conflict": (
                 self.primary_conflict.to_dict() if self.primary_conflict is not None else None
             ),
+            "deviation": self.deviation.to_dict() if self.deviation is not None else None,
+            "candidate_comparisons": [
+                item.to_dict() for item in self.candidate_comparisons
+            ],
             "traffic": [item.to_dict() for item in self.traffic],
             "exception_queue": (
                 self.exception_queue.to_dict() if self.exception_queue is not None else None
@@ -331,6 +433,11 @@ class InProcessGoldenDemoSessionApi:
                 step_result=step_result,
                 resolution_result=resolution_result,
             ),
+            deviation=_map_deviation(
+                step_result=step_result,
+                scenario_events=runtime.simulation.timeline.events,
+            ),
+            candidate_comparisons=_map_candidate_comparisons(resolution_result),
             exception_queue=queue,
             recommendation=recommendation,
             controller_decision=controller_decision,
@@ -394,6 +501,124 @@ def _map_aircraft(state: AircraftState, metadata) -> GoldenDemoAircraftReadModel
         flight_phase=state.flight_phase.value,
         emergency_status=state.emergency_status.value,
         emergency_type=(state.emergency_type.value if state.emergency_type is not None else None),
+    )
+
+
+def _map_deviation(
+    *,
+    step_result,
+    scenario_events: tuple[ScenarioEvent, ...],
+) -> GoldenDemoDeviationReadModel | None:
+    if step_result is None:
+        return None
+    event = next(
+        (
+            item
+            for item in scenario_events
+            if item.event_type is ScenarioEventType.ENTRY_CONFORMANCE_DEVIATION
+            and item.scheduled_time_utc <= step_result.timestamp_utc
+        ),
+        None,
+    )
+    if event is None or not isinstance(event.payload, EntryConformanceDeviationPayload):
+        return None
+    state = next(
+        item
+        for item in step_result.traffic_snapshot.states
+        if item.aircraft_id == event.target_aircraft_id
+    )
+    payload = event.payload
+    return GoldenDemoDeviationReadModel(
+        event_id=event.event_id,
+        detected_at_utc=_utc_text(event.scheduled_time_utc),
+        aircraft_id=event.target_aircraft_id,
+        expected_entry_point=payload.expected_entry_point,
+        expected_altitude_ft=payload.expected_altitude_ft,
+        actual_altitude_ft=payload.actual_altitude_ft,
+        vertical_deviation_ft=payload.actual_altitude_ft - payload.expected_altitude_ft,
+        expected_heading_deg=payload.expected_heading_deg,
+        actual_heading_deg=state.heading_deg,
+        heading_deviation_deg=_signed_heading_delta(
+            state.heading_deg,
+            payload.expected_heading_deg,
+        ),
+        lateral_deviation_nm=payload.lateral_deviation_nm,
+        time_deviation_seconds=payload.time_deviation_seconds,
+    )
+
+
+def _signed_heading_delta(actual_heading_deg: float, expected_heading_deg: float) -> float:
+    delta = (actual_heading_deg - expected_heading_deg + 180.0) % 360.0 - 180.0
+    return 180.0 if delta == -180.0 else delta
+
+
+def _map_candidate_comparisons(
+    resolution_result,
+) -> tuple[GoldenDemoCandidateComparisonReadModel, ...]:
+    if resolution_result is None:
+        return ()
+    result_by_id = {
+        item.candidate_id: item for item in resolution_result.validation_run.results
+    }
+    primary_recommendation = resolution_result.recommendation_set.primary_recommendation
+    primary_candidate_id = (
+        primary_recommendation.candidate_id if primary_recommendation is not None else None
+    )
+    return tuple(
+        _map_candidate_comparison(
+            candidate,
+            result_by_id[candidate.candidate_id],
+            recommended=candidate.candidate_id == primary_candidate_id,
+        )
+        for candidate in resolution_result.candidate_batch.candidates
+    )
+
+
+def _map_candidate_comparison(
+    candidate: ResolutionCandidate,
+    validation: CandidateSafetyValidationResult,
+    *,
+    recommended: bool,
+) -> GoldenDemoCandidateComparisonReadModel:
+    maneuver = candidate.maneuver
+    return GoldenDemoCandidateComparisonReadModel(
+        candidate_id=candidate.candidate_id,
+        target_aircraft_id=candidate.target_aircraft_id,
+        maneuver_type=candidate.maneuver_type.value,
+        target_heading_deg=(
+            maneuver.target_heading_deg if isinstance(maneuver, HeadingManeuver) else None
+        ),
+        target_altitude_ft=(
+            maneuver.target_altitude_ft if isinstance(maneuver, AltitudeManeuver) else None
+        ),
+        target_ground_speed_kt=(
+            maneuver.target_ground_speed_kt if isinstance(maneuver, SpeedManeuver) else None
+        ),
+        delay_seconds=(
+            maneuver.delay_seconds if isinstance(maneuver, EntryDelayManeuver) else None
+        ),
+        target_sequence_position=(
+            maneuver.target_sequence_position
+            if isinstance(maneuver, SequenceChangeManeuver)
+            else None
+        ),
+        operational_cost_score=candidate.cost.operational_cost_score,
+        verdict=validation.verdict.value,
+        primary_conflict_status=validation.primary_conflict.status.value,
+        primary_horizontal_separation_nm=(
+            validation.primary_conflict.minimum_separation.horizontal_nm
+        ),
+        primary_vertical_separation_ft=(
+            validation.primary_conflict.minimum_separation.vertical_ft
+        ),
+        secondary_conflict_aircraft_ids=tuple(
+            item.pair.aircraft_ids for item in validation.secondary_conflicts
+        ),
+        performance_feasible=validation.performance_feasible,
+        rule_violation_ids=tuple(item.rule_id for item in validation.rule_violations),
+        reason_codes=tuple(item.value for item in validation.reason_codes),
+        validation_profile_id=validation.validation_profile_id,
+        recommended=recommended,
     )
 
 

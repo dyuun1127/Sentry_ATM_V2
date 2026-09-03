@@ -31,6 +31,8 @@ Application을 실행하지 않는다.
 - 해결 항목을 포함한 현재 Exception Queue와 활성 개수
 - 현재 Recommendation Set과 Controller Decision Audit Log
 - HIGH/CRITICAL 원 충돌의 항공기쌍, CPA/TCPA, 분리기준 대비 비율, Risk Score/Reason/Profile 증거
+- T+60 진입 이벤트의 계획·실제 고도/침로 및 수평·수직·시간 편차
+- CAND-A~E 전체의 기동, 비용, 원 충돌 결과, 2차 충돌, 규칙 위반과 검증 판정
 - 적용 전후 고도, Post-apply Prediction/Conflict Run과 원 Conflict의 SAFE/LOW/RESOLVED 요약
 
 모든 중첩 객체는 기존 Queue, Recommendation 및 Decision Read Model을 재사용한다. `to_dict()`는 tuple,
@@ -110,7 +112,7 @@ Runtime Dependency가 없다. `Ctrl+C`로 종료하면 Listening Socket을 닫�
 - TLS, 외부 Interface Bind와 다중 Worker를 제공하지 않는다.
 - Session ID와 결과는 프로세스 재시작 후 복구되지 않는다.
 - Authentication, authorization, streaming과 다중 동시 Session을 제공하지 않는다.
-- Trajectory Point 전체와 Candidate A~E 전체 검증표는 아직 Session 요약에 포함하지 않는다.
+- Trajectory Point 전체는 Session 요약에 포함하지 않는다.
 
 ## 9. Phase 14-C Explainability Projection
 
@@ -122,3 +124,14 @@ Conflict ID 오름차순으로 기준 충돌을 선택한다. Resolution이 생�
 이 필드는 원 충돌 증거이며 `revalidation`과 의미가 다르다. `primary_conflict`는 승인 전 기준선을,
 `revalidation`은 승인 기동을 실제 Runtime에 적용한 후의 결과를 나타낸다. UI는 둘을 BEFORE/AFTER로
 비교하되, 적용 전 Candidate Safety는 `VALIDATED CANDIDATE`로 별도 표기한다.
+
+## 10. Phase 15-A Deviation과 Candidate Comparison
+
+`deviation`은 T+60 `ENTRY_CONFORMANCE_DEVIATION` Event가 발생한 뒤부터 제공된다. Event에 보존된
+Expected/Actual 값과 최신 Step의 Aircraft Heading을 결합하며, Reset 또는 이벤트 발생 전에는 `null`이다.
+표시용 편차는 `actual - expected` 부호를 유지한다.
+
+`candidate_comparisons`는 Resolution Result가 생성된 뒤 CAND-A~E를 Candidate ID 순서로 제공한다.
+각 항목은 Candidate와 같은 ID의 Safety Validation Result를 결합하며 SAFE 후보만 담는 Recommendation
+Set과 구분된다. 따라서 추천에서 제외된 2차 충돌, 원 충돌 미해소, 최저고도 규칙 위반 및 No-action
+결과도 화면과 자동 회귀 검사에서 확인할 수 있다.

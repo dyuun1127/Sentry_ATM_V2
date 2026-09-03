@@ -90,6 +90,43 @@
         </article>
       </section>
 
+      <section class="deviation-panel" data-deviation-panel hidden aria-labelledby="deviation-title">
+        <header>
+          <div>
+            <p class="eyebrow">PLANNED VS ACTUAL</p>
+            <h2 id="deviation-title"><span data-deviation-aircraft>—</span> Entry Conformance</h2>
+          </div>
+          <strong class="deviation-badge">DEVIATION DETECTED</strong>
+        </header>
+        <div class="deviation-grid">
+          <article>
+            <span>ENTRY POINT</span>
+            <strong data-deviation-entry>—</strong>
+            <small>EXPECTED</small>
+          </article>
+          <article>
+            <span>ALTITUDE</span>
+            <strong><b data-deviation-actual-altitude>—</b> / <b data-deviation-expected-altitude>—</b> FT</strong>
+            <small>ACTUAL / EXPECTED · <em data-deviation-vertical>—</em> FT</small>
+          </article>
+          <article>
+            <span>HEADING</span>
+            <strong><b data-deviation-actual-heading>—</b>° / <b data-deviation-expected-heading>—</b>°</strong>
+            <small>ACTUAL / EXPECTED · <em data-deviation-heading>—</em>°</small>
+          </article>
+          <article>
+            <span>LATERAL</span>
+            <strong><b data-deviation-lateral>—</b> NM</strong>
+            <small>ENTRY PATH OFFSET</small>
+          </article>
+          <article>
+            <span>TIME</span>
+            <strong><b data-deviation-time>—</b> SEC</strong>
+            <small>SCHEDULE OFFSET</small>
+          </article>
+        </div>
+      </section>
+
       <section class="conflict-explainability" data-conflict-explainability hidden aria-labelledby="conflict-explainability-title">
         <header class="explainability-header">
           <div>
@@ -266,6 +303,36 @@
           </div>
         </section>
       </div>
+
+      <section class="panel candidate-panel" data-candidate-panel hidden aria-labelledby="candidate-title">
+        <header class="panel-header">
+          <div>
+            <p class="eyebrow">ISOLATED SAFETY VALIDATION</p>
+            <h2 id="candidate-title">Resolution Candidate Comparison</h2>
+          </div>
+          <span class="read-only-tag">ALL CANDIDATES</span>
+        </header>
+        <div class="table-scroll">
+          <table class="candidate-table">
+            <thead>
+              <tr>
+                <th scope="col">CANDIDATE</th>
+                <th scope="col">TARGET</th>
+                <th scope="col">MANEUVER</th>
+                <th scope="col">PRIMARY CPA</th>
+                <th scope="col">SECONDARY / RULE</th>
+                <th scope="col">COST</th>
+                <th scope="col">VERDICT</th>
+              </tr>
+            </thead>
+            <tbody data-candidate-body></tbody>
+          </table>
+        </div>
+        <footer class="candidate-note">
+          <span>VALIDATION BOUNDARY</span>
+          <p>각 후보는 원 Traffic을 변경하지 않는 격리된 재시뮬레이션에서 동일 기준으로 검증됩니다.</p>
+        </footer>
+      </section>
 
       <section class="timeline-panel" aria-labelledby="timeline-title">
         <div class="timeline-heading">

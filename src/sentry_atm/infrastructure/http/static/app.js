@@ -50,6 +50,17 @@ const elements = {
   queueCount: document.querySelector("[data-queue-count]"),
   elapsedTime: document.querySelector("[data-elapsed-time]"),
   clockState: document.querySelector("[data-clock-state]"),
+  deviationPanel: document.querySelector("[data-deviation-panel]"),
+  deviationAircraft: document.querySelector("[data-deviation-aircraft]"),
+  deviationEntry: document.querySelector("[data-deviation-entry]"),
+  deviationActualAltitude: document.querySelector("[data-deviation-actual-altitude]"),
+  deviationExpectedAltitude: document.querySelector("[data-deviation-expected-altitude]"),
+  deviationVertical: document.querySelector("[data-deviation-vertical]"),
+  deviationActualHeading: document.querySelector("[data-deviation-actual-heading]"),
+  deviationExpectedHeading: document.querySelector("[data-deviation-expected-heading]"),
+  deviationHeading: document.querySelector("[data-deviation-heading]"),
+  deviationLateral: document.querySelector("[data-deviation-lateral]"),
+  deviationTime: document.querySelector("[data-deviation-time]"),
   aircraftLayer: document.querySelector("[data-aircraft-layer]"),
   conflictOverlay: document.querySelector("[data-conflict-overlay]"),
   conflictLine: document.querySelector("[data-conflict-line]"),
@@ -98,6 +109,8 @@ const elements = {
   afterLabel: document.querySelector("[data-after-label]"),
   afterOutcome: document.querySelector("[data-after-outcome]"),
   afterSeparation: document.querySelector("[data-after-separation]"),
+  candidatePanel: document.querySelector("[data-candidate-panel]"),
+  candidateBody: document.querySelector("[data-candidate-body]"),
   toast: document.querySelector("[data-toast]"),
 };
 
@@ -132,6 +145,14 @@ function formatNumber(value, digits = 0) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
+}
+
+function formatSignedNumber(value, digits = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "—";
+  }
+  return `${numeric > 0 ? "+" : ""}${formatNumber(numeric, digits)}`;
 }
 
 function isMilitary(aircraft) {
@@ -231,6 +252,23 @@ function renderTrafficTable(traffic) {
   }
 }
 
+function renderDeviation(deviation) {
+  elements.deviationPanel.hidden = !deviation;
+  if (!deviation) {
+    return;
+  }
+  elements.deviationAircraft.textContent = deviation.aircraft_id ?? "—";
+  elements.deviationEntry.textContent = deviation.expected_entry_point ?? "—";
+  elements.deviationActualAltitude.textContent = formatNumber(deviation.actual_altitude_ft);
+  elements.deviationExpectedAltitude.textContent = formatNumber(deviation.expected_altitude_ft);
+  elements.deviationVertical.textContent = formatSignedNumber(deviation.vertical_deviation_ft);
+  elements.deviationActualHeading.textContent = formatNumber(deviation.actual_heading_deg);
+  elements.deviationExpectedHeading.textContent = formatNumber(deviation.expected_heading_deg);
+  elements.deviationHeading.textContent = formatSignedNumber(deviation.heading_deviation_deg);
+  elements.deviationLateral.textContent = formatNumber(deviation.lateral_deviation_nm, 1);
+  elements.deviationTime.textContent = formatSignedNumber(deviation.time_deviation_seconds);
+}
+
 function renderExceptionQueue(queue) {
   const items = Array.isArray(queue?.items)
     ? queue.items.filter((item) => item.status !== "RESOLVED")
@@ -286,6 +324,76 @@ function maneuverText(maneuver) {
     SEQUENCE_CHANGE: `POSITION ${formatNumber(maneuver.target_sequence_position)}`,
   };
   return `${maneuver.maneuver_type} ${labels[maneuver.maneuver_type] ?? ""}`.trim();
+}
+
+function comparisonManeuverText(candidate) {
+  return maneuverText({
+    maneuver_type: candidate.maneuver_type,
+    target_altitude_ft: candidate.target_altitude_ft,
+    target_heading_deg: candidate.target_heading_deg,
+    target_ground_speed_kt: candidate.target_ground_speed_kt,
+    delay_seconds: candidate.delay_seconds,
+    target_sequence_position: candidate.target_sequence_position,
+  });
+}
+
+function candidateConstraintText(candidate) {
+  const evidence = [];
+  for (const pair of candidate.secondary_conflict_aircraft_ids ?? []) {
+    evidence.push(`SECONDARY ${pair.join("/")}`);
+  }
+  for (const ruleId of candidate.rule_violation_ids ?? []) {
+    evidence.push(`RULE ${ruleId}`);
+  }
+  if (!candidate.performance_feasible) {
+    evidence.push("PERFORMANCE LIMIT");
+  }
+  if (evidence.length === 0) {
+    return candidate.primary_conflict_status === "SAFE" ? "NONE" : "PRIMARY REMAINS";
+  }
+  return evidence.join(" · ");
+}
+
+function renderCandidateComparisons(candidates) {
+  const items = Array.isArray(candidates) ? candidates : [];
+  elements.candidatePanel.hidden = items.length === 0;
+  elements.candidateBody.replaceChildren();
+  for (const candidate of items) {
+    const row = document.createElement("tr");
+    row.classList.toggle("is-recommended", Boolean(candidate.recommended));
+
+    const idCell = document.createElement("td");
+    const id = document.createElement("strong");
+    id.textContent = candidate.candidate_id ?? "—";
+    idCell.append(id);
+    if (candidate.recommended) {
+      const badge = document.createElement("span");
+      badge.className = "recommended-badge";
+      badge.textContent = "RECOMMENDED";
+      idCell.append(badge);
+    }
+
+    const verdictCell = document.createElement("td");
+    const verdict = document.createElement("span");
+    verdict.className = `candidate-verdict ${String(candidate.verdict).toLowerCase()}`;
+    verdict.textContent = candidate.verdict ?? "UNKNOWN";
+    verdictCell.append(verdict);
+
+    row.append(
+      idCell,
+      cell(candidate.target_aircraft_id ?? "—"),
+      cell(comparisonManeuverText(candidate)),
+      cell(
+        `H ${formatNumber(candidate.primary_horizontal_separation_nm, 2)} NM · V ${formatNumber(
+          candidate.primary_vertical_separation_ft,
+        )} FT`,
+      ),
+      cell(candidateConstraintText(candidate), "candidate-constraint"),
+      cell(formatNumber(candidate.operational_cost_score), "candidate-cost"),
+      verdictCell,
+    );
+    elements.candidateBody.append(row);
+  }
 }
 
 function renderDecisionSupport(session) {
@@ -452,10 +560,12 @@ function renderSession(session) {
   elements.sessionId.textContent = `SESSION ${session.session_id ?? "—"}`;
   renderAircraftMap(traffic);
   renderTrafficTable(traffic);
+  renderDeviation(session.deviation);
   renderStage(String(session.stage ?? "READY"));
   renderExceptionQueue(session.exception_queue);
   renderDecisionSupport(session);
   renderConflictExplainability(session);
+  renderCandidateComparisons(session.candidate_comparisons);
   updateCommandControl(String(session.stage ?? "READY"));
 }
 

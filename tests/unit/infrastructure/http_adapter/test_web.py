@@ -58,6 +58,8 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b"data-decision-card" in body
     assert b"data-conflict-explainability" in body
     assert b"data-conflict-overlay" in body
+    assert b"data-deviation-panel" in body
+    assert b"data-candidate-panel" in body
     assert b"/assets/app.css" in body
     assert app.api_app is runtime.http_app
 
@@ -106,6 +108,8 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
     assert b"error.status === 409" in script
     assert b"function renderConflictExplainability(session)" in script
     assert b"session.primary_conflict" in script
+    assert b"function renderDeviation(deviation)" in script
+    assert b"function renderCandidateComparisons(candidates)" in script
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:

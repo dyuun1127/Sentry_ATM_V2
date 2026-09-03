@@ -62,6 +62,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 14-B: Deterministic Demo Command Controls 구현 완료
 - Phase 14-C: Conflict & Resolution Explainability Visualization 구현 완료
 - Phase 14-D: Demo Runbook & End-to-End Regression 구현 완료
+- Phase 15-A: Planned-vs-Actual Deviation & Candidate Comparison UI 구현 완료
 - Modify/Reject Decision UI: 아직 구현하지 않음
 
 ## 핵심 문서
