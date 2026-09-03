@@ -1,6 +1,13 @@
 """Core SENTRY domain models and policies."""
 
 from sentry_atm.domain.aircraft import AircraftMetadata, AircraftState
+from sentry_atm.domain.approach_sequence import (
+    STABILISED_PHASES,
+    ApproachOrderReasonCode,
+    ApproachResequencingResult,
+    ApproachSlot,
+    EmergencySegmentStatus,
+)
 from sentry_atm.domain.conflict import (
     POC_TERMINAL_V1_RULE_PROFILE,
     ConflictAssessmentRun,
@@ -84,6 +91,11 @@ from sentry_atm.domain.risk import (
 from sentry_atm.domain.trajectory import Trajectory, TrajectoryPoint
 
 __all__ = [
+    "EmergencySegmentStatus",
+    "ApproachSlot",
+    "ApproachResequencingResult",
+    "ApproachOrderReasonCode",
+    "STABILISED_PHASES",
     "AircraftCategory",
     "AircraftMetadata",
     "AircraftPerformanceProfile",

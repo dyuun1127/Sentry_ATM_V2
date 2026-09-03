@@ -25,6 +25,10 @@ from sentry_atm.runtime.orchestrator import (
     GoldenDemoStepOrchestrator,
     GoldenDemoStepResult,
 )
+from sentry_atm.runtime.resequencing_orchestrator import (
+    ApproachResequencingRun,
+    ApproachSequenceOrchestrator,
+)
 from sentry_atm.runtime.resolution_orchestrator import (
     GoldenDemoResolutionOrchestrator,
     GoldenDemoResolutionResult,
@@ -37,6 +41,8 @@ from sentry_atm.runtime.session import (
 )
 
 __all__ = [
+    "ApproachResequencingRun",
+    "ApproachSequenceOrchestrator",
     "GoldenDemoApprovedManeuverApplicationResult",
     "GoldenDemoApprovedManeuverOrchestrator",
     "GoldenDemoControllerDecisionOrchestrator",

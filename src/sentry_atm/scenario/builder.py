@@ -8,6 +8,7 @@ from sentry_atm.domain import (
     AircraftMetadata,
     AircraftState,
     DataSource,
+    EmergencyStatus,
     EmergencyType,
     FlightPhase,
 )
@@ -55,6 +56,11 @@ _MIL_F02_INITIAL_X_NM = -10.894137382415922
 _MIL_F02_INITIAL_Y_NM = 18.77685738241592
 _MIL_F02_INITIAL_ALTITUDE_FT = 6_946.25
 _MIL_F02_VERTICAL_SPEED_FPM = 400.0
+
+# 시나리오 8.11 의 최종접근 안정화 지점. T+280 까지 등속으로 날아온 위치를
+# 그대로 쓴다 — 순간이동시키면 그 틱의 예측·충돌 판정이 통째로 어긋난다.
+_MIL_T01_APPROACH_X_NM = 3.8464566929133854
+_MIL_T01_APPROACH_Y_NM = -3.8341207349009107
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +228,27 @@ def build_golden_demo_scenario() -> ScenarioDefinition:
                 heading_deg=300.0,
                 vertical_speed_fpm=0.0,
                 flight_phase=FlightPhase.LEVEL,
+                scheduled_states=(
+                    # 시나리오 8.11 — 승인 뒤 비상 우선 복귀기가 최종접근에
+                    # 안정되는 지점. 이 상태가 없으면 MIL-T01 은 7,000ft 로
+                    # 공항 위를 그대로 지나가고, 비상 처리 구간이 끝났다고
+                    # 판정할 근거가 영원히 생기지 않는다.
+                    AircraftState(
+                        aircraft_id="MIL-T01",
+                        timestamp_utc=GOLDEN_DEMO_START_UTC + timedelta(seconds=280),
+                        x_nm=_MIL_T01_APPROACH_X_NM,
+                        y_nm=_MIL_T01_APPROACH_Y_NM,
+                        altitude_ft=5_000.0,
+                        ground_speed_kt=150.0,
+                        heading_deg=300.0,
+                        vertical_speed_fpm=-1_200.0,
+                        source=DataSource.SYNTHETIC,
+                        flight_phase=FlightPhase.APPROACH,
+                        emergency_status=EmergencyStatus.DECLARED,
+                        emergency_type=EmergencyType.PRIORITY_RETURN,
+                        wake_category=wake_category_for("C130"),
+                    ),
+                ),
             ),
             _scenario_aircraft(
                 aircraft_id="MIL-T02",
