@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import export_scenario as ex  # noqa: E402
 
+from sentry_atm.api import geometry as api_geometry  # noqa: E402
 from sentry_atm.regulation import conflict as cf  # noqa: E402
 from sentry_atm.regulation import data as sdata  # noqa: E402
 from sentry_atm.regulation import handoff as ho  # noqa: E402
@@ -39,7 +40,7 @@ from sentry_atm.regulation import resolution as res  # noqa: E402
 from sentry_atm.regulation import schedule as sched_mod  # noqa: E402
 from sentry_atm.regulation import sequencing as seq  # noqa: E402
 from sentry_atm.regulation import sortie as sortie_mod  # noqa: E402
-from sentry_atm.regulation.geo import separation_distance_nm, vincenty_direct  # noqa: E402
+from sentry_atm.regulation.geo import separation_distance_nm  # noqa: E402
 from sentry_atm.scenario import sortie_builder as sortie_scenario  # noqa: E402
 
 FRAME_S = ex.FRAME_S
@@ -80,56 +81,16 @@ def make_trajectories(ds, gen, sq, events, rng):
 
 
 def hold_geometry(pattern, book):
-    """체공 장주를 스코프에 그릴 좌표로.
-
-    경주로형 장주 — 인바운드 구간, 180° 선회, 아웃바운드 구간, 180° 선회.
-    선회는 반원으로 근사한다(반경 = 장주 길이 / π 가 아니라 표준선회 반경).
-    """
-    inb = pattern.inbound_course_true
-    fix = (pattern.lat, pattern.lon)
-    leg_m = pattern.leg_nm * M_PER_NM
-    # 인바운드는 픽스로 들어오는 방향이므로, 아웃바운드 시작점은 그 반대편
-    back = (inb + 180.0) % 360.0
-    side = 1.0 if pattern.right_turns else -1.0
-    turn_r_nm = pattern.leg_nm / 4.0
-    off = (inb + 90.0 * side) % 360.0
-
-    a = fix
-    b = vincenty_direct(*fix, back, leg_m)
-    c = vincenty_direct(*b, off, 2 * turn_r_nm * M_PER_NM)
-    d = vincenty_direct(*c, inb, leg_m)
-    pts = [a, b]
-    # 반원 두 개를 각각 8분할해 이어 붙인다
-    for start, centre_brg in ((b, off), (d, (off + 180.0) % 360.0)):
-        centre = vincenty_direct(*start, centre_brg, turn_r_nm * M_PER_NM)
-        base = (centre_brg + 180.0) % 360.0
-        for k in range(1, 9):
-            ang = (base + side * 180.0 * k / 8.0) % 360.0
-            pts.append(vincenty_direct(*centre, ang, turn_r_nm * M_PER_NM))
-    pts.append(a)
-    return [[round(p[0], 6), round(p[1], 6)] for p in pts]
+    """체공 장주를 스코프에 그릴 좌표로 — 라이브러리와 같은 것을 쓴다."""
+    return api_geometry.hold_geometry(pattern)
 
 
 def area_geometry(area):
-    return {
-        "id": area.id,
-        "points": [[round(p[0], 6), round(p[1], 6)] for p in area.volume.polygon],
-        "lower_ft": round(area.lower_ft),
-        "upper_ft": round(area.upper_ft),
-        "centre": [round(area.centroid[0], 6), round(area.centroid[1], 6)],
-    }
+    return api_geometry.area_geometry(area)
 
 
 def route_geometry(route):
-    if route is None:
-        return None
-    return {
-        "fixes": route.fixes,
-        "points": [[round(route.origin[0], 6), round(route.origin[1], 6)]]
-        + [[round(x.lat, 6), round(x.lon, 6)] for x in route.legs],
-        "total_nm": round(route.total_nm, 2),
-        "detour_nm": round(route.detour_nm, 2),
-    }
+    return api_geometry.route_geometry(route)
 
 
 ACT_GROUPS = (

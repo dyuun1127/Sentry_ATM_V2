@@ -81,6 +81,13 @@ class GoldenDemoSessionCommand(StrEnum):
     REJECT_RECOMMENDATION = "REJECT_RECOMMENDATION"
     APPLY_APPROVED_MANEUVER = "APPLY_APPROVED_MANEUVER"
     RESET = "RESET"
+    ADVANCE = "ADVANCE"
+    """시계를 주어진 초만큼 진행한다.
+
+    나머지 명령은 골든 데모의 시간선(T+70 에 충돌, T+75 에 권고)에 맞춰져 있어
+    다른 시나리오에서는 검문소를 통과하지 못한다. 75분짜리 소티는 대본이 아니라
+    시계로 움직이므로 시나리오와 무관한 진행 수단이 따로 필요하다.
+    """
 
 
 class GoldenDemoSessionCommandValidationError(ValueError):

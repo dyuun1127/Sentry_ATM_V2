@@ -22,6 +22,7 @@ REFERENCE = ROOT / "src" / "sentry_atm" / "regulation" / "reference"
 ARTIFACTS = ROOT / "artifacts"
 ARTIFACTS.mkdir(exist_ok=True)
 
+from sentry_atm.api import geometry as api_geometry  # noqa: E402
 from sentry_atm.regulation import conflict as cf  # noqa: E402
 from sentry_atm.regulation import data as sdata  # noqa: E402
 from sentry_atm.regulation import (  # noqa: E402
@@ -32,9 +33,7 @@ from sentry_atm.regulation import resolution as res  # noqa: E402
 from sentry_atm.regulation import sequencing as seq  # noqa: E402
 from sentry_atm.regulation.geo import (  # noqa: E402
     bearing_true,
-    parse_latlon,
     separation_distance_nm,
-    vincenty_direct,
 )
 
 FRAME_S = 10.0
@@ -53,121 +52,12 @@ def load_scorer(path):
 
 
 def airspace_geometry(ds, sq):
-    """콘솔이 그릴 공역 형상 — 전부 AIP 실좌표."""
-    air = ds.airspace.raw
-    ctr = air["cheongju_terminal"]
-    c_lat = parse_latlon(ctr["center"]["lat"])
-    c_lon = parse_latlon(ctr["center"]["lon"])
+    """콘솔이 그릴 공역 형상 — 라이브러리와 같은 것을 쓴다.
 
-    rwy24r = ds.procedures.runways["24R"]
-    rwy06l = ds.procedures.runways["06L"]
-
-    def ring(radius_nm, n=72):
-        return [
-            list(vincenty_direct(c_lat, c_lon, 360.0 * i / n, radius_nm * 1852.0))
-            for i in range(n + 1)
-        ]
-
-    ds.procedures.fix("TURTU")
-    centreline = [
-        list(vincenty_direct(*sq.thr, (sq.final_course_deg + 180.0) % 360.0,
-                             d * 1852.0))
-        for d in (0.0, 30.0)
-    ]
-
-    # --- 특수사용공역 (AIP ENR 5.1 / 5.2) ---
-    # 관제 스코프가 실제로 보여주는 정보다. 청주는 제한구역과 훈련공역이
-    # 접근로 바로 옆(8~18NM)에 붙어 있어, 이 공역이 까다로운 이유가 화면으로 설명된다.
-    def circle(lat, lon, radius_nm, n=48):
-        return [
-            list(vincenty_direct(lat, lon, 360.0 * i / n, radius_nm * 1852.0))
-            for i in range(n + 1)
-        ]
-
-    su = air.get("special_use", {})
-    restricted = [
-        {
-            "id": r["id"], "name": r.get("name", ""),
-            "activity": r.get("activity", ""),
-            "radius_nm": r["radius_nm"],
-            "points": circle(parse_latlon(r["center"]["lat"]),
-                             parse_latlon(r["center"]["lon"]), r["radius_nm"]),
-            "centre": [parse_latlon(r["center"]["lat"]), parse_latlon(r["center"]["lon"])],
-        }
-        for r in su.get("restricted", [])
-    ]
-    moa = [
-        {
-            "id": m["id"],
-            "points": [[parse_latlon(x.split()[0]), parse_latlon(x.split()[1])]
-                       for x in m["polygon"]],
-        }
-        for m in su.get("moa", [])
-    ]
-    neighbour_ctr = [
-        {
-            "id": c["id"], "name": c.get("name", ""),
-            "points": circle(parse_latlon(c["center"]["lat"]),
-                             parse_latlon(c["center"]["lon"]), c["radius_nm"]),
-            "centre": [parse_latlon(c["center"]["lat"]), parse_latlon(c["center"]["lon"])],
-        }
-        for c in su.get("neighbour_ctr", [])
-    ]
-
-    # --- 지형 배경 (Natural Earth, 오프라인) ---
-    terrain = {}
-    tpath = REFERENCE / "terrain.json"
-    if tpath.exists():
-        terrain = json.loads(tpath.read_text(encoding="utf-8")).get("layers", {})
-
-    # --- 인접 섹터 (T19 — 중원 APP, 도착기가 여기서 인수된다) ---
-    t19 = next((b for b in air["tma"]["blocks"] if b["id"] == "T19"), None)
-    t19_poly = (
-        [[parse_latlon(n["lat"]), parse_latlon(n["lon"])] for n in t19["polygon"]]
-        if t19 and t19.get("polygon") else []
-    )
-
-    return {
-        "restricted": restricted,
-        "moa": moa,
-        "neighbour_ctr": neighbour_ctr,
-        "terrain": terrain,
-        "t19": t19_poly,
-        "t17": [[lat, lon] for lat, lon in ds.airspace.sector_polygon],
-        "t17_label": f"T17 {ds.airspace.target_sector['unit']} "
-                     f"1,000ft AGL~6,500ft AMSL Class D/E",
-        "rings": [
-            {"radius_nm": 5.0, "points": ring(5.0), "label": "관제권 5NM"},
-            {"radius_nm": 10.0, "points": ring(10.0), "label": "터미널 10NM"},
-            {"radius_nm": 20.0, "points": ring(20.0), "label": "20NM"},
-            {"radius_nm": 30.0, "points": ring(30.0), "label": "30NM"},
-        ],
-        "centre": [c_lat, c_lon],
-        "runway": {
-            "name": "06L/24R",
-            "thr24r": [rwy24r.thr_lat, rwy24r.thr_lon],
-            "thr06l": [rwy06l.thr_lat, rwy06l.thr_lon],
-            "true_brg": rwy24r.true_brg,
-        },
-        "centreline": centreline,
-        "fixes": [
-            {
-                "name": name,
-                "lat": w.lat,
-                "lon": w.lon,
-                "dist_thr_nm": round(separation_distance_nm(w.lat, w.lon, *sq.thr), 2),
-            }
-            for name, w in ds.procedures.waypoints.items()
-            if separation_distance_nm(w.lat, w.lon, *sq.thr) < 32
-        ],
-        "approach": {
-            "faf": ds.procedures.iap("RNP_24R")["faf"],
-            "faf_dist_nm": sq.faf_dist_nm,
-            "if_dist_nm": sq.join_dist_nm,
-            "gs_angle_deg": sq.gs_angle_deg,
-            "thr_elev_ft": sq.thr_elev_ft,
-        },
-    }
+    여기에 한 벌을 더 두면 정적 산출물과 실시간 콘솔이 서로 다른 공역을 그리게
+    되고, 둘 다 그럴듯해서 어긋난 사실이 드러나지 않는다.
+    """
+    return api_geometry.airspace_geometry(ds, sq)
 
 
 def main() -> int:

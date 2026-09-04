@@ -116,6 +116,7 @@ class GoldenDemoSessionCommandService:
         *,
         rationale: str | None = None,
         modified_maneuver: ResolutionManeuver | None = None,
+        seconds: int | None = None,
     ) -> GoldenDemoSessionReadModel:
         """Execute one validated checkpoint and return its resulting Session view."""
 
@@ -141,6 +142,21 @@ class GoldenDemoSessionCommandService:
 
         if selected is GoldenDemoSessionCommand.RESET:
             runtime.simulation.clock.reset()
+            return self._read_api.get_current()
+        if selected is GoldenDemoSessionCommand.ADVANCE:
+            if seconds is None:
+                raise GoldenDemoSessionCommandValidationError(
+                    "ADVANCE must state how many seconds to advance"
+                )
+            if type(seconds) is not int or not 1 <= seconds <= 3_600:
+                raise GoldenDemoSessionCommandValidationError(
+                    "seconds must be an integer from 1 through 3600"
+                )
+            # 시계가 아직 서 있으면 먼저 돌린다. 세워 둔 채로 진행하면 단계는
+            # 계산되지만 시각이 그대로라 화면이 멈춘 것처럼 보인다.
+            if not runtime.simulation.clock.is_running:
+                runtime.simulation.clock.play()
+            steps.step(seconds)
             return self._read_api.get_current()
         if selected is GoldenDemoSessionCommand.START:
             _require_checkpoint(current, GoldenDemoSessionStage.READY, elapsed_seconds=0.0)
@@ -354,7 +370,24 @@ class GoldenDemoSessionRuntime:
 def build_golden_demo_session_runtime() -> GoldenDemoSessionRuntime:
     """Wire one unstarted Session without running any command or calculation."""
 
-    runtime = build_golden_demo_runtime()
+    return build_session_runtime(build_golden_demo_runtime())
+
+
+def build_sortie_session_runtime(**kwargs) -> GoldenDemoSessionRuntime:
+    """같은 배선을 13단계 소티에 붙인다.
+
+    소티용 세션을 따로 만들지 않는 이유는 5·6단계와 같다 — 두 벌이 되면 시험에서
+    도는 코드와 시연에서 도는 코드가 서로 달라진다.
+    """
+
+    from sentry_atm.runtime.composition import build_sortie_runtime
+
+    return build_session_runtime(build_sortie_runtime(**kwargs))
+
+
+def build_session_runtime(runtime) -> GoldenDemoSessionRuntime:
+    """어떤 시나리오 런타임이든 같은 세션 구성으로 감싼다."""
+
     steps = GoldenDemoStepOrchestrator(runtime)
     resolution = GoldenDemoResolutionOrchestrator(steps)
     decision = GoldenDemoControllerDecisionOrchestrator(resolution)

@@ -57,7 +57,12 @@ def run_golden_demo_regression(
     if normalized_timeout <= 0.0:
         raise ValueError("timeout_seconds must be greater than zero")
 
-    server = create_local_golden_demo_server(LocalGoldenDemoServerSettings(port=0))
+    # 시나리오를 명시한다. 이것은 **골든 데모** 회귀이므로 서버 기본값을 따라가면
+    # 기본값이 바뀌는 순간 다른 시나리오를 검사하게 되고, 그 사실이 검사 이름에는
+    # 드러나지 않는다.
+    server = create_local_golden_demo_server(
+        LocalGoldenDemoServerSettings(port=0, scenario="golden")
+    )
     server.RequestHandlerClass = _QuietWsgiRequestHandler
     worker = Thread(target=server.serve_forever, name="golden-demo-check", daemon=True)
     worker.start()

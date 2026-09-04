@@ -48,9 +48,13 @@ from sentry_atm.runtime.session import (
     GoldenDemoSessionCommandService,
     GoldenDemoSessionRuntime,
     build_golden_demo_session_runtime,
+    build_session_runtime,
+    build_sortie_session_runtime,
 )
 
 __all__ = [
+    "build_session_runtime",
+    "build_sortie_session_runtime",
     "build_scenario_runtime",
     "build_sortie_runtime",
     "ControlUnitAssignment",

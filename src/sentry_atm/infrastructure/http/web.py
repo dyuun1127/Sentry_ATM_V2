@@ -1,5 +1,11 @@
-"""Same-origin static Web UI shell around the Golden Demo Session API."""
+"""Same-origin static Web UI shell around the Golden Demo Session API.
 
+스코프 배경 형상도 여기서 낸다. 공역·활주로·픽스·지형은 시나리오와 무관하고
+시간에 따라 변하지 않으므로, 세션 API 의 매 초 갱신되는 읽기 모델에 실어 보내면
+같은 30 KB 를 초당 한 번씩 다시 보내게 된다. 한 번 받아 두고 쓰는 것이 맞다.
+"""
+
+import json
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -11,6 +17,7 @@ type StartResponse = Callable[[str, list[tuple[str, str]]], object]
 type WsgiResponse = Iterable[bytes]
 
 _STATIC_PACKAGE = "sentry_atm.infrastructure.http"
+_GEOMETRY_PATH = "/api/v1/reference/geometry"
 _SECURITY_HEADERS = (
     ("Cache-Control", "no-store"),
     ("X-Content-Type-Options", "nosniff"),
@@ -57,7 +64,10 @@ class GoldenDemoWebWsgiApp:
                 HTTPStatus.BAD_REQUEST,
                 b"invalid WSGI environment",
             )
-        asset = self._assets.get(path)
+        if path == _GEOMETRY_PATH:
+            asset = _geometry_asset()
+        else:
+            asset = self._assets.get(path)
         if asset is None:
             return self._api_app(environ, start_response)
 
@@ -81,6 +91,22 @@ class GoldenDemoWebWsgiApp:
             asset,
             include_body=method == "GET",
         )
+
+
+_geometry_cache: _StaticAsset | None = None
+
+
+def _geometry_asset() -> _StaticAsset:
+    """스코프 배경. 시나리오와 무관하므로 한 번 만들어 두고 돌려준다."""
+    global _geometry_cache
+    if _geometry_cache is None:
+        from sentry_atm.api.geometry import scope_geometry
+
+        _geometry_cache = _StaticAsset(
+            json.dumps(scope_geometry(), ensure_ascii=False).encode("utf-8"),
+            "application/json; charset=utf-8",
+        )
+    return _geometry_cache
 
 
 def _load_assets() -> dict[str, _StaticAsset]:

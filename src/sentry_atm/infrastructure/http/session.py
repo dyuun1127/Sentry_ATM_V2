@@ -123,6 +123,7 @@ class GoldenDemoSessionWsgiApp:
                 raise TypeError("command must be text")
             command = GoldenDemoSessionCommand(command_value)
             rationale, modified_maneuver = _parse_command_inputs(payload, command)
+            seconds = payload.get("seconds")
         except KeyError:
             raise _HttpError(
                 HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -140,6 +141,7 @@ class GoldenDemoSessionWsgiApp:
                 command,
                 rationale=rationale,
                 modified_maneuver=modified_maneuver,
+                seconds=seconds,
             )
         except GoldenDemoSessionCommandValidationError as error:
             raise _HttpError(
@@ -172,7 +174,11 @@ def _parse_command_inputs(
     payload: dict[str, object],
     command: GoldenDemoSessionCommand,
 ) -> tuple[str | None, ResolutionManeuver | None]:
-    if command is GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
+    if command is GoldenDemoSessionCommand.ADVANCE:
+        # 진행 초를 함께 받는다. 다른 명령과 달리 근거나 기동은 받지 않는다 —
+        # 시계를 돌리는 것뿐이고 관제사의 판단이 아니다.
+        expected_fields = {"command", "seconds"}
+    elif command is GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
         expected_fields = {"command", "rationale", "modified_maneuver"}
     elif command is GoldenDemoSessionCommand.REJECT_RECOMMENDATION:
         expected_fields = {"command", "rationale"}
@@ -183,6 +189,8 @@ def _parse_command_inputs(
             f"{command.value} body must contain exactly: "
             f"{', '.join(sorted(expected_fields))}"
         )
+    if command is GoldenDemoSessionCommand.ADVANCE:
+        return None, None
     rationale = payload.get("rationale")
     if rationale is not None and not isinstance(rationale, str):
         raise TypeError("rationale must be text")

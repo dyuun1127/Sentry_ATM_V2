@@ -6,10 +6,22 @@ from dataclasses import dataclass
 from wsgiref.simple_server import WSGIServer, make_server
 
 from sentry_atm.infrastructure.http.web import GoldenDemoWebWsgiApp
-from sentry_atm.runtime import build_golden_demo_session_runtime
+from sentry_atm.runtime import (
+    build_golden_demo_session_runtime,
+    build_sortie_session_runtime,
+)
 
 _LOOPBACK_HOST = "127.0.0.1"
 _DEFAULT_PORT = 8000
+
+# 기본값은 소티다. 골든 데모는 8대가 5분 동안 떠 있는 회귀 고정물이고, 시연에서
+# 보여줄 것은 13단계 소티다. 기본을 골든 데모로 두면 서버를 그냥 띄웠을 때
+# 시연과 다른 것이 나온다.
+_DEFAULT_SCENARIO = "sortie"
+_SESSION_BUILDERS = {
+    "sortie": build_sortie_session_runtime,
+    "golden": build_golden_demo_session_runtime,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,10 +29,16 @@ class LocalGoldenDemoServerSettings:
     """Validated process-local server settings with a fixed loopback host."""
 
     port: int = _DEFAULT_PORT
+    scenario: str = _DEFAULT_SCENARIO
+    """어떤 시나리오를 돌 것인가 — "sortie" 또는 "golden"."""
 
     def __post_init__(self) -> None:
         if type(self.port) is not int or not 0 <= self.port <= 65_535:
             raise ValueError("port must be an integer from 0 through 65535")
+        if self.scenario not in _SESSION_BUILDERS:
+            raise ValueError(
+                f"scenario must be one of {sorted(_SESSION_BUILDERS)}"
+            )
 
     @property
     def host(self) -> str:
@@ -33,7 +51,7 @@ def create_local_golden_demo_server(
     """Bind one fresh Golden Demo Session Runtime to the IPv4 loopback interface."""
 
     resolved = settings or LocalGoldenDemoServerSettings()
-    runtime = build_golden_demo_session_runtime()
+    runtime = _SESSION_BUILDERS[resolved.scenario]()
     web_app = GoldenDemoWebWsgiApp(runtime.http_app)
     return make_server(resolved.host, resolved.port, web_app)
 
@@ -65,6 +83,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=f"loopback TCP port (default: {_DEFAULT_PORT})",
     )
     parser.add_argument(
+        "--scenario",
+        default=_DEFAULT_SCENARIO,
+        choices=sorted(_SESSION_BUILDERS),
+        help=f"which scenario to run (default: {_DEFAULT_SCENARIO})",
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="run the deterministic end-to-end demo readiness check and exit",
@@ -72,7 +96,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     if arguments.check:
         return run_local_golden_demo_check()
-    return run_local_golden_demo_server(LocalGoldenDemoServerSettings(port=arguments.port))
+    return run_local_golden_demo_server(
+        LocalGoldenDemoServerSettings(
+            port=arguments.port,
+            scenario=arguments.scenario,
+        )
+    )
 
 
 def run_local_golden_demo_check() -> int:
