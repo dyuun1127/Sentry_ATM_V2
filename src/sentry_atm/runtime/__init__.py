@@ -25,6 +25,14 @@ from sentry_atm.runtime.orchestrator import (
     GoldenDemoStepOrchestrator,
     GoldenDemoStepResult,
 )
+from sentry_atm.runtime.regulatory_orchestrator import (
+    ControlUnitAssignment,
+    HoldingAdvisory,
+    RecoveryRouteAdvisory,
+    RegulatoryAdvisory,
+    RegulatoryAdvisoryOrchestrator,
+    RunwaySlotAdvisory,
+)
 from sentry_atm.runtime.resequencing_orchestrator import (
     ApproachResequencingRun,
     ApproachSequenceOrchestrator,
@@ -41,6 +49,12 @@ from sentry_atm.runtime.session import (
 )
 
 __all__ = [
+    "ControlUnitAssignment",
+    "HoldingAdvisory",
+    "RecoveryRouteAdvisory",
+    "RegulatoryAdvisory",
+    "RegulatoryAdvisoryOrchestrator",
+    "RunwaySlotAdvisory",
     "ApproachResequencingRun",
     "ApproachSequenceOrchestrator",
     "GoldenDemoApprovedManeuverApplicationResult",
