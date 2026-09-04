@@ -1,6 +1,7 @@
 """Deterministic restricted Candidate generation without Safety claims."""
 
 from collections.abc import Iterable, Mapping
+from math import ceil, floor
 from numbers import Real
 
 from sentry_atm.domain import (
@@ -165,16 +166,24 @@ class DeterministicResolutionCandidateGenerator:
             )
         if maneuver_type is ResolutionManeuverType.ALTITUDE:
             if preferred_altitude_ft is not None:
-                target_altitude_ft = preferred_altitude_ft
-            elif template.target_role is CandidateTargetRole.PREFERRED:
-                target_altitude_ft = min(
-                    target_state.altitude_ft + self._profile.altitude_change_ft,
-                    target_profile.ceiling_ft,
+                # 호출자가 고도를 지정했으면 그대로 쓴다. 지정한 쪽이 사다리나
+                # 규정 제약을 이미 반영했을 수 있으므로 여기서 다시 반올림하면
+                # 그 의도를 덮어쓴다.
+                return AltitudeManeuver(preferred_altitude_ft)
+            if template.target_role is CandidateTargetRole.PREFERRED:
+                target_altitude_ft = _assignable_altitude_ft(
+                    min(
+                        target_state.altitude_ft + self._profile.altitude_change_ft,
+                        target_profile.ceiling_ft,
+                    ),
+                    climbing=True,
+                    ceiling_ft=target_profile.ceiling_ft,
                 )
             else:
-                target_altitude_ft = max(
-                    0.0,
-                    target_state.altitude_ft - self._profile.altitude_change_ft,
+                target_altitude_ft = _assignable_altitude_ft(
+                    max(0.0, target_state.altitude_ft - self._profile.altitude_change_ft),
+                    climbing=False,
+                    ceiling_ft=target_profile.ceiling_ft,
                 )
             return AltitudeManeuver(target_altitude_ft)
         if maneuver_type is ResolutionManeuverType.SPEED:
@@ -232,6 +241,44 @@ def _validate_performance_profiles(
     if not all(isinstance(value, AircraftPerformanceProfile) for value in materialized.values()):
         raise TypeError("performance_profiles must contain AircraftPerformanceProfile values")
     return materialized
+
+
+# 배정고도 간격. 관제사는 "8,446 피트로 상승" 이라고 지시하지 않는다 — 고도는
+# 1,000 ft 단위로 배정되고, AIP RKTU 의 배정고도 사다리(4,000·5,000·6,000)도 같은
+# 간격이다. 현재고도에 증분을 더한 값을 그대로 내면 실제로 낼 수 없는 지시가
+# 되고, 그것은 관제사가 화면을 신뢰하지 않을 이유가 된다.
+_ALTITUDE_ASSIGNMENT_STEP_FT = 1_000.0
+
+
+def _assignable_altitude_ft(
+    value: float,
+    *,
+    climbing: bool,
+    ceiling_ft: float,
+    floor_ft: float = 0.0,
+) -> float:
+    """실제로 배정할 수 있는 고도로 맞춘다.
+
+    기동 방향으로 맞춘다 — 상승 중인 항공기를 내림 반올림하면 요청한 것보다 낮은
+    고도가 되어 분리가 의도보다 좁아진다.
+
+    **맞춘 뒤 포락선 안으로 가둔다.** 상한에 붙은 값을 올림하면 상한을 넘고,
+    그 고도는 항공기가 갈 수 없다. 넘으면 한 칸 내려 상한 이하의 배정 가능한
+    고도를 쓴다. 그 고도가 포락선 밖이면 배정할 수 있는 값이 없다는 뜻이므로
+    상한 자체를 낸다 — 반올림 때문에 후보가 사라지게 두지 않는다.
+    """
+    step = _ALTITUDE_ASSIGNMENT_STEP_FT
+    if value % step == 0.0:
+        snapped = value
+    else:
+        snapped = (ceil(value / step) if climbing else floor(value / step)) * step
+    if snapped > ceiling_ft:
+        lowered = floor(ceiling_ft / step) * step
+        return lowered if lowered >= floor_ft else ceiling_ft
+    if snapped < floor_ft:
+        raised = ceil(floor_ft / step) * step
+        return raised if raised <= ceiling_ft else floor_ft
+    return snapped
 
 
 def _normalize_preferred_altitude(

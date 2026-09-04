@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
+from sentry_atm.domain.presence import normalize_presence
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
 from sentry_atm.scenario.event import ScenarioEvent
-from sentry_atm.scenario.presence import normalize_presence
 
 
 @dataclass(frozen=True, slots=True)

@@ -205,7 +205,9 @@ class IsolatedResolutionSafetyValidator:
             performance_by_id,
             self._profile,
         )
-        rule_violations = _minimum_altitude_violations(candidate, self._profile)
+        rule_violations = _minimum_altitude_violations(
+            candidate, state_by_id, self._profile
+        )
         reasons = _reason_codes(
             candidate,
             primary_conflict=primary_conflict,
@@ -317,23 +319,55 @@ def _is_performance_feasible(
 
 def _minimum_altitude_violations(
     candidate: ResolutionCandidate,
+    state_by_id: Mapping[str, AircraftState],
     profile: ResolutionSafetyValidationProfile,
 ) -> tuple[SafetyRuleViolation, ...]:
+    """잠정 최저고도에 걸리는가.
+
+    이 최저고도는 공식 최저안전고도가 아니다 (`ASM-037`). 전사 자료에 최저
+    벡터고도가 없어 대표값을 쓰고 있고, 공식 자료가 준비되면 교체해야 한다.
+
+    **이미 그 아래에 있는 항공기에는 적용하지 않는다.** 최종접근 중인 항공기는
+    공고된 절차를 따라 합법적으로 그 아래에 있고, 거기에 7,500 ft 바닥을 들이대면
+    아무것도 지키지 못한 채 모든 후보가 막힌다 — 실제로 소티에서 그렇게 되어
+    상신할 수 있는 안이 하나도 남지 않았다.
+
+    그 대신 요구하는 것은 **더 내려가지 않는 것**이다. 잠정 기준으로 판정할 수
+    없는 구간에서 할 수 있는 말은 "이 기동이 상황을 더 나쁘게 만들지 않는다"
+    까지이며, 그 이상을 말하려면 근거가 있어야 한다.
+    """
     maneuver = candidate.maneuver
-    if not isinstance(maneuver, AltitudeManeuver) or (
-        maneuver.target_altitude_ft >= profile.minimum_candidate_altitude_ft
-    ):
+    if not isinstance(maneuver, AltitudeManeuver):
         return ()
+
+    target_ft = maneuver.target_altitude_ft
+    floor_ft = profile.minimum_candidate_altitude_ft
+    current_state = state_by_id.get(candidate.target_aircraft_id or "")
+    current_ft = current_state.altitude_ft if current_state is not None else None
+
+    if current_ft is not None and current_ft < floor_ft:
+        if target_ft >= current_ft:
+            return ()
+        description = (
+            f"target altitude {target_ft:.1f} ft descends below the Aircraft's "
+            f"current {current_ft:.1f} ft, which is already under the provisional "
+            f"minimum {floor_ft:.1f} ft"
+        )
+    elif target_ft >= floor_ft:
+        return ()
+    else:
+        description = (
+            f"target altitude {target_ft:.1f} ft is below "
+            f"configured minimum {floor_ft:.1f} ft"
+        )
+
     return (
         SafetyRuleViolation(
             violation_id=(f"VIOLATION-{candidate.candidate_id}-{profile.minimum_altitude_rule_id}"),
             rule_id=profile.minimum_altitude_rule_id,
             violation_type=SafetyRuleViolationType.MINIMUM_ALTITUDE,
             aircraft_id=candidate.target_aircraft_id,
-            description=(
-                f"target altitude {maneuver.target_altitude_ft:.1f} ft is below "
-                f"configured minimum {profile.minimum_candidate_altitude_ft:.1f} ft"
-            ),
+            description=description,
             source_reference=profile.source_reference,
         ),
     )

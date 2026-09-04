@@ -140,6 +140,26 @@ class GoldenDemoSessionCommandService:
             current=current,
         )
 
+        # 증거가 시계보다 뒤처진 채로 명령을 실행하지 않는다.
+        #
+        # 예전에는 경과초를 못박아 이것이 우연히 걸렸다. 시각 고정을 걷어낸
+        # 자리에는 조건을 명시해야 한다 — 시계만 움직이고 단계가 계산되지 않은
+        # 상태에서는 화면이 보여 주는 교통과 실제 시각이 다르고, 그 위에서 내린
+        # 판단은 보이지 않는 상황에 대한 판단이 된다.
+        #
+        # RESET 은 예외다. 어긋난 상태를 되돌리는 것이 그 명령의 일이다.
+        if selected is not GoldenDemoSessionCommand.RESET:
+            latest_step = steps.last_result
+            if (
+                latest_step is not None
+                and latest_step.timestamp_utc != runtime.simulation.clock.current_time_utc
+            ):
+                raise ValueError(
+                    "Session evidence is behind the Clock; "
+                    f"latest Step is {latest_step.timestamp_utc.isoformat()} but the Clock "
+                    f"is {runtime.simulation.clock.current_time_utc.isoformat()}"
+                )
+
         if selected is GoldenDemoSessionCommand.RESET:
             runtime.simulation.clock.reset()
             return self._read_api.get_current()
@@ -159,67 +179,39 @@ class GoldenDemoSessionCommandService:
             steps.step(seconds)
             return self._read_api.get_current()
         if selected is GoldenDemoSessionCommand.START:
-            _require_checkpoint(current, GoldenDemoSessionStage.READY, elapsed_seconds=0.0)
+            _require_checkpoint(current, GoldenDemoSessionStage.READY)
             runtime.simulation.clock.play()
             steps.step(0)
         elif selected is GoldenDemoSessionCommand.ADVANCE_TO_CONFLICT:
-            _require_checkpoint(current, GoldenDemoSessionStage.MONITORING, elapsed_seconds=0.0)
+            _require_checkpoint(current, GoldenDemoSessionStage.MONITORING)
             steps.step(70)
         elif selected is GoldenDemoSessionCommand.GENERATE_RECOMMENDATION:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.CONFLICT_DETECTED,
-                elapsed_seconds=70.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.CONFLICT_DETECTED)
             steps.step(5)
             resolution.resolve()
         elif selected is GoldenDemoSessionCommand.ACCEPT_RECOMMENDATION:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE,
-                elapsed_seconds=75.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE)
             steps.step(15)
             decision.accept()
         elif selected is GoldenDemoSessionCommand.MODIFY_RECOMMENDATION:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE,
-                elapsed_seconds=75.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE)
             steps.step(15)
             decision.modify(
                 rationale=rationale,  # type: ignore[arg-type]
                 modified_maneuver=modified_maneuver,  # type: ignore[arg-type]
             )
         elif selected is GoldenDemoSessionCommand.REJECT_RECOMMENDATION:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE,
-                elapsed_seconds=75.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.RECOMMENDATION_AVAILABLE)
             steps.step(15)
             decision.reject(rationale=rationale)  # type: ignore[arg-type]
         elif selected is GoldenDemoSessionCommand.REVALIDATE_MODIFIED_MANEUVER:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.DECISION_MODIFIED,
-                elapsed_seconds=90.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.DECISION_MODIFIED)
             modified_revalidation.revalidate()
         elif selected is GoldenDemoSessionCommand.APPLY_VALIDATED_MODIFIED_MANEUVER:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.MODIFICATION_REVALIDATED,
-                elapsed_seconds=90.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.MODIFICATION_REVALIDATED)
             modified_application.authorize_apply_and_revalidate()
         elif selected is GoldenDemoSessionCommand.APPLY_APPROVED_MANEUVER:
-            _require_checkpoint(
-                current,
-                GoldenDemoSessionStage.DECISION_ACCEPTED,
-                elapsed_seconds=90.0,
-            )
+            _require_checkpoint(current, GoldenDemoSessionStage.DECISION_ACCEPTED)
             self._application_orchestrator.apply_and_revalidate()
         else:  # pragma: no cover - exhaustive StrEnum dispatch
             raise AssertionError(f"unsupported Session command: {selected.value}")
@@ -336,18 +328,21 @@ def _matches_read_maneuver(read_model, maneuver: ResolutionManeuver) -> bool:
 def _require_checkpoint(
     current: GoldenDemoSessionReadModel,
     expected_stage: GoldenDemoSessionStage,
-    *,
-    elapsed_seconds: float,
 ) -> None:
+    """이 명령이 지금 성립하는가.
+
+    단계만 본다. 예전에는 경과초까지 못박았지만 그것은 골든 데모의 보정된
+    시간선을 재현하기 위한 것이었고, 다른 시나리오에서는 승인할 수 있는 순간이
+    단 한 시점뿐이 되어 판단을 사람에게 맡긴다는 말과 화면이 어긋났다.
+
+    시각이 지켜 주던 성질 — 판단과 증거가 같은 시각의 것이어야 한다는 것 — 은
+    각 오케스트레이터가 동시대성 조건으로 직접 지킨다. 여기서 시각을 다시 보면
+    같은 것을 두 곳에서 다르게 정의하게 된다.
+    """
     if current.stage is not expected_stage:
         raise ValueError(
             f"command requires Session stage {expected_stage.value}; "
             f"current stage is {current.stage.value}"
-        )
-    if current.elapsed_seconds != elapsed_seconds:
-        raise ValueError(
-            f"command requires elapsed_seconds={elapsed_seconds:.1f}; "
-            f"current value is {current.elapsed_seconds:.1f}"
         )
 
 

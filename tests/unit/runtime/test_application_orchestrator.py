@@ -126,9 +126,12 @@ def test_application_requires_decision_time_freshness_audit_and_uniqueness() -> 
     assert current_application.last_result is first
     assert _mil_f01_runtime(current_runtime).applied_states == (first.applied_state,)
 
+    # 시각을 못박는 대신 동시대성을 요구한다. 승인은 그 시점의 교통에 대해
+    # 검증된 것이므로, 시간이 흐른 뒤 그대로 적용하면 검증하지 않은 상황에
+    # 검증된 기동을 넣는 것이 된다.
     late_runtime, late_steps, _, _, late_application, _ = _at_accepted_decision()
     late_steps.step(5)
-    with pytest.raises(ValueError, match=r"T\+90"):
+    with pytest.raises(ValueError, match="contemporaneous"):
         late_application.apply_and_revalidate()
     assert _mil_f01_runtime(late_runtime).applied_states == ()
 

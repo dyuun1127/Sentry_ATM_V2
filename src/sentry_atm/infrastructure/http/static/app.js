@@ -125,6 +125,8 @@ async function advance(seconds) {
     state.session = await post("ADVANCE", { seconds: step });
     state.advisory = await get(ADVISORY).catch(() => null);
     setLink(true);
+    // 그리기 전에 내린다. 그리는 동안 busy 이면 단추가 비활성인 채로 남는다.
+    state.busy = false;
     render();
   } catch (error) {
     setLink(false);
@@ -152,6 +154,7 @@ async function seek(offsetSeconds) {
     }
     state.advisory = await get(ADVISORY).catch(() => null);
     setLink(true);
+    state.busy = false;
     render();
   } catch (error) {
     setLink(false);
@@ -812,12 +815,15 @@ async function decide(command, extra = {}) {
     state.session = await post(command, extra);
     state.advisory = await get(ADVISORY).catch(() => null);
     setLink(true);
+    state.busy = false;
     say(`${command} 완료 — 단계 ${state.session.stage}`, "good");
     render();
   } catch (error) {
     setLink(true);
+    state.busy = false;
     // 거부당한 이유를 그대로 보여 준다. 삼키면 관제사가 무엇이 막혔는지 모른다.
     say(String(error.message || error), "bad");
+    render();
   } finally {
     state.busy = false;
   }

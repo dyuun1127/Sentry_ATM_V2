@@ -1,7 +1,7 @@
 """Isolated revalidation of one controller-modified Golden Demo Maneuver."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sentry_atm.domain import (
     AircraftPerformanceProfile,
@@ -21,7 +21,6 @@ from sentry_atm.runtime.decision_orchestrator import (
     GoldenDemoControllerDecisionOrchestrator,
 )
 
-_REVALIDATION_AT_SECONDS = 90
 _GENERATOR_PROFILE_ID = "CONTROLLER_MODIFICATION_V1"
 
 
@@ -81,7 +80,7 @@ class GoldenDemoModifiedManeuverRevalidationOrchestrator:
         return self._decision_orchestrator.resolution_orchestrator.step_orchestrator.runtime
 
     def revalidate(self) -> GoldenDemoModifiedManeuverRevalidationResult:
-        """Validate the audited modified action against a copied T+90 snapshot."""
+        """관제사가 고친 기동을 그 시점의 교통 사본에 대해 검증한다."""
 
         decision_result = self._decision_orchestrator.last_result
         self._synchronize_reset()
@@ -99,11 +98,14 @@ class GoldenDemoModifiedManeuverRevalidationOrchestrator:
             raise ValueError("Resolution and Step evidence are required for revalidation")
         runtime = steps.runtime
         clock = runtime.simulation.clock
-        expected_time = clock.start_time_utc + timedelta(seconds=_REVALIDATION_AT_SECONDS)
         if step_result.timestamp_utc != clock.current_time_utc:
             raise ValueError("the latest Golden Demo Step must match the current Clock")
-        if step_result.timestamp_utc != expected_time:
-            raise ValueError("Golden Demo modified revalidation must run at T+90 seconds")
+        # 재검증은 그 판단과 같은 시각에서 이루어져야 한다. 시간이 흐른 뒤에
+        # 재검증하면 관제사가 고친 기동을 다른 교통에 대해 판정하게 된다.
+        if decision_result.timestamp_utc != step_result.timestamp_utc:
+            raise ValueError(
+                "the modified Controller Decision must be contemporaneous with the current Step"
+            )
         if self._last_tick_count == clock.tick_count:
             raise ValueError("modified Maneuver revalidation already exists for this Tick")
         if runtime.controller_decision_service.last_audit_log is not decision_result.audit_log:

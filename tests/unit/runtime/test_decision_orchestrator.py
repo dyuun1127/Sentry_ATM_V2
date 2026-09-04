@@ -126,6 +126,8 @@ def test_decision_requires_resolution_time_freshness_catalog_and_uniqueness() ->
     with pytest.raises(ValueError, match="Resolution is required"):
         decision.accept()
 
+    # 상신 직후에 판단하는 것은 정상이다. T+90 고정은 시연 속도였지 규칙이
+    # 아니었다 — 관제사가 언제 판단할지는 상황이 정한다.
     early_runtime = build_golden_demo_runtime()
     early_steps = GoldenDemoStepOrchestrator(early_runtime)
     early_resolution = GoldenDemoResolutionOrchestrator(early_steps)
@@ -133,8 +135,20 @@ def test_decision_requires_resolution_time_freshness_catalog_and_uniqueness() ->
     early_runtime.simulation.clock.play()
     early_steps.step(75)
     early_resolution.resolve()
-    with pytest.raises(ValueError, match=r"T\+90"):
-        early_decision.accept()
+    assert early_decision.accept() is not None
+
+    # 지키는 것은 시각이 아니라 신선도다. 증거가 지난 시각의 것이면 이미 움직인
+    # 항공기에 대해 판단하게 된다.
+    stale_runtime = build_golden_demo_runtime()
+    stale_steps = GoldenDemoStepOrchestrator(stale_runtime)
+    stale_resolution = GoldenDemoResolutionOrchestrator(stale_steps)
+    stale_decision = GoldenDemoControllerDecisionOrchestrator(stale_resolution)
+    stale_runtime.simulation.clock.play()
+    stale_steps.step(75)
+    stale_resolution.resolve()
+    stale_runtime.simulation.engine.tick()
+    with pytest.raises(ValueError, match="current Clock"):
+        stale_decision.accept()
 
     current_runtime, _, _, current_decision, _, _ = _at_decision_time()
     first = current_decision.accept()

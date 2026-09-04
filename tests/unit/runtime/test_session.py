@@ -294,7 +294,9 @@ def test_command_rejects_clock_drift_before_advancing_checkpoint() -> None:
     session.runtime.simulation.engine.tick()
     before = session.read_api.get_current()
 
-    with pytest.raises(ValueError, match="elapsed_seconds=0.0"):
+    # 시각을 못박는 대신 증거와 시계의 일치를 본다. 시계만 움직이고 단계가
+    # 계산되지 않았으면 화면이 보여 주는 교통과 실제 시각이 다르다.
+    with pytest.raises(ValueError, match="behind the Clock"):
         session.command_service.execute(GoldenDemoSessionCommand.ADVANCE_TO_CONFLICT)
 
     assert session.read_api.get_current() == before

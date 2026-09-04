@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from sentry_atm.scenario.presence import normalize_presence
+from sentry_atm.domain.presence import normalize_presence
 
 T0 = datetime(2026, 9, 1, tzinfo=UTC)
 

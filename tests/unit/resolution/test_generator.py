@@ -325,7 +325,10 @@ def test_generator_builds_golden_a_to_e_from_actual_t_plus_75_state() -> None:
     assert isinstance(candidate_c.maneuver, SpeedManeuver)
     assert candidate_c.maneuver.target_ground_speed_kt == 220.0
     assert isinstance(candidate_d.maneuver, AltitudeManeuver)
-    assert candidate_d.maneuver.target_altitude_ft == 7_200.0
+    # 8,200 - 1,000 = 7,200 이지만 배정할 수 있는 고도가 아니다. 강하이므로
+    # 아래쪽 1,000 ft 단위인 7,000 으로 맞춘다. 최저고도 규칙(7,500)에는 여전히
+    # 걸리며, 그것이 이 후보가 안전 검증에서 하는 역할이다.
+    assert candidate_d.maneuver.target_altitude_ft == 7_000.0
     assert isinstance(candidate_e.maneuver, NoActionManeuver)
 
 
@@ -384,7 +387,9 @@ def test_generator_clips_default_altitude_and_speed_to_profile_envelopes() -> No
         preferred_target_aircraft_id="MIL-F01",
     )
 
-    assert batch.candidates[0].maneuver.target_altitude_ft == 9_500.0  # type: ignore[union-attr]
+    # 상한 9,500 ft 로 잘린 뒤 배정 가능한 고도로 맞춘다. 9,500 은 1,000 ft
+    # 단위가 아니므로 상한 이하의 9,000 이 된다 — 올림하면 갈 수 없는 고도가 된다.
+    assert batch.candidates[0].maneuver.target_altitude_ft == 9_000.0  # type: ignore[union-attr]
     assert batch.candidates[2].maneuver.target_ground_speed_kt == 240.0  # type: ignore[union-attr]
 
 

@@ -6,8 +6,8 @@ from math import cos, radians, sin
 
 from sentry_atm.domain.aircraft import AircraftState
 from sentry_atm.domain.enums import DataSource
+from sentry_atm.domain.presence import normalize_presence
 from sentry_atm.domain.units import fpm_to_ft_per_second, knots_to_nm_per_second
-from sentry_atm.scenario.presence import normalize_presence
 from sentry_atm.simulation.clock import SimulationClock
 
 

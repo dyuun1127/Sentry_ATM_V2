@@ -1,7 +1,7 @@
 """Authorized application of one safely revalidated controller modification."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sentry_atm.domain import (
     AircraftState,
@@ -20,8 +20,6 @@ from sentry_atm.runtime.modified_revalidation_orchestrator import (
     GoldenDemoModifiedManeuverRevalidationResult,
 )
 from sentry_atm.simulation import SyntheticAircraftRuntime, TrafficSnapshot
-
-_APPLICATION_AT_SECONDS = 90
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,11 +113,10 @@ class GoldenDemoValidatedModifiedManeuverApplicationOrchestrator:
         if step_result is None:  # pragma: no cover - Revalidation implies a source Step
             raise ValueError("a Golden Demo Step is required before modified application")
         clock = runtime.simulation.clock
-        expected_time = clock.start_time_utc + timedelta(seconds=_APPLICATION_AT_SECONDS)
         if step_result.timestamp_utc != clock.current_time_utc:
             raise ValueError("the latest Golden Demo Step must match the current Clock")
-        if step_result.timestamp_utc != expected_time:
-            raise ValueError("Golden Demo modified Maneuver Application must run at T+90 seconds")
+        # 검증 결과가 지난 시각의 것이면 적용하지 않는다. 시각 고정을 걷어낸
+        # 자리를 이 조건이 지킨다.
         if revalidation.timestamp_utc != step_result.timestamp_utc:
             raise ValueError("modified Revalidation must match the current Golden Demo Step")
         if self._last_tick_count == clock.tick_count:

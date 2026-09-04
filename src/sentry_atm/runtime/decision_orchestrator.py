@@ -1,7 +1,7 @@
 """Deterministic Golden Demo controller decision audit orchestration."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sentry_atm.domain import (
     ControllerDecisionAuditEntry,
@@ -12,8 +12,6 @@ from sentry_atm.domain import (
 )
 from sentry_atm.runtime.resolution_orchestrator import GoldenDemoResolutionOrchestrator
 
-_DECISION_AT_SECONDS = 90
-_EXPECTED_CANDIDATE_ID = "CAND-A"
 _CONTROLLER_POSITION_ID = "RKTU-DEMO-CONTROLLER"
 
 
@@ -31,7 +29,7 @@ class GoldenDemoControllerDecisionResult:
 
 
 class GoldenDemoControllerDecisionOrchestrator:
-    """Record one calibrated T+90 CAND-A decision without applying a Maneuver."""
+    """상신된 안에 대한 관제사 판단 하나를 기록한다 — 기동은 아직 적용하지 않는다."""
 
     __slots__ = (
         "_last_result",
@@ -60,7 +58,7 @@ class GoldenDemoControllerDecisionOrchestrator:
         return self._last_result
 
     def accept(self) -> GoldenDemoControllerDecisionResult:
-        """Record the selected SAFE Recommendation as accepted at T+90."""
+        """상신된 SAFE 회피안을 승인으로 기록한다."""
 
         return self.decide(ControllerDecisionType.ACCEPT)
 
@@ -105,11 +103,10 @@ class GoldenDemoControllerDecisionOrchestrator:
             raise ValueError("a Golden Demo Step is required before Controller Decision")
         runtime = steps.runtime
         clock = runtime.simulation.clock
-        expected_time = clock.start_time_utc + timedelta(seconds=_DECISION_AT_SECONDS)
+        # 판단은 증거와 같은 시각의 것이어야 한다. 시각 자체를 못박지는 않는다 —
+        # 관제사가 언제 판단할지는 상황이 정하지 대본이 정하지 않는다.
         if step_result.timestamp_utc != clock.current_time_utc:
             raise ValueError("the latest Golden Demo Step must match the current Clock")
-        if step_result.timestamp_utc != expected_time:
-            raise ValueError("Golden Demo Controller Decision must run at T+90 seconds")
         if self._last_tick_count == clock.tick_count:
             raise ValueError(
                 "a Golden Demo Controller Decision already exists for the current Tick"
@@ -118,11 +115,12 @@ class GoldenDemoControllerDecisionOrchestrator:
         recommendation_set = resolution_result.recommendation_set
         if runtime.recommendation_catalog.get_current_recommendation() is not recommendation_set:
             raise ValueError("the Golden Demo Recommendation must be current in the Catalog")
+        # 판단 대상은 상신된 안이다. 어느 후보인지는 그때 그때 다르다 — 특정
+        # 후보 식별자를 요구하면 그 후보가 뽑히지 않는 상황에서는 승인 자체가
+        # 성립하지 않는다.
         recommendation = recommendation_set.primary_recommendation
-        if (  # pragma: no cover - calibrated Resolution invariant
-            recommendation is None or recommendation.candidate_id != _EXPECTED_CANDIDATE_ID
-        ):
-            raise ValueError("the Golden Demo primary Recommendation must be CAND-A")
+        if recommendation is None:
+            raise ValueError("the Recommendation Set must publish a primary Recommendation")
 
         audit_log = runtime.controller_decision_service.decide(
             recommendation_set,
