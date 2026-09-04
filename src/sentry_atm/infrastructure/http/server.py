@@ -52,7 +52,7 @@ def create_local_golden_demo_server(
 
     resolved = settings or LocalGoldenDemoServerSettings()
     runtime = _SESSION_BUILDERS[resolved.scenario]()
-    web_app = GoldenDemoWebWsgiApp(runtime.http_app)
+    web_app = GoldenDemoWebWsgiApp(runtime.http_app, runtime)
     return make_server(resolved.host, resolved.port, web_app)
 
 

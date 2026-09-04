@@ -12,6 +12,14 @@ _MINIMUM_PYTHON = (3, 12)
 _REQUIRED_ASSETS = ("index.html", "app.css", "app.js")
 _EXTERNAL_MARKERS = (b"http://", b"https://", b"//cdn.")
 
+# XML 이름공간 식별자. 생김새는 URL 이지만 가져오는 자원이 아니라 이름이며,
+# SVG 요소를 만들려면 이 문자열이 반드시 있어야 한다 (`createElementNS`).
+#
+# 문자열을 쪼개 검사를 피하지 않는다. 그렇게 하면 진짜 외부 자원도 같은 방법으로
+# 숨길 수 있게 되어 검사가 아무것도 지키지 못한다. 허용하는 것을 적어 두면
+# 무엇이 예외인지 남는다.
+_ALLOWED_URIS = (b"http://www.w3.org/2000/svg",)
+
 
 class GoldenDemoReleasePreflightFailure(RuntimeError):
     """Raised when the presentation environment is not release-ready."""
@@ -98,6 +106,8 @@ def _read_required_assets() -> dict[str, bytes]:
 def _require_offline_assets(assets: dict[str, bytes]) -> None:
     for name, content in assets.items():
         lowered = content.lower()
+        for allowed in _ALLOWED_URIS:
+            lowered = lowered.replace(allowed, b"")
         if any(marker in lowered for marker in _EXTERNAL_MARKERS):
             raise GoldenDemoReleasePreflightFailure(
                 f"packaged UI asset contains an external URL: {name}"

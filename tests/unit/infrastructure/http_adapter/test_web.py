@@ -5,6 +5,8 @@ import pytest
 from sentry_atm.infrastructure.http import GoldenDemoWebWsgiApp
 from sentry_atm.runtime import build_golden_demo_session_runtime
 
+SCENARIO_PATH = "/api/v1/reference/scenario"
+
 
 def _request(
     app: GoldenDemoWebWsgiApp,
@@ -50,29 +52,33 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert headers["Cache-Control"] == "no-store"
     assert headers["X-Content-Type-Options"] == "nosniff"
     assert "default-src 'self'" in headers["Content-Security-Policy"]
+
+    # 완전한 문서여야 한다. 조각으로 내보내면 언어·문자셋·뷰포트가 빠지고
+    # 브라우저가 호환 모드로 그린다.
+    assert b"<!doctype html>" in body
     assert b'<html lang="ko">' in body
+    assert b'<meta charset="utf-8" />' in body
     assert b"SENTRY ATM" in body
-    assert b"data-aircraft-layer" in body
-    assert b"data-primary-command" in body
-    assert b"data-reset-command" in body
-    assert b"data-decision-card" in body
-    assert b"data-conflict-explainability" in body
-    assert b"data-conflict-overlay" in body
-    assert b"data-trail-layer" in body
-    assert b"data-playback-offset" in body
-    assert b"data-playback-toggle" in body
-    assert b"data-playback-scrubber" in body
-    assert b"data-playback-cues" in body
-    assert b'data-playback-rate="1"' in body
-    assert b'data-playback-rate="2"' in body
-    assert b'data-playback-rate="4"' in body
-    assert b"data-deviation-panel" in body
-    assert b"data-candidate-panel" in body
-    assert b"data-decision-actions" in body
-    assert b"data-decision-form" in body
-    assert b"data-modified-type" in body
-    assert b"data-modified-revalidation" in body
-    assert b"data-revalidation-source" in body
+    assert b"skip-link" in body
+
+    # 화면이 반드시 들고 있어야 하는 자리들. 이름이 아니라 자리를 고정한다.
+    for marker in (
+        b"data-primary-command",
+        b"data-reset-command",
+        b"data-conflict-explainability",
+        b"data-deviation-panel",
+        b"data-candidate-panel",
+        b"data-decision-actions",
+        b"data-decision-form",
+        b"data-modified-type",
+        b"data-modified-revalidation",
+    ):
+        assert marker in body, marker
+
+    # 스코프 계층. 배경과 항적이 각각 자기 그룹을 가져야 지우고 다시 그릴 수 있다.
+    for layer in (b'id="g-terrain"', b'id="g-airspace"', b'id="g-traffic"', b'id="g-links"'):
+        assert layer in body, layer
+
     assert b"/assets/app.css" in body
     assert app.api_app is runtime.http_app
 
@@ -81,11 +87,11 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     ("path", "content_type", "content"),
     [
         ("/index.html", "text/html; charset=utf-8", b"SENTRY ATM"),
-        ("/assets/app.css", "text/css; charset=utf-8", b".aircraft-track"),
+        ("/assets/app.css", "text/css; charset=utf-8", b".ac-trail"),
         (
             "/assets/app.js",
             "text/javascript; charset=utf-8",
-            b"/api/v1/golden-demo/session/commands",
+            b"/api/v1/golden-demo/session",
         ),
     ],
 )
@@ -104,70 +110,131 @@ def test_static_assets_have_exact_content_types(
 
 
 def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> None:
+    """관제사가 화면에서 낼 수 있어야 하는 명령이 전부 있는가.
+
+    하나라도 빠지면 그 판단은 화면에서 할 수 없고, 사람이 판단한다는 주장이
+    그만큼 좁아진다.
+    """
     app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
 
     _, _, script = _request(app, path="/assets/app.js")
 
     for command in (
-        b'command: "START"',
-        b'command: "ADVANCE_TO_CONFLICT"',
-        b'command: "GENERATE_RECOMMENDATION"',
-        b'command: "REVALIDATE_MODIFIED_MANEUVER"',
-        b'command: "APPLY_VALIDATED_MODIFIED_MANEUVER"',
-        b'command: "APPLY_APPROVED_MANEUVER"',
-        b'command: "RESET"',
+        b'"START"',
+        b'"ADVANCE_TO_CONFLICT"',
+        b'"GENERATE_RECOMMENDATION"',
+        b'"ACCEPT_RECOMMENDATION"',
+        b'"MODIFY_RECOMMENDATION"',
+        b'"REJECT_RECOMMENDATION"',
+        b'"REVALIDATE_MODIFIED_MANEUVER"',
+        b'"APPLY_VALIDATED_MODIFIED_MANEUVER"',
+        b'"APPLY_APPROVED_MANEUVER"',
+        b'"RESET"',
     ):
-        assert command in script
-    assert b"if (requestBusy || !command)" in script
-    assert b"error.status === 409" in script
+        assert command in script, command
+
+    # 중복 제출 경계. 없으면 한 번의 판단이 두 번 기록될 수 있다.
+    assert b"if (state.busy) return;" in script
+    # 거부당한 이유를 삼키지 않는다.
+    assert b"say(String(error.message || error), \"bad\")" in script
     assert b"function renderConflictExplainability(session)" in script
-    assert b"session.primary_conflict" in script
+    assert b"session?.primary_conflict" in script
     assert b"function renderDeviation(deviation)" in script
     assert b"function renderCandidateComparisons(candidates)" in script
-    assert b'executeCommand("ACCEPT_RECOMMENDATION")' in script
-    assert b'executeCommand("MODIFY_RECOMMENDATION"' in script
-    assert b'executeCommand("REJECT_RECOMMENDATION"' in script
-    assert b"function buildModifiedManeuver()" in script
-    assert b"function renderDecisionWorkflow(session, latestDecision)" in script
-    assert b"session.modified_revalidation" in script
+    assert b"function modifiedManeuver(altitudeFt)" in script
     assert b"COMMAND_BY_STAGE.BLOCKED_MODIFICATION" in script
 
 
-def test_ui_assets_animate_playback_frames_with_interpolated_markers_and_trails() -> None:
+def test_ui_assets_draw_the_scope_from_reference_geometry_and_leave_trails() -> None:
+    """스코프가 배경 형상과 항적 자취를 그리는가.
+
+    자취가 없으면 현재 위치와 속도벡터만 남아 선회 중인지 직진 중인지 읽을 수
+    없다. 배경 형상은 서버에서 받아야 화면과 판정이 같은 공역을 본다.
+    """
     app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
 
     _, _, script = _request(app, path="/assets/app.js")
     _, _, stylesheet = _request(app, path="/assets/app.css")
 
-    assert b'const PLAYBACK_ENDPOINT = "/api/v1/golden-demo/playback"' in script
-    assert b"function interpolateAircraft(current, next, fraction)" in script
-    assert b"function renderPlaybackFrame(offsetSeconds)" in script
-    assert b"requestAnimationFrame(animate)" in script
-    assert b"cancelAnimationFrame(playbackAnimationId)" in script
-    assert b"TRAIL_WINDOW_SECONDS = 30" in script
-    assert b"setInterval" not in script
-    assert b".aircraft-trail" in stylesheet
-    assert b"will-change: left, top" in stylesheet
+    assert b'const GEOMETRY = "/api/v1/reference/geometry"' in script
+    assert b'const SCENARIO = "/api/v1/reference/scenario"' in script
+    assert b'const ADVISORY = "/api/v1/advisory"' in script
+    assert b"function recordTrails()" in script
+    assert b"TRAIL_POINTS" in script
+    assert b".ac-trail" in stylesheet
+
+    # 좌표 변환은 서버와 같은 타원체를 써야 한다. 평균 반지름으로 근사하면
+    # 배경과 항적이 어긋난다.
+    assert b"WGS84_F = 1 / 298.257223563" in script
+    assert b"function curvatureRadiiNm(latDeg)" in script
 
 
-def test_ui_assets_control_rate_timeline_and_contract_driven_auto_pause() -> None:
+def test_ui_assets_control_the_clock_and_expose_scenario_steps() -> None:
+    """75분짜리 시나리오를 화면에서 다룰 수 있는가."""
     app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
 
     _, _, script = _request(app, path="/assets/app.js")
     _, _, stylesheet = _request(app, path="/assets/app.css")
 
-    assert b"function togglePlayback()" in script
-    assert b"function selectPlaybackRate(rate)" in script
-    assert b"playback.contract.supported_rates.includes(rate)" in script
-    assert b"function nextAutoPauseCue(previousOffset, nextOffset)" in script
-    assert b"function advanceSessionForCue(cue)" in script
-    assert b'command: "ADVANCE_TO_CONFLICT"' in script
-    assert b'command: "GENERATE_RECOMMENDATION"' in script
-    assert b'playbackScrubber.addEventListener("input"' in script
-    assert b"cue.auto_pause" in script
-    assert b"activeCue?.requires_operator_action" in script
-    assert b".playback-console" in stylesheet
-    assert b"--playback-progress" in stylesheet
+    assert b"function start()" in script
+    assert b"function stop()" in script
+    assert b"async function seek(offsetSeconds)" in script
+    assert b'"ADVANCE"' in script
+    assert b"const RATES = [1, 2, 4, 8, 16]" in script
+    assert b"const RANGES = " in script
+    assert b"function buildSteps()" in script
+    assert b".track" in stylesheet
+    assert b".steps button" in stylesheet
+
+
+def test_reference_and_advisory_endpoints_serve_json() -> None:
+    """스코프 배경과 규정 권고가 API 로 나오는가."""
+    runtime = build_golden_demo_session_runtime()
+    app = GoldenDemoWebWsgiApp(runtime.http_app, runtime)
+
+    for path in ("/api/v1/reference/geometry", "/api/v1/reference/scenario"):
+        status, headers, body = _request(app, path=path)
+        assert status == 200, path
+        assert headers["Content-Type"] == "application/json; charset=utf-8"
+        assert body.startswith(b"{")
+
+    # 권고는 단계가 한 번이라도 계산된 뒤에 값이 생긴다. 그 전에는 빈 객체다.
+    status, headers, body = _request(app, path="/api/v1/advisory")
+    assert status == 200
+    assert headers["Content-Type"] == "application/json; charset=utf-8"
+
+
+def test_scenario_endpoint_describes_the_running_scenario() -> None:
+    """돌고 있는 시나리오를 말해야 한다.
+
+    늘 소티를 돌려주면 골든 데모를 돌면서 74분짜리 시간축과 13단계를 그리게
+    되고, 화면이 무엇을 보여 주는지 스스로 틀리게 말한다.
+    """
+    import json
+
+    from sentry_atm.runtime import build_sortie_session_runtime
+
+    golden = build_golden_demo_session_runtime()
+    _, _, body = _request(GoldenDemoWebWsgiApp(golden.http_app, golden), path=SCENARIO_PATH)
+    payload = json.loads(body)
+    assert payload["scenario_id"] == "RKTU_GOLDEN_DEMO_V1"
+    assert payload["duration_seconds"] == 300.0
+
+    sortie = build_sortie_session_runtime()
+    _, _, body = _request(GoldenDemoWebWsgiApp(sortie.http_app, sortie), path=SCENARIO_PATH)
+    payload = json.loads(body)
+    assert payload["scenario_id"] == "RKTU_SORTIE_V1"
+    assert payload["duration_seconds"] > 3_600.0
+    assert len(payload["steps"]) == 13
+
+
+def test_advisory_is_absent_without_a_runtime() -> None:
+    """런타임 없이 감싸면 권고 경로만 세션 API 로 넘어간다 — 나머지는 그대로 돈다."""
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    status, _, _ = _request(app, path="/api/v1/advisory")
+
+    assert status == 404
 
 
 def test_head_and_method_boundaries_are_explicit() -> None:
