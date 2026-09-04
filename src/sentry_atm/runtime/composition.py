@@ -8,6 +8,7 @@ from sentry_atm.api import (
     InProcessGoldenDemoPlaybackApi,
     InProcessRecommendationApi,
 )
+from sentry_atm.api.playback import build_sortie_playback_contract
 from sentry_atm.conflict import (
     ConflictAssessmentService,
     PairwiseConflictDetector,
@@ -42,6 +43,7 @@ from sentry_atm.scenario import (
     build_golden_demo_scenario,
     build_scenario_simulation,
 )
+from sentry_atm.scenario.sortie_builder import build_sortie_plan
 
 
 class InMemoryRecommendationCatalog:
@@ -131,6 +133,33 @@ def build_golden_demo_runtime() -> GoldenDemoRuntime:
     definition = build_golden_demo_scenario()
     if definition.scenario_id != GOLDEN_DEMO_SCENARIO_ID:  # pragma: no cover - builder invariant
         raise ValueError("Golden Demo builder returned an unexpected scenario")
+    return build_scenario_runtime(definition)
+
+
+def build_sortie_runtime(**kwargs) -> GoldenDemoRuntime:
+    """같은 배선을 13단계 소티 시나리오에 붙인다.
+
+    골든 데모용 배선을 따로 두지 않는 이유는, 파이프라인이 특정 시나리오에
+    묶여 있지 않다는 것이 확인되어야 할 성질이기 때문이다. 소티가 골든 데모와
+    다른 경로를 타면 시연에서 도는 것과 시험에서 도는 것이 서로 다른 코드가 된다.
+    """
+
+    plan = build_sortie_plan(**kwargs)
+    return build_scenario_runtime(
+        plan.definition,
+        playback_contract=build_sortie_playback_contract(plan),
+    )
+
+
+def build_scenario_runtime(
+    definition: ScenarioDefinition,
+    *,
+    playback_contract=None,
+) -> GoldenDemoRuntime:
+    """어떤 시나리오든 같은 결정적 구성으로 배선한다."""
+
+    if not isinstance(definition, ScenarioDefinition):
+        raise TypeError("definition must be a ScenarioDefinition")
     simulation = build_scenario_simulation(definition)
 
     prediction_service = PredictionRunService(ConstantVelocityPredictor())
@@ -154,7 +183,7 @@ def build_golden_demo_runtime() -> GoldenDemoRuntime:
         controller_decision_service,
         recommendation_catalog,
     )
-    playback_api = InProcessGoldenDemoPlaybackApi(definition)
+    playback_api = InProcessGoldenDemoPlaybackApi(definition, playback_contract)
 
     return GoldenDemoRuntime(
         simulation=simulation,

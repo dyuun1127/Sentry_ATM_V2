@@ -40,6 +40,7 @@ from sentry_atm.regulation import schedule as sched_mod  # noqa: E402
 from sentry_atm.regulation import sequencing as seq  # noqa: E402
 from sentry_atm.regulation import sortie as sortie_mod  # noqa: E402
 from sentry_atm.regulation.geo import separation_distance_nm, vincenty_direct  # noqa: E402
+from sentry_atm.scenario import sortie_builder as sortie_scenario  # noqa: E402
 
 FRAME_S = ex.FRAME_S
 M_PER_NM = 1852.0
@@ -53,56 +54,24 @@ LEVEL_ORDER = {"정상": 0, "주의": 1, "위험": 2, "비상": 3}
 # ----------------------------------------------------------------------
 
 
-def shift_departure(traj, liftoff_s):
-    """부양 시각이 주어진 값이 되도록 평행이동한다.
-
-    도착의 `shift_to` 는 **마지막** 표본(시단)을 맞추지만, 출발은 **첫** 표본이
-    부양 시점이므로 기준이 반대다. 같은 함수를 쓰면 출발 항적이 시간축에서
-    거꾸로 놓인다.
-    """
-    delta = liftoff_s - traj.samples[0].t_s
-    return synth.Trajectory(
-        traj.callsign, traj.actype, traj.wake_cat,
-        [replace(s, t_s=s.t_s + delta) for s in traj.samples],
-        traj.dt_s,
-    )
-
-
 def runway_events(sc):
     """실제로 활주로를 쓰는 사건 전부 — (기체, 확정 시각).
 
-    `with_sortie` 가 전체 교통이고 `final` 은 비상 이후 재배치된 꼬리다. 둘을
-    합치되, 재배치된 항적은 `final` 의 시각을 쓴다. 비상기는 **출격과 복귀로
-    두 번** 활주로를 쓰므로 도착 사건을 따로 더한다 — 한 번만 세면 복귀 항적이
-    화면에서 사라진다.
+    라이브러리와 같은 것을 쓴다. 여기에 한 벌을 더 두면 시연용 산출물과 시뮬레이터
+    시나리오가 서로 다른 활주로 순서를 갖게 되고, 둘 다 그럴듯해서 어긋난 사실이
+    드러나지 않는다.
     """
-    final_by = {s.op.callsign: s for s in sc.final.slots}
-    out = []
-    for slot in sc.with_sortie.slots:
-        f = final_by.get(slot.op.callsign)
-        t = f.time_s if (f is not None and f.op.op is slot.op.op) else slot.time_s
-        out.append((slot.op, t))
-    emg = final_by.get(sc.fighter_callsign)
-    if emg is not None and not emg.op.is_departure:
-        out.append((emg.op, emg.time_s))
-    return out
+    return sortie_scenario._runway_events(sc)
 
 
 def make_trajectories(ds, gen, sq, events, rng):
     """활주로 사건마다 항적 하나. 같은 콜사인이 두 번 나올 수 있다."""
-    out = []
-    for op, t in events:
-        if op.is_departure:
-            roll = ds.fleet.departure_roll_s(op.actype, op.wake_cat)
-            intent = gen.departure_intent(rng, op.callsign, 0.0, actype=op.actype)
-            tr = gen.synth.fly_departure(intent, rng)
-            out.append((f"{op.callsign}:D", shift_departure(tr, t + roll)))
-        else:
-            intent = gen.random_intent(rng, op.callsign, 0.0)
-            intent = replace(intent, actype=op.actype, wake_cat=op.wake_cat)
-            tr = gen.synth.fly(intent, rng)
-            out.append((f"{op.callsign}:A", synth.shift_to(tr, t)))
-    return out
+    return [
+        (f"{op.callsign}:{'D' if is_departure else 'A'}", track)
+        for op, is_departure, track in sortie_scenario._make_tracks(
+            ds, gen, events, rng
+        )
+    ]
 
 
 # ----------------------------------------------------------------------

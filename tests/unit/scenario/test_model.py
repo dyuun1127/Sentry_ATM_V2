@@ -198,11 +198,28 @@ def test_scenario_definition_rejects_empty_invalid_duplicate_or_wrong_time() -> 
         ),
         initial_state=_state(timestamp_utc=START_UTC + timedelta(seconds=1)),
     )
-    with pytest.raises(ValueError, match="scenario start time"):
+    # 시작 이후에 등장하는 것은 허용된다. 소티는 75분에 걸쳐 15대가 들어오므로
+    # 항공기마다 등장 시각이 다르다.
+    ScenarioDefinition(
+        scenario_id="LATER-ENTRY",
+        start_time_utc=START_UTC,
+        aircraft=(later_aircraft,),
+    )
+
+    # 시작 **이전**은 거부한다. 시계가 도달할 수 없는 시각이라 그 항공기는
+    # 영원히 나타나지 않고, 시나리오에 적혀 있으므로 빠진 사실도 드러나지 않는다.
+    early_aircraft = ScenarioAircraft(
+        metadata=AircraftMetadata(
+            aircraft_id="CIV-A01",
+            performance_class="AIRLINER-POC-V1",
+        ),
+        initial_state=_state(timestamp_utc=START_UTC - timedelta(seconds=1)),
+    )
+    with pytest.raises(ValueError, match="precede the scenario start time"):
         ScenarioDefinition(
-            scenario_id="WRONG-TIME",
+            scenario_id="EARLY-ENTRY",
             start_time_utc=START_UTC,
-            aircraft=(later_aircraft,),
+            aircraft=(early_aircraft,),
         )
 
 

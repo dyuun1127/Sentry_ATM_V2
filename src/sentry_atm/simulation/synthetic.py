@@ -1,11 +1,13 @@
 """Deterministic piecewise constant-motion runtime for synthetic aircraft."""
 
 from collections.abc import Iterable
+from datetime import datetime
 from math import cos, radians, sin
 
 from sentry_atm.domain.aircraft import AircraftState
 from sentry_atm.domain.enums import DataSource
 from sentry_atm.domain.units import fpm_to_ft_per_second, knots_to_nm_per_second
+from sentry_atm.scenario.presence import normalize_presence
 from sentry_atm.simulation.clock import SimulationClock
 
 
@@ -15,6 +17,7 @@ class SyntheticAircraftRuntime:
     __slots__ = (
         "_applied_states",
         "_clock",
+        "_presence",
         "_initial_state",
         "_observed_reset_count",
         "_scheduled_states",
@@ -26,6 +29,7 @@ class SyntheticAircraftRuntime:
         clock: SimulationClock,
         initial_state: AircraftState,
         scheduled_states: Iterable[AircraftState] = (),
+        presence: Iterable[tuple[datetime, datetime]] = (),
     ) -> None:
         if not isinstance(clock, SimulationClock):
             raise TypeError("clock must be a SimulationClock")
@@ -56,9 +60,12 @@ class SyntheticAircraftRuntime:
         ):
             raise ValueError("scheduled_states must be strictly ordered after initial_state")
 
+        windows = normalize_presence(presence)
+
         self._clock = clock
         self._initial_state = initial_state
         self._scheduled_states = materialized_states
+        self._presence = windows
         self._observed_reset_count = clock.reset_count
         self._applied_states: tuple[AircraftState, ...] = ()
 
@@ -85,6 +92,12 @@ class SyntheticAircraftRuntime:
         """Return future deterministic motion anchors in activation order."""
 
         return self._scheduled_states
+
+    @property
+    def presence(self) -> tuple[tuple[datetime, datetime], ...]:
+        """이 항공기가 관할 구역에 있는 구간들 (비어 있으면 계속 있는 것)."""
+
+        return self._presence
 
     @property
     def applied_states(self) -> tuple[AircraftState, ...]:
@@ -124,6 +137,10 @@ class SyntheticAircraftRuntime:
         current_time_utc = self._clock.current_time_utc
         motion_anchor = self._initial_state
         if current_time_utc < motion_anchor.timestamp_utc:
+            return None
+        if self._presence and not any(
+            start <= current_time_utc < end for start, end in self._presence
+        ):
             return None
         later_anchors = tuple(
             sorted(

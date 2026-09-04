@@ -7,6 +7,7 @@ from sentry_atm.domain import AircraftMetadata, AircraftState, DataSource
 from sentry_atm.domain.time_policy import to_utc
 from sentry_atm.domain.validation import require_identifier
 from sentry_atm.scenario.event import ScenarioEvent
+from sentry_atm.scenario.presence import normalize_presence
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +17,18 @@ class ScenarioAircraft:
     metadata: AircraftMetadata
     initial_state: AircraftState
     scheduled_states: tuple[AircraftState, ...] = ()
+    presence: tuple[tuple[datetime, datetime], ...] = ()
+    """이 항공기가 관할 구역 안에 있는 구간들. 비어 있으면 계속 있는 것으로 본다.
+
+    골든 데모는 8대가 5분 동안 전부 떠 있었으므로 이런 것이 필요 없었다. 소티는
+    다르다. 착륙한 항공기를 그대로 두면 활주로를 지나 계속 직진하고, 그 유령이
+    끝까지 분리 판정의 대상이 된다.
+
+    구간이 **여럿일 수 있는** 이유는 출격 소티 때문이다. 전투기는 이륙 후 터미널
+    구역을 떠나 작전지역에서 임무를 수행하고 돌아온다. 그 사이 항공기는 우리
+    관할이 아니다 — 없는 항적을 지어내 두 구간을 이으면 규정 계층이 만들지 않은
+    데이터가 산출물 한가운데 들어간다. 안 보이는 것이 사실에 가깝다.
+    """
 
     def __post_init__(self) -> None:
         if not isinstance(self.metadata, AircraftMetadata):
@@ -51,6 +64,11 @@ class ScenarioAircraft:
         ):
             raise ValueError("scheduled_states must be strictly ordered after initial_state")
 
+        windows = normalize_presence(self.presence)
+        object.__setattr__(self, "presence", windows)
+        if windows and windows[0][0] > self.initial_state.timestamp_utc:
+            raise ValueError("presence must start no later than the initial state")
+
     @property
     def aircraft_id(self) -> str:
         return self.metadata.aircraft_id
@@ -84,8 +102,13 @@ class ScenarioDefinition:
         aircraft_ids = self.aircraft_ids
         if len(set(aircraft_ids)) != len(aircraft_ids):
             raise ValueError("scenario aircraft IDs must be unique")
-        if any(item.initial_state.timestamp_utc != self.start_time_utc for item in self.aircraft):
-            raise ValueError("all initial states must use the scenario start time")
+        # 초기 상태가 시작 시각과 **같아야 한다**는 규칙이었다. 8대가 5분 동안
+        # 전부 떠 있던 골든 데모에서는 참이었지만, 시나리오의 성질이 아니라 그
+        # 시나리오의 성질이었다. 소티는 75분에 걸쳐 15대가 들어오므로 항공기마다
+        # 등장 시각이 다르다. 시작 이전으로 가는 것만 막는다 — 그것은 시계가
+        # 도달할 수 없는 시각이라 그 항공기는 영원히 나타나지 않는다.
+        if any(item.initial_state.timestamp_utc < self.start_time_utc for item in self.aircraft):
+            raise ValueError("initial states must not precede the scenario start time")
 
         object.__setattr__(self, "events", tuple(self.events))
         if not all(isinstance(event, ScenarioEvent) for event in self.events):

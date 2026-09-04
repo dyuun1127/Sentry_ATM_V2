@@ -17,9 +17,19 @@ from sentry_atm.scenario.event import (
     ScenarioEventType,
 )
 from sentry_atm.scenario.model import ScenarioAircraft, ScenarioDefinition
+from sentry_atm.scenario.sortie_builder import (
+    SORTIE_SCENARIO_ID,
+    SORTIE_START_UTC,
+    build_sortie_scenario,
+    build_sortie_steps,
+)
 from sentry_atm.scenario.timeline import ScenarioEventTimeline
 
 __all__ = [
+    "SORTIE_SCENARIO_ID",
+    "SORTIE_START_UTC",
+    "build_sortie_scenario",
+    "build_sortie_steps",
     "GOLDEN_DEMO_SCENARIO_ID",
     "GOLDEN_DEMO_START_UTC",
     "EmergencyDeclaredPayload",

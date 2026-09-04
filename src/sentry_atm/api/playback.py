@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from math import isfinite
+from math import ceil, isfinite
 from typing import Protocol, runtime_checkable
 
 from sentry_atm.domain import AircraftState
@@ -287,7 +287,10 @@ class GoldenDemoPlaybackFrame:
             to_utc(self.timestamp_utc, field_name="timestamp_utc"),
         )
         aircraft = tuple(self.aircraft)
-        if not aircraft or not all(
+        # 프레임이 비어 있을 수 있다. 8대가 5분 내내 떠 있던 골든 데모에서는
+        # 빈 하늘이 나올 수 없었지만, 시간당 8회인 공항에서는 몇 분씩 아무도
+        # 없는 것이 정상이다. 그것을 오류로 막으면 실제 교통량을 그릴 수 없다.
+        if not all(
             isinstance(item, GoldenDemoPlaybackAircraftFrame) for item in aircraft
         ):
             raise TypeError("aircraft must contain playback Aircraft frames")
@@ -359,6 +362,85 @@ class GoldenDemoPlaybackApiContract(Protocol):
     """Synchronous read-only animated playback boundary."""
 
     def get_playback(self) -> GoldenDemoPlaybackReadModel: ...
+
+
+# 13단계 중 화면에서 멈출 지점. 나머지 단계는 배경으로 흐른다 — 열세 번을 전부
+# 멈추면 시연이 끊기기만 하고 무엇이 중요한지 드러나지 않는다.
+_SORTIE_CUE_TYPES = {
+    1: GoldenDemoPlaybackCueType.PLAYBACK_STARTED,
+    # 3단계(전투기 출격)에는 큐를 걸지 않는다. 남는 큐 타입이 ENTRY_DEVIATION
+    # 뿐인데 그것은 진입 편차를 뜻하고 출격은 편차가 아니다. 콘솔은 타입을 보고
+    # 표시를 고르므로, 맞는 타입이 없다고 아무거나 붙이면 화면이 거짓말을 한다.
+    7: GoldenDemoPlaybackCueType.EMERGENCY_DECLARED,
+    9: GoldenDemoPlaybackCueType.CONFLICT_DETECTED,
+    10: GoldenDemoPlaybackCueType.RECOMMENDATION_AVAILABLE,
+    12: GoldenDemoPlaybackCueType.POST_ACTION_REVALIDATION,
+    13: GoldenDemoPlaybackCueType.RECOVERY_COMPLETE,
+}
+
+# 관제사의 판단을 기다려야 하는 지점. 비상 선언과 회피안 제시가 그렇다.
+_SORTIE_OPERATOR_CUES = frozenset({7, 10})
+
+
+def build_sortie_playback_contract(plan=None, **kwargs) -> GoldenDemoPlaybackContract:
+    """13단계를 재생 큐로. 시나리오와 같은 시간축을 쓴다.
+
+    큐를 손으로 적지 않는 이유는, 적는 순간 단계 시각이 두 벌이 되기 때문이다.
+    시나리오의 시각이 바뀌면 큐는 조용히 어긋난 채로 남는다.
+    """
+
+    from sentry_atm.scenario.sortie_builder import (
+        SORTIE_SCENARIO_ID,
+        build_sortie_plan,
+    )
+
+    if plan is None:
+        plan = build_sortie_plan(**kwargs)
+    steps = plan.steps
+    if not steps:
+        raise ValueError("sortie steps must not be empty")
+
+    # 마지막 단계가 아니라 마지막 항공기가 빠지는 시각까지 재생한다. 단계에서
+    # 끊으면 13단계 뒤에도 하늘에 남아 있는 교통이 화면에서 잘린다.
+    last_exit_s = max(
+        (window[1] - plan.definition.start_time_utc).total_seconds()
+        for item in plan.definition.aircraft
+        for window in (item.presence or ())
+    )
+    # 프레임 간격이 1초이므로 길이도 정수 초여야 한다. 소수점이 남으면 마지막
+    # 프레임이 길이에 정확히 닿지 못해 재생 모델이 끝을 찾지 못한다.
+    duration_seconds = float(
+        ceil(max(float(max(step.t_s for step in steps)), last_exit_s))
+    )
+    cues = []
+    for step in steps:
+        cue_type = _SORTIE_CUE_TYPES.get(step.n)
+        if cue_type is None:
+            continue
+        operator = step.n in _SORTIE_OPERATOR_CUES
+        cues.append(
+            GoldenDemoPlaybackCue(
+                cue_id=f"CUE-S{step.n:02d}",
+                cue_type=cue_type,
+                # 첫 큐는 T+0 이어야 한다. 1단계는 첫 민항이 착륙하는 시각이라
+                # 0 이 아니므로, 그 큐만 원점으로 당긴다.
+                offset_seconds=0.0 if step.n == 1 else float(step.t_s),
+                label=f"{step.n}. {step.name}",
+                auto_pause=operator,
+                requires_operator_action=operator,
+            )
+        )
+    return GoldenDemoPlaybackContract(
+        scenario_id=SORTIE_SCENARIO_ID,
+        duration_seconds=duration_seconds,
+        frame_interval_seconds=1.0,
+        render_fps=60,
+        default_rate=4.0,
+        # 75분짜리 시나리오라 등속으로 보면 시연 시간을 넘는다. 기본을 4배로 두고
+        # 큐에서 멈춘다.
+        supported_rates=(1.0, 2.0, 4.0, 8.0),
+        cues=tuple(cues),
+    )
 
 
 class InProcessGoldenDemoPlaybackApi:

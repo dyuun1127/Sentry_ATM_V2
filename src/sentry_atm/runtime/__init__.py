@@ -8,6 +8,8 @@ from sentry_atm.runtime.composition import (
     GoldenDemoRuntime,
     InMemoryRecommendationCatalog,
     build_golden_demo_runtime,
+    build_scenario_runtime,
+    build_sortie_runtime,
 )
 from sentry_atm.runtime.decision_orchestrator import (
     GoldenDemoControllerDecisionOrchestrator,
@@ -49,6 +51,8 @@ from sentry_atm.runtime.session import (
 )
 
 __all__ = [
+    "build_scenario_runtime",
+    "build_sortie_runtime",
     "ControlUnitAssignment",
     "HoldingAdvisory",
     "RecoveryRouteAdvisory",

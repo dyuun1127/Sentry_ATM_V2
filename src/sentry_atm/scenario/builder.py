@@ -310,6 +310,7 @@ def build_scenario_simulation(definition: ScenarioDefinition) -> ScenarioSimulat
             clock=clock,
             initial_state=item.initial_state,
             scheduled_states=item.scheduled_states,
+            presence=item.presence,
         )
         for item in definition.aircraft
     )
