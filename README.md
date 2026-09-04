@@ -33,7 +33,7 @@ SENTRY는 청주공항(RKTU) 중심 Terminal Simulation Area에서 미래 4DT를
 - Phase 0~16 구현 및 `main` 통합 완료
 - Golden Demo Release Preflight `5/5` 통과
 - 실제 Loopback HTTP Multi-Path Regression `10/10` 통과
-- 전체 자동 테스트 `1322 passed`
+- 전체 자동 테스트 `1363 passed` (SC-001~SC-014 인수 시험 포함)
 - 인터넷, Docker, PostgreSQL/PostGIS, Node.js 없이 로컬 실행 가능
 
 ## 핵심 기능

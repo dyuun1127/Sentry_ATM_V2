@@ -347,6 +347,15 @@ reason_category: AIRCRAFT_CONDITION
 | `SC-013` | 모든 추천, 근거, 관제사 결정 및 적용 결과가 Audit Log에 남아야 한다. |
 | `SC-014` | 시나리오 종료 시 미해결 `HIGH` 또는 `CRITICAL` Conflict가 없어야 한다. |
 
+> **인수 시험.** 위 14개 조건은 `tests/acceptance/test_scenario_success_conditions.py`
+> 에 하나씩 대응한다. 시험 이름에 ID 가 들어 있고(`test_sc_001_...`), 문서와 시험의
+> 목록이 어긋나면 `test_every_documented_success_condition_has_a_test` 가 걸린다 —
+> 조건이 늘었는데 시험이 없는 상태로 넘어가지 않게 하기 위해서다.
+>
+> 단위 시험과 달리 실제 Runtime 을 START 부터 적용·재검증까지 끝까지 구동한다.
+> 계층이 각각 맞는 것과 이어 붙였을 때 맞는 것은 다른 문제이고, 성공 조건은
+> 후자를 묻는다.
+
 ## 10. 실패 조건
 
 - 현재 분리 위반이 발생한 뒤에야 최초 경고가 생성된다.
