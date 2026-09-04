@@ -56,13 +56,28 @@ def test_vertical_separation_rejects_invalid_altitude(invalid: object) -> None:
         vertical_separation_ft(invalid, 8_000.0)  # type: ignore[arg-type]
 
 
+def test_default_distance_uses_the_wgs84_ellipsoid() -> None:
+    """기본값이 타원체다 — AIP 좌표와 대조하므로 AIP 가 쓰는 도형이어야 한다."""
+    start = GeodeticPosition(latitude_deg=36.7164, longitude_deg=127.4992)
+    end = GeodeticPosition(latitude_deg=36.7164, longitude_deg=128.0)
+
+    wgs84 = geodetic_distance_nm(start, end)
+    sphere = geodetic_distance_nm(start, end, earth_radius_nm=MEAN_EARTH_RADIUS_NM)
+
+    # 이 위도의 동서 방향에서 구면 근사는 약 0.23% 짧다.
+    assert wgs84 > sphere
+    assert (wgs84 - sphere) / wgs84 == pytest.approx(0.0023, abs=3e-4)
+
+
 def test_one_degree_latitude_matches_known_spherical_arc() -> None:
     start = GeodeticPosition(0.0, 127.0)
     end = GeodeticPosition(1.0, 127.0)
 
     expected_nm = MEAN_EARTH_RADIUS_NM * pi / 180.0
 
-    assert geodetic_distance_nm(start, end) == pytest.approx(expected_nm)
+    assert geodetic_distance_nm(
+        start, end, earth_radius_nm=MEAN_EARTH_RADIUS_NM
+    ) == pytest.approx(expected_nm)
 
 
 def test_geodetic_distance_is_zero_and_symmetric() -> None:
@@ -78,7 +93,9 @@ def test_antipodal_geodetic_distance_is_half_circumference() -> None:
     start = GeodeticPosition(0.0, 0.0)
     end = GeodeticPosition(0.0, 180.0)
 
-    assert geodetic_distance_nm(start, end) == pytest.approx(pi * MEAN_EARTH_RADIUS_NM)
+    assert geodetic_distance_nm(
+        start, end, earth_radius_nm=MEAN_EARTH_RADIUS_NM
+    ) == pytest.approx(pi * MEAN_EARTH_RADIUS_NM)
 
 
 def test_geodetic_distance_accepts_custom_positive_radius() -> None:

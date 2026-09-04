@@ -1,11 +1,35 @@
-"""RKTU-centered spherical local tangent-plane coordinate conversion."""
+"""RKTU-centered local tangent-plane coordinate conversion on WGS84.
+
+The plane was spherical, on a mean Earth radius. At this latitude that carries a
+systematic scale error of about 0.23 percent, because the meridional and prime
+vertical radii of curvature (6,358 and 6,386 km at 36.7N) straddle the mean
+radius rather than matching it.
+
+Between two aircraft five miles apart that came to 22 metres, and it leaned the
+wrong way: the plane reported them **further apart than they were**, so a pair the
+plane called exactly at the three mile minimum was already inside it.
+
+Twenty-two metres sits far below radar accuracy and no controller would ever see
+it. It is corrected anyway, for two reasons. The bias is systematic and in the
+unsafe direction, so it never averages out. And this plane is the bridge between
+local x/y and the AIP-transcribed coordinates the regulation layer works in,
+where runway thresholds, holding patterns and published fixes all live in
+latitude and longitude. Using the local curvature radii instead of a mean radius
+brings the worst pairwise error down to 1.9 metres.
+"""
 
 from dataclasses import dataclass
-from math import atan2, cos, degrees, hypot, radians, sin, sqrt
+from math import cos, degrees, radians, sin, sqrt
 
-from sentry_atm.domain.units import as_finite_float, as_non_negative_float
+from sentry_atm.domain.units import as_finite_float
 
 MEAN_EARTH_RADIUS_NM = 3_440.065
+"""평균 지구 반지름 (NM). 구면 근사가 필요한 곳에만 남겨 둔다."""
+
+# WGS84 타원체. 곡률반경은 위도에 따라 달라지므로 원점에서 한 번 구해 쓴다.
+WGS84_SEMI_MAJOR_AXIS_M = 6_378_137.0
+WGS84_FLATTENING = 1.0 / 298.257223563
+METRES_PER_NM = 1_852.0
 
 RKTU_ARP_LATITUDE_DEG = 36 + 42 / 60 + 59 / 3_600
 RKTU_ARP_LONGITUDE_DEG = 127 + 29 / 60 + 57 / 3_600
@@ -27,6 +51,20 @@ def _as_longitude_deg(value: float, *, field_name: str = "longitude_deg") -> flo
 
 def _normalize_longitude_deg(value: float) -> float:
     return (value + 180.0) % 360.0 - 180.0
+
+
+def curvature_radii_m(latitude_deg: float) -> tuple[float, float]:
+    """WGS84 자오선·묘유선 곡률반경 (m).
+
+    남북 방향과 동서 방향의 반지름이 다르다. 하나의 평균 반지름으로 두 방향을
+    함께 근사하면 그 차이가 그대로 배율 오차가 된다.
+    """
+    latitude = radians(_as_latitude_deg(latitude_deg))
+    eccentricity_squared = WGS84_FLATTENING * (2.0 - WGS84_FLATTENING)
+    w = 1.0 - eccentricity_squared * sin(latitude) ** 2
+    meridional = WGS84_SEMI_MAJOR_AXIS_M * (1.0 - eccentricity_squared) / (w**1.5)
+    prime_vertical = WGS84_SEMI_MAJOR_AXIS_M / sqrt(w)
+    return meridional, prime_vertical
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,18 +93,19 @@ class LocalPosition:
 
 @dataclass(frozen=True, slots=True)
 class LocalTangentPlane:
-    """Spherical East-North tangent plane centered on a geodetic origin."""
+    """WGS84 East-North tangent plane centered on a geodetic origin."""
 
     origin: GeodeticPosition
-    earth_radius_nm: float = MEAN_EARTH_RADIUS_NM
 
     def __post_init__(self) -> None:
         if not isinstance(self.origin, GeodeticPosition):
             raise TypeError("origin must be a GeodeticPosition")
-        radius = as_non_negative_float(self.earth_radius_nm, field_name="earth_radius_nm")
-        if radius == 0.0:
-            raise ValueError("earth_radius_nm must be greater than zero")
-        object.__setattr__(self, "earth_radius_nm", radius)
+
+    @property
+    def curvature_radii_nm(self) -> tuple[float, float]:
+        """원점 위도에서의 (자오선, 묘유선) 곡률반경 (NM)."""
+        meridional, prime_vertical = curvature_radii_m(self.origin.latitude_deg)
+        return meridional / METRES_PER_NM, prime_vertical / METRES_PER_NM
 
     def to_local(self, position: GeodeticPosition) -> LocalPosition:
         """Project a nearby surface position onto the origin's ENU plane."""
@@ -74,95 +113,41 @@ class LocalTangentPlane:
         if not isinstance(position, GeodeticPosition):
             raise TypeError("position must be a GeodeticPosition")
 
-        origin_up, origin_east, origin_north = self._origin_basis()
-        point_up = _surface_unit_vector(position)
-        near_side_projection = _dot(point_up, origin_up)
-        if near_side_projection <= 0.0:
+        meridional_nm, prime_vertical_nm = self.curvature_radii_nm
+        latitude_delta_deg = position.latitude_deg - self.origin.latitude_deg
+        longitude_delta_deg = _normalize_longitude_deg(
+            position.longitude_deg - self.origin.longitude_deg
+        )
+        if abs(latitude_delta_deg) >= 90.0 or abs(longitude_delta_deg) >= 90.0:
             raise ValueError("position must be within 90 degrees of the tangent-plane origin")
 
-        delta = tuple(
-            self.earth_radius_nm * (point_component - origin_component)
-            for point_component, origin_component in zip(point_up, origin_up, strict=True)
-        )
         return LocalPosition(
-            x_nm=_dot(delta, origin_east),
-            y_nm=_dot(delta, origin_north),
+            x_nm=(
+                radians(longitude_delta_deg)
+                * prime_vertical_nm
+                * cos(radians(self.origin.latitude_deg))
+            ),
+            y_nm=radians(latitude_delta_deg) * meridional_nm,
         )
 
     def to_geodetic(self, position: LocalPosition) -> GeodeticPosition:
-        """Recover the near-side surface position from local ENU coordinates."""
+        """Recover the surface position from local ENU coordinates."""
 
         if not isinstance(position, LocalPosition):
             raise TypeError("position must be a LocalPosition")
 
-        horizontal_squared = position.x_nm**2 + position.y_nm**2
-        radius_squared = self.earth_radius_nm**2
-        if horizontal_squared >= radius_squared:
-            raise ValueError("local position lies outside the invertible tangent-plane hemisphere")
+        meridional_nm, prime_vertical_nm = self.curvature_radii_nm
+        latitude_deg = self.origin.latitude_deg + degrees(position.y_nm / meridional_nm)
+        if not -90.0 <= latitude_deg <= 90.0:
+            raise ValueError("local position lies outside the invertible tangent plane")
 
-        origin_up, origin_east, origin_north = self._origin_basis()
-        up_component = sqrt(radius_squared - horizontal_squared)
-        point_ecef = tuple(
-            position.x_nm * east + position.y_nm * north + up_component * up
-            for east, north, up in zip(
-                origin_east,
-                origin_north,
-                origin_up,
-                strict=True,
-            )
+        longitude_deg = self.origin.longitude_deg + degrees(
+            position.x_nm / (prime_vertical_nm * cos(radians(self.origin.latitude_deg)))
         )
-
-        latitude_deg = degrees(atan2(point_ecef[2], hypot(point_ecef[0], point_ecef[1])))
-        longitude_deg = _normalize_longitude_deg(degrees(atan2(point_ecef[1], point_ecef[0])))
         return GeodeticPosition(
             latitude_deg=latitude_deg,
-            longitude_deg=longitude_deg,
+            longitude_deg=_normalize_longitude_deg(longitude_deg),
         )
-
-    def _origin_basis(
-        self,
-    ) -> tuple[
-        tuple[float, float, float],
-        tuple[float, float, float],
-        tuple[float, float, float],
-    ]:
-        latitude_rad = radians(self.origin.latitude_deg)
-        longitude_rad = radians(self.origin.longitude_deg)
-        sin_latitude = sin(latitude_rad)
-        cos_latitude = cos(latitude_rad)
-        sin_longitude = sin(longitude_rad)
-        cos_longitude = cos(longitude_rad)
-
-        up = (
-            cos_latitude * cos_longitude,
-            cos_latitude * sin_longitude,
-            sin_latitude,
-        )
-        east = (-sin_longitude, cos_longitude, 0.0)
-        north = (
-            -sin_latitude * cos_longitude,
-            -sin_latitude * sin_longitude,
-            cos_latitude,
-        )
-        return up, east, north
-
-
-def _surface_unit_vector(position: GeodeticPosition) -> tuple[float, float, float]:
-    latitude_rad = radians(position.latitude_deg)
-    longitude_rad = radians(position.longitude_deg)
-    cos_latitude = cos(latitude_rad)
-    return (
-        cos_latitude * cos(longitude_rad),
-        cos_latitude * sin(longitude_rad),
-        sin(latitude_rad),
-    )
-
-
-def _dot(left: tuple[float, ...], right: tuple[float, ...]) -> float:
-    return sum(
-        left_component * right_component
-        for left_component, right_component in zip(left, right, strict=True)
-    )
 
 
 RKTU_ARP = GeodeticPosition(

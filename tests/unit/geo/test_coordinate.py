@@ -1,5 +1,5 @@
 from dataclasses import FrozenInstanceError
-from math import degrees
+from math import degrees, pi
 
 import pytest
 
@@ -8,6 +8,7 @@ from sentry_atm.geo.coordinate import (
     RKTU_ARP,
     RKTU_ARP_LATITUDE_DEG,
     RKTU_ARP_LONGITUDE_DEG,
+    RKTU_LOCAL_FRAME,
     GeodeticPosition,
     LocalPosition,
     LocalTangentPlane,
@@ -32,15 +33,28 @@ def test_rktu_arp_maps_to_local_origin() -> None:
 
 
 def test_north_is_positive_y() -> None:
-    one_nm_in_degrees = degrees(1.0 / MEAN_EARTH_RADIUS_NM)
+    # 1 해리는 위도 45도 기준으로 정의된 값이라, 36.7도에서 자오선 1분은 정확히
+    # 1 NM 이 아니다. 평면이 타원체 곡률을 쓰므로 그 차이가 그대로 나타난다.
+    meridional_nm = RKTU_LOCAL_FRAME.curvature_radii_nm[0]
+    one_nm_north_in_degrees = degrees(1.0 / meridional_nm)
 
     local = rktu_geodetic_to_local(
-        RKTU_ARP.latitude_deg + one_nm_in_degrees,
+        RKTU_ARP.latitude_deg + one_nm_north_in_degrees,
         RKTU_ARP.longitude_deg,
     )
 
     assert local.x_nm == pytest.approx(0.0, abs=1e-10)
-    assert local.y_nm == pytest.approx(1.0, abs=1e-6)
+    assert local.y_nm == pytest.approx(1.0, abs=1e-9)
+
+
+def test_one_arcminute_of_latitude_is_slightly_under_one_nautical_mile() -> None:
+    """36.7도에서 자오선 1분은 약 0.9985 NM 이다 — 구면 근사가 놓치던 값."""
+    local = rktu_geodetic_to_local(
+        RKTU_ARP.latitude_deg + 1.0 / 60.0,
+        RKTU_ARP.longitude_deg,
+    )
+
+    assert local.y_nm == pytest.approx(0.9985, abs=5e-4)
 
 
 def test_east_is_positive_x() -> None:
@@ -118,9 +132,11 @@ def test_geodetic_position_rejects_out_of_range_values(
         GeodeticPosition(latitude_deg, longitude_deg)
 
 
-def test_local_inverse_rejects_position_outside_hemisphere() -> None:
+def test_local_inverse_rejects_a_position_off_the_planet() -> None:
+    # 자오선 곡률반경의 사분원을 넘으면 위도가 극을 지나 되돌아온다.
+    quarter_meridian_nm = RKTU_LOCAL_FRAME.curvature_radii_nm[0] * pi / 2.0
     with pytest.raises(ValueError, match="outside the invertible"):
-        rktu_local_to_geodetic(MEAN_EARTH_RADIUS_NM, 0.0)
+        rktu_local_to_geodetic(0.0, quarter_meridian_nm)
 
 
 def test_forward_projection_rejects_far_side_of_earth() -> None:
@@ -130,11 +146,17 @@ def test_forward_projection_rejects_far_side_of_earth() -> None:
         frame.to_local(GeodeticPosition(0.0, 180.0))
 
 
-def test_tangent_plane_requires_a_valid_origin_and_radius() -> None:
+def test_tangent_plane_requires_a_valid_origin() -> None:
     with pytest.raises(TypeError, match="GeodeticPosition"):
         LocalTangentPlane(origin="RKTU")  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="greater than zero"):
-        LocalTangentPlane(origin=RKTU_ARP, earth_radius_nm=0.0)
+
+
+def test_curvature_radii_straddle_the_mean_radius() -> None:
+    """평균 반지름 하나로 두 방향을 근사하면 배율 오차가 생기는 이유."""
+    meridional_nm, prime_vertical_nm = RKTU_LOCAL_FRAME.curvature_radii_nm
+
+    assert meridional_nm < MEAN_EARTH_RADIUS_NM < prime_vertical_nm
+    assert prime_vertical_nm - meridional_nm > 10.0
 
 
 def test_tangent_plane_rejects_incorrect_position_types() -> None:
