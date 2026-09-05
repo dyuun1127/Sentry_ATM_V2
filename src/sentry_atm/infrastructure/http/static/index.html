@@ -62,7 +62,6 @@
       </div>
 
       <p class="scope-foot">
-        시각은 시연 진행 화면이 움직입니다 —
         <a href="/scenario" target="_blank" rel="noopener">시연 화면 열기</a>
       </p>
     </section>
@@ -73,7 +72,6 @@
           <h2>예외 큐</h2>
           <span class="count" id="qcount">0</span>
         </div>
-        <p class="card-sub">판단이 필요한 것만 근거와 함께 올라온다.</p>
         <ul class="qlist" id="qlist"></ul>
         <p class="empty" id="qempty">감시 정상 — 상신할 예외 없음</p>
         <button type="button" class="act next" id="next" data-primary-command hidden></button>
@@ -99,7 +97,7 @@
         <div class="candidates" id="candidates" data-candidate-panel></div>
 
         <form class="decision-form" id="decision" data-decision-actions data-decision-form>
-          <p class="form-note">판단은 관제사가 한다. 아래는 상신된 안이며, 승인 전에는 아무것도 적용되지 않는다.</p>
+          <p class="form-note">승인 전에는 어떤 기동도 적용되지 않는다.</p>
           <label class="field">
             <span>고도 수정 (ft)</span>
             <input type="number" id="alt" step="100" min="1000" max="45000" inputmode="numeric">

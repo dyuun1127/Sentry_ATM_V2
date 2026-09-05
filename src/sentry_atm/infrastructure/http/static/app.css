@@ -334,7 +334,8 @@ h2 {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 3px;
+  /* 설명 문구를 걷어냈으므로 제목과 내용 사이 간격을 여기서 준다. */
+  margin-bottom: 10px;
 }
 
 .count {
@@ -346,7 +347,6 @@ h2 {
 .count.hot { color: var(--danger); }
 .count.warm { color: var(--caution); }
 
-.card-sub { margin: 0 0 10px; font-size: var(--fs-md); color: var(--ink-3); }
 
 .qlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 
