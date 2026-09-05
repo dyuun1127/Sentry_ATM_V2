@@ -1,6 +1,6 @@
 """측지 계산 — AIP 좌표 파싱, WGS84 거리·방위, 국지 평면 좌표계.
 
-세 가지 용도에 각각 다른 도구를 쓴다. 정확도 수치는 tests/test_geo.py 에서 실측한다.
+세 가지 용도에 각각 다른 도구를 쓴다. 정확도 수치는 tests/unit/regulation/test_geo.py 에서 실측한다.
 
 1. AIP 절차 검증 — `vincenty_inverse`
    AIP가 고시한 구간 거리·트랙은 WGS84 측지선 값이므로 역해로 대조한다.

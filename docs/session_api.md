@@ -1,5 +1,12 @@
 # Golden Demo Session Read API
 
+> **범위 안내 — 이 문서는 골든 데모(`--scenario golden`)를 설명한다.**
+> 골든 데모는 값을 못박아 둔 **회귀 고정물**이고 `--check` 가 검사하는 대상이라,
+> 여기 적힌 수치(8대, T+70 충돌 …)는 그대로 유지된다. 발표에서 실제로 돌리는 것은
+> 기본값인 **출격 시나리오(`--scenario sortie`, 15대 75분 13단계)** 이며, 그쪽
+> 진행은 [`demo_runbook.md`](demo_runbook.md)에 있다.
+
+
 ## 1. 범위
 
 Phase 13-A는 T+0부터 승인 적용 후 T+90까지의 분리된 backend 결과를 프론트엔드가 한 번에 읽을 수

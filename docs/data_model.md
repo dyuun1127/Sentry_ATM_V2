@@ -258,7 +258,8 @@ Truth를 재현하기 위한 입력이며 관제 명령이나 Conflict 결과가
 
 `ConflictEvent.tcpa_seconds`는 평가시각과 최근접 예상시각의 차이에서 계산하므로 중복된 시간 상태를
 저장하지 않는다. `POC_TERMINAL_V1`의 5 NM/1,000 ft는 `ASM-018`의 잠정 PoC 값이며 공식적인
-보편 분리기준이 아니다. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하고, Phase 6-C의
+보편 분리기준이 아니다. **현재 기본값은 규정 프로파일(수평 3 NM, 고시 5-5-4 가)이고**
+`POC_TERMINAL_V1`은 주입했을 때만 쓰인다 — `ASM-018` 변경 기록 참조. Phase 6-B의 CPA/TCPA 계산 결과를 이 계약으로 전달하고, Phase 6-C의
 Pairwise Detector가 전체 Assessment와 탐지 결과를 생성한다.
 Phase 6-D의 Rolling Scheduler는 `ConflictAssessmentRun`을 기본 5초 Simulation Time 구간마다
 최대 한 번 생성한다.

@@ -26,6 +26,7 @@ from sentry_atm.infrastructure.persistence import (
     seed_poc_reference_data,
 )
 from sentry_atm.infrastructure.persistence.models import AircraftStateRow
+from sentry_atm.reference_data import POC_AIRCRAFT_TYPES, POC_PERFORMANCE_PROFILES
 
 pytestmark = pytest.mark.integration
 
@@ -174,8 +175,8 @@ def test_reference_seed_is_idempotent_and_preserves_existing_profile(tmp_path: P
         second_result = seed_poc_reference_data(session)
         preserved = SqlAlchemyAircraftPerformanceProfileRepository(session).get("AIRLINER-POC-V1")
 
-    assert first_result.aircraft_types_added == 3
-    assert first_result.performance_profiles_added == 3
+    assert first_result.aircraft_types_added == len(POC_AIRCRAFT_TYPES)
+    assert first_result.performance_profiles_added == len(POC_PERFORMANCE_PROFILES)
     assert second_result.aircraft_types_added == 0
     assert second_result.performance_profiles_added == 0
     assert preserved is not None

@@ -1,108 +1,177 @@
-# Golden Demo Web UI
+# Web UI
 
-## 1. 범위
+## 1. 화면을 둘로 나눈 이유
 
-Phase 14-A는 Golden Demo backend를 심사·설명할 수 있는 최소 Dashboard Shell을 제공한다. 별도 Node.js,
-Frontend Framework 또는 CDN 없이 Python Package에 포함된 HTML/CSS/JavaScript를 같은 Local Server에서
-제공한다.
+한 화면이 관제석이면서 동시에 발표 자료일 수는 없다.
+
+관제 화면에 재생 단추와 13단계 진행 바를 두면 그것은 관제 화면이 아니라 시연
+도구다. 실제 관제석에는 시각을 되감는 수단이 없고, 지금 무슨 이야기의 몇 번째
+장면인지 알려주는 표시도 없다. 반대로 청중에게는 스코프만 보여주면 무엇을 보고
+있는지 알 수 없다.
+
+그래서 **관제사가 보는 것**과 **청중이 보는 것**을 나눴다. 서버는 하나이고, 두
+화면은 같은 세션을 본다.
+
+| 화면 | 경로 | 보는 사람 | 하는 일 |
+|---|---|---|---|
+| **관제 콘솔** | `/` | 관제사 (발표자) | 스코프·예외 큐·근거를 보고 **판단한다** |
+| **시연 진행 화면** | `/scenario` | 청중 (빔프로젝터) | 단계와 근거 조항을 보여주고 **시계를 쥔다** |
+
+**시계는 시연 화면만 움직인다.** 관제 콘솔은 서버의 현재 시각을 따라갈 뿐이며,
+시각을 바꾸는 수단을 갖지 않는다.
 
 ## 2. Route와 자산
 
 | Route | Content-Type | 역할 |
 |---|---|---|
-| `/`, `/index.html` | `text/html; charset=utf-8` | Dashboard Shell |
-| `/assets/app.css` | `text/css; charset=utf-8` | Layout, Radar, Responsive Theme |
-| `/assets/app.js` | `text/javascript; charset=utf-8` | Session GET과 View 투영 |
+| `/`, `/index.html` | `text/html; charset=utf-8` | 관제 콘솔 |
+| `/scenario` | `text/html; charset=utf-8` | 시연 진행 화면 |
+| `/assets/app.css`, `/assets/app.js` | `text/css`, `text/javascript` | 관제 콘솔 |
+| `/assets/scenario.css`, `/assets/scenario.js` | `text/css`, `text/javascript` | 시연 진행 화면 |
+| `/api/v1/reference/geometry` | `application/json` | 스코프가 그릴 지형·공역·활주로·픽스·장주 |
+| `/api/v1/reference/scenario` | `application/json` | **실행 중인** 시나리오의 단계·막 구성 |
+| `/api/v1/advisory` | `application/json` | 규정 계층이 낸 절차 권고 (활주로 순서 등) |
 
-`GoldenDemoWebWsgiApp`은 위 Route만 직접 처리하고 모든 `/api/...` 및 알 수 없는 Route를 기존
-`GoldenDemoSessionWsgiApp`에 위임한다. 따라서 UI를 추가해도 Session Command/API 계약은 변하지 않는다.
+`GoldenDemoWebWsgiApp` 은 위 Route만 직접 처리하고 나머지 `/api/...` 및 알 수 없는
+Route를 `GoldenDemoSessionWsgiApp` 에 위임한다. UI를 바꿔도 Session Command/API
+계약은 변하지 않는다.
 
-## 3. 화면 구성
+`/api/v1/reference/scenario` 는 **실행 중인 시나리오를 반영한다.** 여기가 늘 소티를
+돌려주던 시절에는 `--scenario golden` 으로 띄운 화면이 74분짜리 타임라인을 그렸다.
 
-- RKTU Terminal Area와 UTC Simulation 상태 Header
-- Traffic, Active Exception, 경과시간과 Human-in-the-loop 상태 Metric
-- RKTU ARP Local x/y NM 기반 Tactical View
-- 8대 Aircraft State Table
-- Exception Queue와 Decision Support Empty State
-- READY부터 CONFLICT_RESOLVED까지 Deterministic Timeline
-- Session ID와 비운영 PoC 고지
+> **정적 자산은 서버가 메모리에 물고 있다.** `app.css`·`app.js` 를 고쳤으면
+> 새로고침이 아니라 **서버를 다시 띄워야** 반영된다.
 
-Phase 14-A의 JavaScript는 `GET /api/v1/golden-demo/session`으로 초기 상태를 읽는다. Aircraft Marker와
-표를 DOM API와 `textContent`로 생성하며 API 문자열을 HTML로 삽입하지 않는다.
+## 3. 관제 콘솔 (`/`)
 
-Phase 14-B는 Session Stage를 backend의 고정 Command와 일대일로 연결한다.
+### 구성
 
-| 현재 Stage | Primary Command |
+| 영역 | 내용 |
 |---|---|
-| `READY` | `START` |
-| `MONITORING` | `ADVANCE_TO_CONFLICT` |
-| `CONFLICT_DETECTED` | `GENERATE_RECOMMENDATION` |
-| `RECOMMENDATION_AVAILABLE` | Decision Card의 `ACCEPT`, `MODIFY`, `REJECT` |
-| `DECISION_ACCEPTED` | `APPLY_APPROVED_MANEUVER` |
-| `DECISION_MODIFIED` | `REVALIDATE_MODIFIED_MANEUVER` |
-| SAFE `MODIFICATION_REVALIDATED` | `APPLY_VALIDATED_MODIFIED_MANEUVER` |
-| 차단된 `MODIFICATION_REVALIDATED` | `RESET` |
-| `DECISION_REJECTED` | `RESET` |
-| `CONFLICT_RESOLVED` | `RESET` |
+| 머리 | 관할·시각·경과/전체·단계·시나리오 이름·연결 표시 |
+| **터미널 관제 스코프** | 지형·공역·링·활주로·공고 장주·픽스·충돌선·항적 |
+| **예외 큐** | 판단이 필요한 것만, 심각도 순으로 |
+| **진입 편차** | 계획 대비 실제 진입점·고도·침로 차이 |
+| **항적** | 고른 항적 한 대의 제원과 위험도 |
+| **권고** | 회피 후보 비교, 판단 근거, `ACCEPT`/`MODIFY`/`REJECT` |
+| **관제 절차** | 규정 계층이 낸 활주로 순서와 근거 조항 |
 
-요청 중에는 새로고침·Primary·Reset Control을 모두 잠근다. 성공 응답은 Traffic, Queue,
-Recommendation, Decision과 Revalidation Panel 전체에 즉시 투영한다. 409 응답 시 최신 Session을 다시
-조회해 화면과 backend를 동기화한다.
+**여기에 없는 것**: 재생 단추, 배속, 13단계 바, 되감기. 실제 관제석에 없는 것은
+두지 않는다.
 
-Phase 14-C는 backend가 계산한 `primary_conflict` 증거를 설명 가능성 영역에 투영한다. 화면에서
-충돌쌍, CPA/TCPA, 수평·수직 분리값과 PoC 기준 대비 비율, Risk Score/Level, Rule/Policy Profile과
-Reason Code를 함께 제시한다. Tactical View에서는 해당 두 항공기를 붉은 Marker와 연결선으로 강조한다.
+### 스코프 조작
 
-추천 생성 전에는 적용 후 결과를 `NOT YET VALIDATED`로 명시한다. 추천 생성 후에는 Safety Validator가
-검증한 Primary Candidate 결과를, 승인 기동 적용 후에는 Post-action Revalidation 결과를 원래 충돌
-증거와 나란히 표시한다. 따라서 후보 검증을 실제 적용 결과처럼 표현하지 않으며, Human-in-the-loop
-경계를 유지한다.
+| 동작 | 결과 |
+|---|---|
+| 마우스 휠 | 커서를 축으로 확대·축소 |
+| 끌기 | 이동 |
+| 두 번 누르기 | 원래 배율·위치로 |
+| `범위 NM` 단추 | 15 / 25 / 40 / 60 NM 고정 배율 |
+| `계층` 단추 | 지형·공역·거리링·체공장주·픽스·데이터블록 켜고 끄기 |
+| `심볼` 단추 | 항적 기호 방식 전환 |
+| 항적 누르기 | 선택 — 데이터블록과 「항적」 패널에 상세 |
 
-Phase 15-A는 T+60 이후 Planned-vs-Actual Entry Conformance Panel을 표시한다. 예상 Entry Point,
-고도·침로와 실제 값, 수평·수직·시간 편차를 같이 보여 편차가 미래 충돌로 이어지는 흐름을 설명한다.
-Resolution 이후에는 CAND-A~E 전체를 한 표에 표시하며 다음 결과를 구분한다.
+화면을 민 끝의 클릭은 선택으로 치지 않는다. 끌다가 손을 뗀 자리에서 항적이
+선택되면 지도를 옮길 때마다 선택이 바뀐다.
 
-- `CAND-A`: 원 충돌 해소, `SAFE`, 추천 후보
-- `CAND-B`: 원 충돌은 해소하지만 `MIL-F02`와 2차 충돌, `UNSAFE`
-- `CAND-C`: 원 충돌 미해소, `INEFFECTIVE`
-- `CAND-D`: 원 충돌 미해소 및 최저고도 Rule 위반, `UNSAFE`
-- `CAND-E`: No-action 원 충돌 지속, `UNSAFE`
+### 항적 기호
 
-표는 Safety Validator의 결과를 표시할 뿐 후보를 선택하거나 Runtime에 적용하지 않는다.
+두 방식을 다 남긴다. 관제 표시 관행에도 두 갈래가 있고, 어느 쪽이 읽기 쉬운지는
+화면 크기와 보는 사람에 따라 다르다 — 한쪽을 지우면 비교할 수 없다.
 
-Phase 15-B는 Recommendation 단계의 Decision Support Card에 `ACCEPT`, `MODIFY`, `REJECT`를 함께
-노출한다. `MODIFY` Form은 Maneuver Type과 프로젝트 내부 단위의 목표값, Rationale을 받고 `REJECT`는
-Rationale만 받는다. Browser 기본 Form 검증과 backend 고정 Schema/Domain 검증을 모두 통과해야 Audit이
-기록된다. 완료 후에는 Decision Type, 변경 기동 또는 적용 불가 상태, Rationale을 같은 Card에서 보여준다.
+| | 표시 | 성격 |
+|---|---|---|
+| **원형** (기본) | 원 + 진행방향 선 | ASR 표시 관행. 소속을 구분하지 않아 기호가 단순하다 |
+| **기호** | 군용 △ · 민항 □ + 진행방향 선 | 소속이 한 눈에 보이지만 기호가 커진다 |
 
-`ACCEPT`만 다음 `APPLY_APPROVED_MANEUVER`를 허용한다. `MODIFY`는 먼저 `REVALIDATION REQUIRED`로
-표시하고 격리 검증 Command만 제공한다. 검증 뒤에는 판정, CPA, 2차 충돌·성능·Rule 증거와
-`SAFE · NOT YET APPLIED` 또는 `BLOCKED` Gate를 표시한다. `REJECT`는 `NO MANEUVER AUTHORIZED`로
-표시하고 새 Run 외의 실행 Control을 제공하지 않는다.
+어느 쪽이든 **색은 위험도에만 쓴다.** 소속까지 색으로 나누면 둘이 섞인다. 고른
+방식은 `localStorage` 에 남아 새로고침해도 유지된다.
 
-Phase 15-D에서 SAFE Gate는 `SAFE 수정 기동 재승인·적용` 버튼을 노출한다. 사용자가 이 버튼을 눌러야
-수정 기동이 Actual Runtime에 적용된다. 완료 후 Decision Card는 수정값과 `AUTHORIZED · APPLIED`,
-Post-action Revalidation을 표시하고 Tactical View와 Aircraft Table도 적용된 상태를 반영한다. UNSAFE
-Gate는 적용 버튼 없이 Reset만 제공한다.
+> **몸통 채움색은 스코프 바탕과 같은 검정이다.** 위험도 색이 안 붙으면 검은
+> 바탕에 검은 원이 되어 항적이 통째로 사라진다. 등급 이름표(`data-level`)와
+> 스타일시트 선택자는 반드시 같은 낱말(`severity.css`)을 써야 하며,
+> `.ac-body` 에는 기본 테두리를 깔아 규칙이 다 어긋나도 무엇인가는 그려지게
+> 해 두었다. `test_scope_paints_every_aircraft_it_draws` 가 이것을 지킨다.
 
-## 4. 보안·접근성 경계
+### 판단 흐름
 
-- `default-src 'self'` 기반 Content Security Policy
+현재 단계에서 이어지는 명령만 노출한다.
+
+| 현재 Stage | 관제사가 할 수 있는 것 |
+|---|---|
+| `CONFLICT_DETECTED` | 회피안 상신 |
+| `RECOMMENDATION_AVAILABLE` | `ACCEPT` · `MODIFY` · `REJECT` |
+| `DECISION_ACCEPTED` | 승인 기동 적용 |
+| `DECISION_MODIFIED` | 수정 기동 격리 검증 |
+| SAFE `MODIFICATION_REVALIDATED` | 검증된 수정 기동 적용 |
+| 차단된 `MODIFICATION_REVALIDATED` · `DECISION_REJECTED` | 새 Run |
+
+`ACCEPT` 만 곧바로 적용을 허용한다. `MODIFY` 는 먼저 격리 검증을 거쳐야 하고,
+검증에서 막히면 적용 단추가 나오지 않는다. `REJECT` 는 어떤 기동도 승인하지
+않는다. 후보 비교표는 Safety Validator 의 판정을 **표시할 뿐** 후보를 고르거나
+Runtime 에 적용하지 않는다.
+
+### 거부 사유
+
+서버가 명령을 거부하면 **본문에 담긴 사유를 화면에 옮긴다.** 상태 코드만 보여
+주면 「HTTP 409」만 남아 관제사가 무엇이 잘못됐는지 알 길이 없다. 자주 나오는
+영문 사유는 우리말로 바꾸되, **모르는 것은 원문 그대로** 보여 준다 — 번역하지
+못했다고 삼키면 그 사유가 화면에서 사라진다.
+
+단계가 바뀌면 지난 메시지를 지운다. 「감시 정상」 아래에 옛 오류가 계속 남아
+있으면 지금 무엇이 잘못됐다는 것인지 읽는 쪽이 알 수 없다.
+
+### 폴링
+
+1초마다 세션을 읽는다. **읽기가 판단을 막지는 않는다** — 폴링이 잠금을 잡으면
+그것과 겹친 순간에 승인 단추가 조용히 아무 일도 하지 않는다. 눌렀는데 반응이
+없는 것은 관제 화면에서 가장 나쁜 종류의 고장이다.
+
+바뀐 것이 없으면 다시 그리지 않는다. 매초 전부 다시 그리면 항적을 고르고 있던
+관제사의 선택이 화면 깜빡임에 묻힌다.
+
+## 4. 시연 진행 화면 (`/scenario`)
+
+| 영역 | 내용 |
+|---|---|
+| 시각 | 경과 / 전체, 재생·정지·배속 |
+| 현재 단계 | 번호, 이름, 설명, **근거 조항** |
+| 막 | 4막 구성과 현재 위치 |
+| 단계 바 | 13단계 — 눌러서 그 시점으로 이동 |
+| 대기 표시 | 관제사의 판단을 기다리는 중임을 알린다 |
+
+**판단이 필요한 단계에서 스스로 멈춘다.** `CONFLICT_DETECTED`,
+`RECOMMENDATION_AVAILABLE`, `DECISION_ACCEPTED`, `DECISION_MODIFIED`,
+`MODIFICATION_REVALIDATED` 에서 시계를 세우고 「관제사 판단 대기」를 띄운다.
+멈춰 있는 동안에도 세션을 계속 읽으므로, 관제 콘솔에서 판단하면 1초 안에
+알아채고 대기 표시를 내린 뒤 이어서 간다.
+
+단계 이동은 목표 시각까지 앞으로 감는 방식이라 **되감기가 아니다.** 뒤 단계로
+가려면 처음으로 되돌린 뒤 다시 간다.
+
+## 5. 보안·접근성 경계
+
+- `default-src 'self'` 기반 Content Security Policy (`object-src 'none'`,
+  `base-uri 'none'`, `frame-ancestors 'none'`)
 - `nosniff`, `no-referrer`, `no-store` Header
 - 외부 Font, Script, Image 및 Analytics 없음
-- 한국어 문서 언어, Skip Link, Landmark, Table Header, 상태 `aria-live`
-- 작은 화면 대응과 `prefers-reduced-motion` 지원
+- API 문자열을 HTML 로 삽입하지 않는다 — DOM API 와 `textContent` 로만 만든다
+- 한국어 문서 언어, Skip Link, Landmark, 상태 `aria-live`
+- 두 화면 모두 머리에 `POC · NOT FOR OPERATIONAL USE` 를 고정 표시한다
 
-## 5. 현재 제한사항
+## 6. 현재 제한사항
 
-- 지도는 실제 항법 Chart가 아닌 RKTU ARP 중심 PoC Local Coordinate View다.
-- 안전성 검증 결과가 SAFE인 Golden Demo Primary Recommendation만 Decision 대상으로 사용한다.
-- 수정 적용 Authorization과 Application Result는 현재 process-local이며 영속 감사 저장소는 아니다.
-- UI는 Process-local 단일 Session만 읽고 Browser 상태를 영속화하지 않는다.
+- 스코프는 실제 항법 Chart 가 아닌 RKTU ARP 중심 PoC Local Coordinate View 다.
+- 단일 Session 만 읽는다. 두 화면이 같은 세션을 보므로 **관제사도 한 명**이다.
+- 수정 적용 Authorization 과 Application Result 는 process-local 이며 영속 감사
+  저장소가 아니다.
+- Browser 에 남기는 것은 항적 기호 선택뿐이다.
 
-## 6. 다음 단계
+## 7. 검증
 
-Phase 15-E의 `python -m sentry_atm.infrastructure.http --check`는 임시 Loopback Server에서 UI 자산과
-ACCEPT, SAFE MODIFY 적용, UNSAFE MODIFY 차단, REJECT 흐름을 모두 검증한다. 실제 브라우저의 반응형
-Layout과 화면 배율은 [`demo_runbook.md`](demo_runbook.md)의 발표 전 육안 점검표로 확인한다. 별도
-Browser Automation Dependency는 Runtime에 추가하지 않는다.
+`python -m sentry_atm.infrastructure.http --check` 는 임시 Loopback Server 에서 UI
+자산과 ACCEPT, SAFE MODIFY 적용, UNSAFE MODIFY 차단, REJECT 흐름을 모두 검증한다.
+
+실제 브라우저의 배율·글씨 크기·색은 [`demo_runbook.md`](demo_runbook.md)의 발표 전
+육안 점검표로 확인한다. 별도 Browser Automation Dependency 는 Runtime 에 추가하지
+않는다.
