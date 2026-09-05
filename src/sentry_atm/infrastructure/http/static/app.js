@@ -113,9 +113,59 @@ async function post(command, extra = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ command, ...extra }),
   });
-  if (!response.ok) throw new Error(`${command} → HTTP ${response.status}`);
+  if (!response.ok) throw new Error(await refusalReason(response));
   return response.json();
 }
+
+/* 서버는 거부한 이유를 본문에 담아 보낸다. 그것을 버리고 상태 코드만 보여 주면
+ * 화면에 「HTTP 409」만 남고, 관제사는 무엇이 잘못됐는지 알 길이 없다. */
+async function refusalReason(response) {
+  try {
+    const body = await response.json();
+    const message = body?.error?.message;
+    if (message) return explainRefusal(message);
+  } catch {
+    // 본문이 JSON 이 아니면 상태 코드로 돌아간다.
+  }
+  return `서버가 거부했다 (HTTP ${response.status})`;
+}
+
+/* 서버 메시지는 영문이다. 자주 나오는 것만 우리말로 바꾸고, **모르는 것은 원문
+ * 그대로 보여 준다** — 번역하지 못했다고 삼키면 그 사유가 화면에서 사라진다. */
+function explainRefusal(message) {
+  const stage = message.match(
+    /requires Session stage ([A-Z_]+); current stage is ([A-Z_]+)/,
+  );
+  if (stage) {
+    return `지금은 ${STAGE_KO[stage[1]] || stage[1]} 단계가 아니다 — 현재 ${
+      STAGE_KO[stage[2]] || stage[2]
+    }`;
+  }
+  if (message.includes("behind the Clock")) {
+    return "화면이 보는 시각이 시계보다 뒤처졌다. 시연 화면에서 「처음으로」 후 다시 진행한다.";
+  }
+  if (message.includes("contemporaneous")) {
+    return "판단한 시점과 지금이 다르다. 그 사이 교통이 움직였으므로 다시 상신해야 한다.";
+  }
+  if (message.includes("only a SAFE modified")) {
+    return "검증을 통과하지 못한 수정안은 적용할 수 없다.";
+  }
+  return message;
+}
+
+const STAGE_KO = {
+  READY: "대기",
+  MONITORING: "감시",
+  DEVIATION_DETECTED: "진입 편차",
+  CONFLICT_DETECTED: "충돌 탐지",
+  RECOMMENDATION_AVAILABLE: "회피안 상신",
+  DECISION_ACCEPTED: "승인",
+  DECISION_MODIFIED: "수정",
+  DECISION_REJECTED: "거부",
+  MODIFICATION_REVALIDATED: "수정 검증 완료",
+  BLOCKED_MODIFICATION: "수정 반려",
+  CONFLICT_RESOLVED: "해소",
+};
 
 async function get(url) {
   const response = await fetch(url);
@@ -127,12 +177,21 @@ function setLink(ok) {
   $("link").className = `link-dot ${ok ? "live" : "dead"}`;
 }
 
-/** 서버에서 현재 상태를 읽어 온다. 시계는 시연 화면이 민다. */
+/** 서버에서 현재 상태를 읽어 온다. 시계는 시연 화면이 민다.
+ *
+ * **`state.busy` 를 잡지 않는다.** 그 플래그는 관제사의 판단이 겹치지 않게
+ * 하려는 것이지 화면 갱신을 막으려는 것이 아니다. 폴링이 그것을 잡으면, 1초마다
+ * 도는 읽기와 겹친 순간에 승인 단추가 조용히 아무 일도 하지 않는다 — 눌렀는데
+ * 반응이 없는 것은 관제 화면에서 가장 나쁜 종류의 고장이다.
+ *
+ * 판단이 진행 중일 때는 읽지 않는다. 그 사이 응답이 끼어들면 명령의 결과를
+ * 덮어쓸 수 있다.
+ */
 async function refresh({ quiet = true } = {}) {
   if (state.busy) return;
-  state.busy = true;
   try {
     const session = await get(API);
+    const previousStage = state.session?.stage;
     const changed =
       session.step_id !== state.session?.step_id ||
       session.stage !== state.session?.stage ||
@@ -142,16 +201,18 @@ async function refresh({ quiet = true } = {}) {
       state.advisory = await get(ADVISORY).catch(() => null);
     }
     setLink(true);
-    state.busy = false;
     // 바뀐 것이 없으면 다시 그리지 않는다. 매초 전부 다시 그리면 항적을 고르고
     // 있던 관제사의 선택이 화면 깜빡임에 묻힌다.
-    if (changed) render();
+    if (changed) {
+      // 상황이 바뀌면 지난 메시지를 지운다. 「HTTP 409」 같은 빨간 글이
+      // 「감시 정상」 아래에 계속 남아 있으면, 지금 무엇이 잘못됐다는 것인지
+      // 읽는 쪽이 알 수 없다.
+      if (session.stage !== previousStage) say("");
+      render();
+    }
   } catch (error) {
     setLink(false);
-    state.busy = false;
     if (!quiet) say(String(error.message || error), "bad");
-  } finally {
-    state.busy = false;
   }
 }
 

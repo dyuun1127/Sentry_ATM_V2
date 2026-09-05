@@ -196,6 +196,48 @@ def test_ui_assets_draw_the_scope_from_reference_geometry_and_leave_trails() -> 
     assert b"function curvatureRadiiNm(latDeg)" in script
 
 
+def test_both_screens_show_why_a_command_was_refused() -> None:
+    """서버가 거부한 이유를 화면에 남기는가.
+
+    서버는 본문에 사유를 담아 보낸다. 그것을 버리고 상태 코드만 보여 주면
+    화면에 「HTTP 409」만 남고, 관제사는 무엇이 잘못됐는지 알 길이 없다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    for path in ("/assets/app.js", "/assets/scenario.js"):
+        _, _, script = _request(app, path=path)
+        assert b"async function refusalReason(response)" in script, path
+        assert b"function explainRefusal(message)" in script, path
+        assert b"body?.error?.message" in script, path
+        # 번역하지 못한 사유는 원문 그대로 보여 준다 — 삼키면 사라진다.
+        assert b"return message;" in script, path
+        # 명령을 보내는 곳이 그 사유를 쓰는지 본다. 조회(`get`)는 거부 본문이
+        # 없으므로 상태 코드로 남겨 둔다.
+        start = script.index(b"async function post(")
+        end = script.index(b"async function refusalReason(")
+        assert b"await refusalReason(response)" in script[start:end], path
+
+
+def test_console_polling_does_not_block_controller_decisions() -> None:
+    """1초마다 도는 읽기가 관제사의 판단을 막으면 안 된다.
+
+    폴링이 `state.busy` 를 잡으면 그것과 겹친 순간에 승인 단추가 조용히 아무
+    일도 하지 않는다. 눌렀는데 반응이 없는 것은 관제 화면에서 가장 나쁜 종류의
+    고장이다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+
+    body = script[script.index(b"async function refresh(") : script.index(b"function follow()")]
+    # 판단 중이면 읽지 않는다. 그러나 읽기가 판단을 막지는 않는다.
+    assert b"if (state.busy) return;" in body
+    assert b"state.busy = true;" not in body
+    # 상황이 바뀌면 지난 메시지를 지운다.
+    assert b"previousStage" in body
+    assert b'say("")' in body
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 

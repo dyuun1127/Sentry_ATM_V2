@@ -62,9 +62,59 @@ async function post(command, extra = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ command, ...extra }),
   });
-  if (!response.ok) throw new Error(`${command} → HTTP ${response.status}`);
+  if (!response.ok) throw new Error(await refusalReason(response));
   return response.json();
 }
+
+/* 서버는 거부한 이유를 본문에 담아 보낸다. 그것을 버리고 상태 코드만 보여 주면
+ * 화면에 「HTTP 409」만 남고, 관제사는 무엇이 잘못됐는지 알 길이 없다. */
+async function refusalReason(response) {
+  try {
+    const body = await response.json();
+    const message = body?.error?.message;
+    if (message) return explainRefusal(message);
+  } catch {
+    // 본문이 JSON 이 아니면 상태 코드로 돌아간다.
+  }
+  return `서버가 거부했다 (HTTP ${response.status})`;
+}
+
+/* 서버 메시지는 영문이다. 자주 나오는 것만 우리말로 바꾸고, **모르는 것은 원문
+ * 그대로 보여 준다** — 번역하지 못했다고 삼키면 그 사유가 화면에서 사라진다. */
+function explainRefusal(message) {
+  const stage = message.match(
+    /requires Session stage ([A-Z_]+); current stage is ([A-Z_]+)/,
+  );
+  if (stage) {
+    return `지금은 ${STAGE_KO[stage[1]] || stage[1]} 단계가 아니다 — 현재 ${
+      STAGE_KO[stage[2]] || stage[2]
+    }`;
+  }
+  if (message.includes("behind the Clock")) {
+    return "화면이 보는 시각이 시계보다 뒤처졌다. 시연 화면에서 「처음으로」 후 다시 진행한다.";
+  }
+  if (message.includes("contemporaneous")) {
+    return "판단한 시점과 지금이 다르다. 그 사이 교통이 움직였으므로 다시 상신해야 한다.";
+  }
+  if (message.includes("only a SAFE modified")) {
+    return "검증을 통과하지 못한 수정안은 적용할 수 없다.";
+  }
+  return message;
+}
+
+const STAGE_KO = {
+  READY: "대기",
+  MONITORING: "감시",
+  DEVIATION_DETECTED: "진입 편차",
+  CONFLICT_DETECTED: "충돌 탐지",
+  RECOMMENDATION_AVAILABLE: "회피안 상신",
+  DECISION_ACCEPTED: "승인",
+  DECISION_MODIFIED: "수정",
+  DECISION_REJECTED: "거부",
+  MODIFICATION_REVALIDATED: "수정 검증 완료",
+  BLOCKED_MODIFICATION: "수정 반려",
+  CONFLICT_RESOLVED: "해소",
+};
 
 async function get(url) {
   const response = await fetch(url);
