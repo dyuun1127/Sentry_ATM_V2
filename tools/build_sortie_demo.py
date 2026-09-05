@@ -42,6 +42,7 @@ from sentry_atm.regulation import sequencing as seq  # noqa: E402
 from sentry_atm.regulation import sortie as sortie_mod  # noqa: E402
 from sentry_atm.regulation.geo import separation_distance_nm  # noqa: E402
 from sentry_atm.scenario import sortie_builder as sortie_scenario  # noqa: E402
+from sentry_atm.scenario.acts import acts_from_steps  # noqa: E402
 
 FRAME_S = ex.FRAME_S
 M_PER_NM = 1852.0
@@ -93,41 +94,12 @@ def route_geometry(route):
     return api_geometry.route_geometry(route)
 
 
-ACT_GROUPS = (
-    (1, "평시", (1, 2), "민항과 군이 같은 활주로를 나눠 쓴다",
-     "시간표에 맞춰 도착·출발이 교대로 활주로를 쓰고, 작전지역이 지정된다."),
-    (2, "출격", (3, 4, 5, 6), "출격 비용은 도착 흐름에서 치러진다",
-     "전투기가 민항 슬롯 사이로 이륙해 SID 를 타고 나가며 관제권이 순차 이양된다."),
-    (3, "비상복귀", (7, 8, 9, 10), "판단이 필요한 것만 근거와 함께 상신한다",
-     "TCAS 미장착 전투기가 비상 선언, 최단 복귀경로가 도착 흐름과 경합한다."),
-    (4, "우선착륙", (11, 12, 13), "순번이 아니라 물리적 최단 도달시각",
-     "공고 체공장주로 민항을 붙들고 비상기를 먼저 내린 뒤 순서를 재구성한다."),
-)
-
-
 def _acts_from_steps(steps, shift, t1):
-    """13단계를 4막으로 묶는다.
+    """13단계를 4막으로 묶는다 — 라이브러리와 같은 표를 쓴다.
 
-    기존 콘솔이 `acts` 를 읽으므로 스키마를 유지하면서, 단계별 상세는
-    `steps` 에 따로 실어 화면이 둘 다 쓸 수 있게 한다.
+    여기에 한 벌을 더 두면 정적 산출물과 시연 화면이 서로 다른 막을 그리게 된다.
     """
-    by_n = {s.n: s for s in steps}
-    out = []
-    for n, name, members, headline, text in ACT_GROUPS:
-        got = [by_n[m] for m in members if m in by_n]
-        if not got:
-            continue
-        t0 = min(s.t_s for s in got) + shift
-        out.append({
-            "n": n, "name": name,
-            "t0": round(t0, 1), "t1": 0.0,
-            "headline": headline,
-            "text": text,
-            "steps": [s.n for s in got],
-        })
-    for i, a in enumerate(out):
-        a["t1"] = round(out[i + 1]["t0"] if i + 1 < len(out) else t1, 1)
-    return out
+    return acts_from_steps(steps, shift_s=shift, end_s=t1)
 
 
 def _schedule_rows(sc, shift):

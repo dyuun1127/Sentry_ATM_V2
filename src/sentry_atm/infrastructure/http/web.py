@@ -240,10 +240,14 @@ def _sortie_scenario_payload() -> dict:
         for item in plan.definition.aircraft
         for window in item.presence
     )
+    from sentry_atm.scenario.acts import acts_from_steps
+
     payload = {
         "scenario_id": plan.definition.scenario_id,
         "duration_seconds": last_exit,
         "operating_area_id": plan_area,
+        # 단계 시각은 이미 시나리오 원점 기준이므로 다시 옮기지 않는다.
+        "acts": acts_from_steps(plan.steps, end_s=last_exit),
         "steps": [
             {
                 "n": step.n,
@@ -271,6 +275,8 @@ def _golden_scenario_payload() -> dict:
         "scenario_id": contract.scenario_id,
         "duration_seconds": contract.duration_seconds,
         "operating_area_id": None,
+        # 골든 데모는 막으로 나뉘지 않는다 — 다섯 검문소짜리 대본이다.
+        "acts": [],
         "steps": [
             {
                 "n": index + 1,
@@ -290,9 +296,24 @@ def _load_assets() -> dict[str, _StaticAsset]:
         root.joinpath("index.html").read_bytes(),
         "text/html; charset=utf-8",
     )
+    scenario = _StaticAsset(
+        root.joinpath("scenario.html").read_bytes(),
+        "text/html; charset=utf-8",
+    )
     return {
         "/": index,
         "/index.html": index,
+        # 시연 진행 화면. 관제 콘솔과 같은 세션을 보되 시계는 이쪽이 쥔다.
+        "/scenario": scenario,
+        "/scenario.html": scenario,
+        "/assets/scenario.css": _StaticAsset(
+            root.joinpath("scenario.css").read_bytes(),
+            "text/css; charset=utf-8",
+        ),
+        "/assets/scenario.js": _StaticAsset(
+            root.joinpath("scenario.js").read_bytes(),
+            "text/javascript; charset=utf-8",
+        ),
         "/assets/app.css": _StaticAsset(
             root.joinpath("app.css").read_bytes(),
             "text/css; charset=utf-8",

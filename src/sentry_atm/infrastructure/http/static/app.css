@@ -186,9 +186,7 @@ h2 {
 }
 .layers button:hover { color: var(--ink-2); border-color: var(--line-2); }
 .layers button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-2); background: var(--bg-2); }
-.layers button:focus-visible,
-.transport button:focus-visible,
-.steps button:focus-visible { outline: 2px solid var(--normal); outline-offset: 1px; }
+.layers button:focus-visible { outline: 2px solid var(--normal); outline-offset: 1px; }
 
 .scope {
   position: relative;
@@ -285,150 +283,19 @@ h2 {
 .ac[data-sel="1"] .ac-tag { fill: var(--ink); }
 .ac[data-sel="1"] .ac-halo { stroke: var(--ink-2); }
 
-/* ---------------------------------------------------------------- 조작부 */
+/* ---------------------------------------------------------------- 스코프 아래 */
 
-.transport {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 14px 7px;
-  flex: none;
-}
-
-.play {
-  width: 30px;
-  height: 30px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r);
-  cursor: pointer;
-  transition: border-color .15s;
-}
-.play:hover { border-color: var(--ink-3); }
-
-.tri {
-  width: 0; height: 0;
-  border-left: 8px solid var(--ink);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  margin-left: 2px;
-}
-.tri.pause {
-  width: 8px; height: 10px;
-  border: none;
-  margin-left: 0;
-  background: linear-gradient(90deg, var(--ink) 0 3px, transparent 3px 5px, var(--ink) 5px 8px);
-}
-
-.track {
-  position: relative;
-  flex: 1;
-  height: 22px;
-  cursor: pointer;
-  min-width: 0;
-}
-
-.track::before {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; top: 10px;
-  height: 2px;
-  background: var(--line);
-  border-radius: 1px;
-}
-
-.track-fill {
-  position: absolute;
-  left: 0; top: 10px;
-  height: 2px;
-  width: 0;
-  background: var(--ink-3);
-  border-radius: 1px;
-}
-
-.track-cues { position: absolute; inset: 0; pointer-events: none; }
-
-.track-cues i {
-  position: absolute;
-  top: 6px;
-  width: 1px;
-  height: 10px;
-  background: var(--line-2);
-}
-.track-cues i.key { background: var(--caution); height: 14px; top: 4px; }
-
-.track-head {
-  position: absolute;
-  top: 5px;
-  width: 2px;
-  height: 12px;
-  background: var(--ink);
-  transform: translateX(-1px);
-}
-
-.rates, .ranges { display: flex; gap: 3px; flex: none; }
-
-.range-label {
-  font-family: var(--mono);
-  font-size: 9px;
+/* 시계를 누가 쥐는지 화면에 적어 둔다. 재생 단추가 없는 이유를 처음 보는
+   사람이 알 수 있어야 한다. */
+.scope-foot {
+  margin: 10px 14px 12px;
+  font-size: 11px;
   color: var(--ink-3);
-  letter-spacing: .08em;
-  align-self: center;
 }
 
-.rates button, .ranges button {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 3px 7px;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  color: var(--ink-3);
-  cursor: pointer;
-}
-.rates button[aria-pressed="true"],
-.ranges button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-2); background: var(--bg-2); }
-
-.ghost {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 4px 9px;
-  flex: none;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  color: var(--ink-3);
-  cursor: pointer;
-}
-.ghost:hover { color: var(--ink-2); border-color: var(--line-2); }
-
-.steps {
-  display: flex;
-  gap: 3px;
-  padding: 0 14px 11px;
-  flex: none;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.steps button {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 4px 8px;
-  flex: none;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  color: var(--ink-3);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color .15s, border-color .15s;
-}
-.steps button:hover { color: var(--ink-2); border-color: var(--line-2); }
-.steps button[aria-current="true"] { color: var(--ink); border-color: var(--caution); background: var(--bg-2); }
+.scope-foot a { color: var(--normal); text-decoration: none; }
+.scope-foot a:hover { text-decoration: underline; }
+.scope-foot a:focus-visible { outline: 2px solid var(--normal); outline-offset: 2px; }
 
 /* ---------------------------------------------------------------- 우측 레일 */
 
@@ -766,3 +633,11 @@ h2 {
   border-color: var(--line-2);
 }
 .act.next:hover { border-color: var(--normal); }
+
+/* `hidden` 이 항상 이기게 한다.
+ *
+ * 브라우저의 `[hidden] { display: none }` 은 UA 스타일시트에 있어서, 이 파일의
+ * `.await { display: flex }` 같은 규칙에 진다. 그러면 `element.hidden = true` 로
+ * 숨긴 것이 화면에 그대로 남는다 — 실제로 「관제사 판단 대기」가 시작 화면에
+ * 떠 있었다. */
+[hidden] { display: none !important; }

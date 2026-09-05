@@ -1,14 +1,17 @@
-/* SENTRY 관제 보조 콘솔.
+/* SENTRY 관제 보조 콘솔 — 관제사가 보는 화면.
+ *
+ * 여기에는 시연용 조작부가 없다. 실제 관제 화면에 「13단계 이동」 단추가 있을
+ * 수 없기 때문이다. 시계는 시연 진행 화면(`/scenario`)이 쥐고, 이 화면은
+ * **따라간다**. 관제사가 하는 것은 판단이다 — 상신·승인·수정·거부.
  *
  * 화면은 세 가지를 서버에서 받는다.
  *
  *   배경 형상  /api/v1/reference/geometry   한 번. 공역·활주로·픽스·지형.
- *   시나리오   /api/v1/reference/scenario   한 번. 13단계와 전체 길이.
- *   현재 상태  /api/v1/golden-demo/session  매 틱. 항적·예외·충돌·권고.
+ *   시나리오   /api/v1/reference/scenario   한 번. 전체 길이 (시각 표시용).
+ *   현재 상태  /api/v1/golden-demo/session  주기적으로. 항적·예외·충돌·권고.
  *
- * 시계는 화면이 돌린다. `ADVANCE` 로 초를 밀고 그 응답이 곧 새 상태다 — 별도로
- * 폴링하지 않는다. 밀고 나서 따로 읽으면 두 요청 사이에 시각이 어긋나고, 항적과
- * 예외가 다른 순간을 가리키게 된다.
+ * 시계를 이 화면이 밀지 않으므로 상태를 주기적으로 읽어야 한다. 두 화면이 다
+ * 밀면 한 틱에 두 번 진행되고, 그러면 보이는 시각과 판단한 시각이 갈린다.
  *
  * 좌표는 국지 x/y(NM)를 그대로 쓴다. 서버가 위경도를 국지 좌표로 바꿔 주므로
  * 화면에서 투영을 다시 할 이유가 없다. 배경 형상만 위경도로 오는데, 그것은
@@ -53,14 +56,12 @@ function toLocal(lat, lon) {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const RATES = [1, 2, 4, 8, 16];
 const RANGES = [15, 25, 40, 60];
 
 /* 항적 꼬리 — 지나온 자리를 몇 개 남긴다. 레이더 화면이 과거 위치를 남기는
  * 이유는 방향과 속도 변화를 한 눈에 읽기 위해서다. 현재 위치와 속도벡터만
  * 있으면 선회 중인지 직진 중인지 알 수 없다. */
 const TRAIL_POINTS = 8;
-const TICK_MS = 400;
 
 /* 어떤 계층을 켜 둘 것인가. 지형과 링은 배경이라 기본으로 켜고, 픽스 이름은
  * 항적이 많을 때 겹치므로 끌 수 있게 둔다. */
@@ -80,8 +81,6 @@ const state = {
   scenario: null,
   session: null,
   advisory: null,
-  playing: false,
-  rate: 4,
   selected: null,
   layers: Object.fromEntries(LAYERS.map(([k, , on]) => [k, on])),
   busy: false,
@@ -111,96 +110,42 @@ function setLink(ok) {
   $("link").className = `link-dot ${ok ? "live" : "dead"}`;
 }
 
-/** 시계를 seconds 만큼 민다. 응답이 곧 새 상태다. */
-async function advance(seconds) {
+/** 서버에서 현재 상태를 읽어 온다. 시계는 시연 화면이 민다. */
+async function refresh({ quiet = true } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
-    // 세션이 시작됐는지는 **서버가 알고 있다.** 화면 안의 플래그로 기억하면
-    // 새로고침할 때마다 그 플래그가 거짓으로 돌아가는데 세션은 서버에 그대로
-    // 살아 있어서, 이미 시작된 세션에 START 를 다시 보내고 409 를 받는다.
-    // 그러면 재생이 첫 틱에서 멈추고, 화면에는 단추가 안 눌린 것처럼 보인다.
-    if (needsStart()) {
-      state.session = await post("START");
+    const session = await get(API);
+    const changed =
+      session.step_id !== state.session?.step_id ||
+      session.stage !== state.session?.stage ||
+      session.elapsed_seconds !== state.session?.elapsed_seconds;
+    state.session = session;
+    if (changed) {
+      state.advisory = await get(ADVISORY).catch(() => null);
     }
-    const step = Math.max(1, Math.round(seconds));
-    state.session = await post("ADVANCE", { seconds: step });
-    state.advisory = await get(ADVISORY).catch(() => null);
     setLink(true);
-    // 그리기 전에 내린다. 그리는 동안 busy 이면 단추가 비활성인 채로 남는다.
     state.busy = false;
-    render();
+    // 바뀐 것이 없으면 다시 그리지 않는다. 매초 전부 다시 그리면 항적을 고르고
+    // 있던 관제사의 선택이 화면 깜빡임에 묻힌다.
+    if (changed) render();
   } catch (error) {
     setLink(false);
-    stop();
     state.busy = false;
-    // 화면에도 남긴다. 콘솔에만 찍으면 재생이 왜 안 되는지 알 길이 없다.
-    say(String(error.message || error), "bad");
-    render();
+    if (!quiet) say(String(error.message || error), "bad");
   } finally {
     state.busy = false;
   }
 }
 
-/** 아직 START 를 보내야 하는 상태인가. 판단 근거는 서버가 낸 단계다. */
-function needsStart() {
-  const stage = state.session?.stage;
-  // 상태를 못 받았으면 시작 전으로 본다. 이미 시작돼 있었다면 START 가 409 를
-  // 내고 그 사유가 화면에 뜨므로, 조용히 아무 일도 안 하는 것보다 낫다.
-  return stage === undefined || stage === null || stage === "READY";
-}
+/* 시계가 도는 동안 따라가려면 주기적으로 읽어야 한다. 1초는 항적이 눈에 띄게
+ * 움직이는 간격이면서, 단일 스레드 서버가 두 화면을 감당할 수 있는 간격이다. */
+const FOLLOW_MS = 1_000;
+let follower = null;
 
-/** 처음으로 되돌린 뒤 지정한 시각까지 한 번에 민다. */
-async function seek(offsetSeconds) {
-  if (state.busy) return;
-  state.busy = true;
-  const wasPlaying = state.playing;
-  stop();
-  state.trails.clear();
-  try {
-    // 되돌린 뒤이므로 세션은 반드시 READY 다. 여기서는 START 가 늘 성립한다.
-    await post("RESET");
-    state.session = await post("START");
-    const target = Math.round(offsetSeconds);
-    if (target >= 1) {
-      state.session = await post("ADVANCE", { seconds: target });
-    }
-    state.advisory = await get(ADVISORY).catch(() => null);
-    setLink(true);
-    state.busy = false;
-    render();
-  } catch (error) {
-    setLink(false);
-    state.busy = false;
-    say(String(error.message || error), "bad");
-    render();
-  } finally {
-    state.busy = false;
-    if (wasPlaying) start();
-  }
-}
-
-/* ------------------------------------------------------------------ 재생 */
-
-let timer = null;
-
-function start() {
-  if (timer) return;
-  state.playing = true;
-  $("tri").className = "tri pause";
-  $("play").setAttribute("aria-label", "일시정지");
-  timer = setInterval(() => {
-    if (elapsed() >= duration()) return stop();
-    advance((state.rate * TICK_MS) / 1000);
-  }, TICK_MS);
-}
-
-function stop() {
-  if (timer) clearInterval(timer);
-  timer = null;
-  state.playing = false;
-  $("tri").className = "tri";
-  $("play").setAttribute("aria-label", "재생");
+function follow() {
+  if (follower) return;
+  follower = setInterval(refresh, FOLLOW_MS);
 }
 
 const elapsed = () => state.session?.elapsed_seconds ?? 0;
@@ -561,8 +506,8 @@ function drawTraffic() {
  * 모든 명령 단추를 늘어놓으면 관제사는 어느 것이 지금 가능한지 알 수 없고,
  * 눌러 본 뒤 거부당하는 것으로 배우게 된다. 지금 성립하는 것 하나만 낸다. */
 const COMMAND_BY_STAGE = {
-  READY: { command: "START", label: "감시 시작" },
-  MONITORING: { command: "ADVANCE_TO_CONFLICT", label: "충돌 시점으로" },
+  // 시계를 미는 명령(START·ADVANCE·ADVANCE_TO_CONFLICT)은 여기에 없다. 시간은
+  // 저절로 흐르는 것이고, 이 화면은 관제사가 **판단하는** 자리다.
   CONFLICT_DETECTED: { command: "GENERATE_RECOMMENDATION", label: "회피안 상신" },
   DECISION_ACCEPTED: { command: "APPLY_APPROVED_MANEUVER", label: "승인 기동 적용" },
   MODIFICATION_REVALIDATED: {
@@ -825,7 +770,6 @@ function say(text, kind = "") {
 async function decide(command, extra = {}) {
   if (state.busy) return;
   state.busy = true;
-  stop();
   try {
     state.session = await post(command, extra);
     state.advisory = await get(ADVISORY).catch(() => null);
@@ -1111,27 +1055,6 @@ function subhead(text) {
   return element;
 }
 
-function drawStep() {
-  const steps = state.scenario?.steps || [];
-  const now = elapsed();
-  let current = null;
-  for (const step of steps) if (step.t_s <= now) current = step;
-
-  $("stepnow").textContent = current ? `${current.n}. ${current.name}` : "대기 중";
-  $("stepdetail").textContent = current?.detail || "";
-  const clauses = $("stepclauses");
-  clauses.textContent = "";
-  for (const clause of current?.clauses || []) {
-    const chip = document.createElement("span");
-    chip.className = "clause";
-    chip.textContent = clause;
-    clauses.appendChild(chip);
-  }
-  for (const button of $("steps").children) {
-    button.setAttribute("aria-current", current && +button.dataset.n === current.n ? "true" : "false");
-  }
-}
-
 /* ------------------------------------------------------------------ 그리기 */
 
 /** 지금 위치를 꼬리에 넣는다. 같은 시각을 두 번 넣지 않는다. */
@@ -1167,10 +1090,6 @@ function render() {
   }`;
   $("scenario").textContent = session?.scenario_id || state.scenario?.scenario_id || "—";
 
-  const fraction = Math.min(1, elapsed() / duration());
-  $("fill").style.width = `${fraction * 100}%`;
-  $("head").style.left = `${fraction * 100}%`;
-
   recordTrails();
   drawBackground();
   drawTraffic();
@@ -1180,7 +1099,6 @@ function render() {
   drawDetail();
   drawRecommendation();
   drawAdvisory();
-  drawStep();
 }
 
 /* ------------------------------------------------------------------ 조작 */
@@ -1217,66 +1135,12 @@ function buildControls() {
     ranges.appendChild(button);
   }
 
-  const rates = $("rates");
-  for (const rate of RATES) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = `${rate}×`;
-    button.setAttribute("aria-pressed", String(rate === state.rate));
-    button.addEventListener("click", () => {
-      state.rate = rate;
-      for (const other of rates.children) {
-        other.setAttribute("aria-pressed", String(other === button));
-      }
-    });
-    rates.appendChild(button);
-  }
-
   wireDecision();
-  $("play").addEventListener("click", () => (state.playing ? stop() : start()));
-  $("reset").addEventListener("click", () => seek(0));
-
-  $("track").addEventListener("click", (event) => {
-    const box = event.currentTarget.getBoundingClientRect();
-    seek(((event.clientX - box.left) / box.width) * duration());
-  });
-
-  window.addEventListener("keydown", (event) => {
-    if (event.target instanceof HTMLInputElement) return;
-    if (event.code === "Space") {
-      event.preventDefault();
-      state.playing ? stop() : start();
-    }
-  });
 
   window.addEventListener("resize", () => {
     fitView();
     render();
   });
-}
-
-function buildSteps() {
-  const bar = $("steps");
-  bar.textContent = "";
-  const cues = $("cues");
-  cues.textContent = "";
-  // 관제사의 판단이 필요한 지점만 눈금을 굵게 한다.
-  const key = new Set([7, 9, 10, 11]);
-
-  for (const step of state.scenario?.steps || []) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.n = String(step.n);
-    button.textContent = `${step.n}. ${step.name}`;
-    button.title = step.detail || "";
-    button.addEventListener("click", () => seek(step.t_s));
-    bar.appendChild(button);
-
-    const tick = document.createElement("i");
-    tick.style.left = `${(step.t_s / duration()) * 100}%`;
-    if (key.has(step.n)) tick.className = "key";
-    cues.appendChild(tick);
-  }
 }
 
 /* ------------------------------------------------------------------ 시작 */
@@ -1293,10 +1157,10 @@ async function boot() {
       state.view.cx = cx;
       state.view.cy = cy;
     }
-    buildSteps();
     state.session = await get(API);
     state.advisory = await get(ADVISORY).catch(() => null);
     setLink(true);
+    follow();
   } catch (error) {
     setLink(false);
     console.error(error);

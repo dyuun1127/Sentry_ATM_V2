@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#080c10" />
+    <title>SENTRY ATM · 시연 진행</title>
+    <link rel="stylesheet" href="/assets/scenario.css" />
+    <script src="/assets/scenario.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">본문으로 이동</a>
+<main class="stage-shell" id="main-content">
+  <header class="stage-bar">
+    <div class="brand">
+      <span class="mark">SENTRY</span>
+      <span class="where">청주 RKTU · 13단계 소티</span>
+    </div>
+    <div class="bar-mid">
+      <span class="clock" id="clock">00:00:00</span>
+      <span class="sep">/</span>
+      <span class="clock dim" id="duration">--:--:--</span>
+    </div>
+    <div class="bar-right">
+      <span class="chip" id="stage">READY</span>
+      <span class="link-dot" id="link" title="서버 연결"></span>
+    </div>
+  </header>
+
+  <!-- 지금 어느 막인가. 13단계는 네 덩어리로 묶인다. -->
+  <nav class="acts" id="acts" aria-label="막"></nav>
+
+  <section class="now">
+    <div class="now-head">
+      <span class="now-n" id="step-n">—</span>
+      <span class="now-of">/ 13</span>
+    </div>
+    <h1 class="now-name" id="step-name">시연 준비</h1>
+    <p class="now-detail" id="step-detail">재생을 누르면 09:00 부터 시작한다.</p>
+    <div class="clauses" id="step-clauses" aria-label="근거 조항"></div>
+  </section>
+
+  <!-- 관제사가 판단해야 하는 순간에는 재생을 멈추고 이것을 띄운다. -->
+  <section class="await" id="await" hidden>
+    <span class="await-dot"></span>
+    <div>
+      <p class="await-title" id="await-title">관제사 판단 대기</p>
+      <p class="await-sub" id="await-sub">관제 콘솔에서 처리하면 이어서 진행합니다.</p>
+    </div>
+  </section>
+
+  <!-- 13단계 전체. 지나온 것·지금·남은 것이 한 눈에 보인다. -->
+  <ol class="rail" id="rail" aria-label="13단계 진행"></ol>
+
+  <footer class="stage-transport">
+    <button class="play" id="play" aria-label="재생">
+      <span class="tri" id="tri"></span>
+    </button>
+    <div class="track" id="track">
+      <div class="track-fill" id="fill"></div>
+      <div class="track-cues" id="cues"></div>
+      <div class="track-head" id="head"></div>
+    </div>
+    <div class="rates" id="rates" role="group" aria-label="재생 배속"></div>
+    <button class="ghost" id="prev">◀ 이전</button>
+    <button class="ghost" id="next-step">다음 ▶</button>
+    <button class="ghost" id="reset" data-reset-command>처음으로</button>
+    <a class="ghost link" href="/" target="_blank" rel="noopener">관제 콘솔 열기</a>
+  </footer>
+  <p class="form-msg" id="msg" role="status"></p>
+</main>
+  </body>
+</html>

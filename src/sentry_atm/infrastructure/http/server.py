@@ -53,7 +53,28 @@ def create_local_golden_demo_server(
     resolved = settings or LocalGoldenDemoServerSettings()
     runtime = _SESSION_BUILDERS[resolved.scenario]()
     web_app = GoldenDemoWebWsgiApp(runtime.http_app, runtime)
-    return make_server(resolved.host, resolved.port, web_app)
+    return make_server(
+        resolved.host,
+        resolved.port,
+        web_app,
+        server_class=_ExclusiveWSGIServer,
+    )
+
+
+class _ExclusiveWSGIServer(WSGIServer):
+    """이미 그 포트를 쓰고 있으면 조용히 겹치지 않고 실패한다.
+
+    `wsgiref` 는 기본으로 `SO_REUSEADDR` 을 켜는데, Windows 에서 그 옵션은
+    **두 프로세스가 같은 포트를 함께 잡도록** 허용한다 (POSIX 와 뜻이 다르다).
+    그러면 옛 프로세스를 죽이지 못한 채 새로 띄웠을 때 둘 다 살아 있고, 요청은
+    둘 중 하나로 간다 — 코드를 고쳐도 화면이 그대로인 상황이 되며, 무엇이
+    잘못됐는지 알아내기가 매우 어렵다. 실제로 그렇게 시간을 썼다.
+
+    겹쳐 뜨느니 못 뜨는 것이 낫다. 포트가 이미 쓰이고 있으면 그 사실이 바로
+    드러나야 한다.
+    """
+
+    allow_reuse_address = 0
 
 
 def run_local_golden_demo_server(

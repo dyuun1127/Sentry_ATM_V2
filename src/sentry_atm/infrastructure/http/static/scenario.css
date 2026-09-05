@@ -1,0 +1,410 @@
+/* SENTRY 시연 진행 화면 — 청중용.
+ *
+ * 관제 콘솔과 다른 화면이다. 콘솔은 관제사가 30cm 앞에서 읽는 것이고 이쪽은
+ * 심사위원이 몇 미터 떨어져서 보는 것이므로, 같은 글씨 크기를 쓸 수 없다.
+ * 기준 글씨를 키우고 한 화면에 담는 정보를 줄인다.
+ *
+ * 색은 콘솔과 같은 팔레트를 쓴다. 두 화면이 나란히 있을 때 같은 색이 같은 것을
+ * 뜻해야 한다 — 여기서 위험이 주황이고 저기서 빨강이면 화면을 옮길 때마다
+ * 색을 다시 읽어야 한다. */
+
+:root {
+  color-scheme: dark;
+
+  --ink: #e7eef4;
+  --ink-2: #a8b8c6;
+  --ink-3: #74879a;
+
+  --bg: #080c10;
+  --bg-1: #0c1218;
+  --bg-2: #111a22;
+  --line: #1d2a35;
+  --line-2: #27384a;
+
+  --normal: #7fa8c4;
+  --caution: #e0a63a;
+  --danger: #e2564a;
+  --emerg: #d946a0;
+  --ok: #4ea882;
+
+  --mono: "SF Mono", "JetBrains Mono", "Consolas", ui-monospace, monospace;
+  --sans: "Pretendard", "Malgun Gothic", -apple-system, system-ui, sans-serif;
+
+  --r: 4px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  color: var(--ink);
+}
+.skip-link:focus { left: 12px; top: 12px; }
+
+.stage-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 clamp(20px, 4vw, 64px);
+}
+
+/* ---------------------------------------------------------------- 상단 */
+
+.stage-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: baseline; gap: 14px; }
+
+.mark {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+
+.where {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+}
+
+.bar-mid { display: flex; align-items: baseline; gap: 10px; }
+
+.clock {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+.clock.dim { font-size: 17px; color: var(--ink-3); }
+.sep { color: var(--ink-3); }
+
+.bar-right { display: flex; align-items: center; gap: 12px; }
+
+.chip {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: .08em;
+  padding: 5px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.chip.hot { color: var(--danger); border-color: color-mix(in oklab, var(--danger) 50%, transparent); }
+.chip.warm { color: var(--caution); border-color: color-mix(in oklab, var(--caution) 50%, transparent); }
+
+.link-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  transition: background .2s;
+}
+.link-dot.live { background: var(--ok); box-shadow: 0 0 8px color-mix(in oklab, var(--ok) 60%, transparent); }
+.link-dot.dead { background: var(--danger); }
+
+/* ---------------------------------------------------------------- 막 */
+
+.acts {
+  display: flex;
+  gap: 2px;
+  padding: 16px 0 0;
+}
+
+.acts button {
+  flex: 1;
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.acts button:hover { color: var(--ink-2); border-color: var(--line-2); }
+.acts button[aria-current="true"] {
+  color: var(--ink);
+  background: var(--bg-2);
+  border-color: var(--caution);
+}
+.acts button[data-done="1"]:not([aria-current="true"]) { color: var(--ink-2); }
+
+.act-n {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  color: var(--ink-3);
+  margin-bottom: 2px;
+}
+
+/* ---------------------------------------------------------------- 지금 */
+
+.now {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(24px, 4vh, 56px) 0;
+  min-height: 0;
+}
+
+.now-head { display: flex; align-items: baseline; gap: 8px; }
+
+.now-n {
+  font-family: var(--mono);
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--caution);
+  font-variant-numeric: tabular-nums;
+}
+
+.now-of {
+  font-family: var(--mono);
+  font-size: clamp(18px, 2vw, 26px);
+  color: var(--ink-3);
+}
+
+.now-name {
+  margin: 14px 0 0;
+  font-size: clamp(30px, 4.4vw, 58px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+
+.now-detail {
+  margin: 18px 0 0;
+  max-width: 62ch;
+  font-size: clamp(17px, 1.5vw, 23px);
+  line-height: 1.62;
+  color: var(--ink-2);
+}
+
+.clauses { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+
+.clause {
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  background: var(--bg-1);
+}
+.clause::before { content: "고시 "; color: var(--ink-3); }
+.clause[data-aip="1"]::before { content: "AIP "; }
+
+/* ---------------------------------------------------------------- 판단 대기 */
+
+.await {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  background: color-mix(in oklab, var(--caution) 10%, var(--bg-1));
+  border: 1px solid color-mix(in oklab, var(--caution) 50%, transparent);
+  border-radius: var(--r);
+}
+
+.await-dot {
+  width: 14px; height: 14px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--caution);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+.await-title { margin: 0; font-size: 21px; font-weight: 600; color: var(--ink); }
+.await-sub { margin: 3px 0 0; font-size: 15px; color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- 13단계 레일 */
+
+.rail {
+  list-style: none;
+  display: flex;
+  gap: 3px;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+.rail li {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 6px 0;
+  border-top: 3px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.rail li:hover { color: var(--ink-2); }
+.rail li[data-done="1"] { border-top-color: var(--ink-3); color: var(--ink-2); }
+.rail li[aria-current="true"] { border-top-color: var(--caution); color: var(--ink); }
+
+/* ---------------------------------------------------------------- 조작부 */
+
+.stage-transport {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 10px;
+  flex-wrap: wrap;
+}
+
+.play {
+  width: 44px; height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.play:hover { border-color: var(--ink-3); }
+
+.tri {
+  width: 0; height: 0;
+  border-left: 12px solid var(--ink);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  margin-left: 3px;
+}
+.tri.pause {
+  width: 12px; height: 15px;
+  border: none;
+  margin-left: 0;
+  background: linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 8px, var(--ink) 8px 12px);
+}
+
+.track {
+  position: relative;
+  flex: 1 1 260px;
+  height: 30px;
+  cursor: pointer;
+  min-width: 0;
+}
+.track::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 14px;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+}
+.track-fill {
+  position: absolute;
+  left: 0; top: 14px;
+  height: 3px;
+  width: 0;
+  background: var(--ink-3);
+  border-radius: 2px;
+}
+.track-cues { position: absolute; inset: 0; pointer-events: none; }
+.track-cues i {
+  position: absolute;
+  top: 9px;
+  width: 2px;
+  height: 13px;
+  background: var(--line-2);
+}
+.track-cues i.key { background: var(--caution); height: 19px; top: 6px; }
+.track-head {
+  position: absolute;
+  top: 8px;
+  width: 3px;
+  height: 15px;
+  background: var(--ink);
+  transform: translateX(-1px);
+}
+
+.rates { display: flex; gap: 4px; flex: none; }
+
+.rates button, .ghost {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 8px 13px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--ink-3);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.rates button:hover, .ghost:hover { color: var(--ink-2); border-color: var(--line-2); }
+.rates button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-2); background: var(--bg-2); }
+.ghost.link { color: var(--normal); border-color: color-mix(in oklab, var(--normal) 40%, transparent); }
+
+.play:focus-visible,
+.rates button:focus-visible,
+.ghost:focus-visible,
+.acts button:focus-visible,
+.rail li:focus-visible { outline: 2px solid var(--normal); outline-offset: 2px; }
+
+.form-msg {
+  margin: 0 0 14px;
+  min-height: 1.4em;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.form-msg.bad { color: var(--danger); }
+.form-msg.good { color: var(--ok); }
+
+@media (max-width: 900px) {
+  .acts { flex-wrap: wrap; }
+  .acts button { flex: 1 1 45%; }
+  .rail li { font-size: 0; padding-top: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* `hidden` 이 항상 이기게 한다.
+ *
+ * 브라우저의 `[hidden] { display: none }` 은 UA 스타일시트에 있어서, 이 파일의
+ * `.await { display: flex }` 같은 규칙에 진다. 그러면 `element.hidden = true` 로
+ * 숨긴 것이 화면에 그대로 남는다 — 실제로 「관제사 판단 대기」가 시작 화면에
+ * 떠 있었다. */
+[hidden] { display: none !important; }

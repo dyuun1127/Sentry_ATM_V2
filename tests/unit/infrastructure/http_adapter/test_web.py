@@ -61,10 +61,9 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert b"SENTRY ATM" in body
     assert b"skip-link" in body
 
-    # 화면이 반드시 들고 있어야 하는 자리들. 이름이 아니라 자리를 고정한다.
+    # 관제사가 판단하는 자리들.
     for marker in (
         b"data-primary-command",
-        b"data-reset-command",
         b"data-conflict-explainability",
         b"data-deviation-panel",
         b"data-candidate-panel",
@@ -83,6 +82,31 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     assert app.api_app is runtime.http_app
 
 
+def test_console_carries_no_demo_transport() -> None:
+    """관제 화면에 시연용 조작부가 있으면 안 된다.
+
+    실제 관제 화면에 「13단계 이동」이나 재생 배속 단추가 있을 수 없다. 시계는
+    시연 진행 화면이 쥐고 이 화면은 따라간다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, body = _request(app)
+    _, _, script = _request(app, path="/assets/app.js")
+
+    for absent in (b'id="play"', b'id="rates"', b'id="track"', b'id="steps"'):
+        assert absent not in body, absent
+    # 시계를 미는 명령은 이 화면의 것이 아니다.
+    assert b'"ADVANCE"' not in script
+    assert b'"ADVANCE_TO_CONFLICT"' not in script
+
+    # 대신 시계를 누가 쥐는지 적어 둔다.
+    assert b'href="/scenario"' in body
+
+    # 따라가려면 주기적으로 읽어야 한다.
+    assert b"async function refresh(" in script
+    assert b"function follow()" in script
+
+
 @pytest.mark.parametrize(
     ("path", "content_type", "content"),
     [
@@ -93,6 +117,9 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
             "text/javascript; charset=utf-8",
             b"/api/v1/golden-demo/session",
         ),
+        ("/scenario", "text/html; charset=utf-8", b"13\xeb\x8b\xa8\xea\xb3\x84"),
+        ("/assets/scenario.css", "text/css; charset=utf-8", b".now-name"),
+        ("/assets/scenario.js", "text/javascript; charset=utf-8", b"AWAITS_CONTROLLER"),
     ],
 )
 def test_static_assets_have_exact_content_types(
@@ -109,8 +136,8 @@ def test_static_assets_have_exact_content_types(
     assert content in body
 
 
-def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> None:
-    """관제사가 화면에서 낼 수 있어야 하는 명령이 전부 있는가.
+def test_ui_assets_include_every_controller_decision_and_busy_boundary() -> None:
+    """관제사가 화면에서 낼 수 있어야 하는 판단이 전부 있는가.
 
     하나라도 빠지면 그 판단은 화면에서 할 수 없고, 사람이 판단한다는 주장이
     그만큼 좁아진다.
@@ -120,8 +147,6 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
     _, _, script = _request(app, path="/assets/app.js")
 
     for command in (
-        b'"START"',
-        b'"ADVANCE_TO_CONFLICT"',
         b'"GENERATE_RECOMMENDATION"',
         b'"ACCEPT_RECOMMENDATION"',
         b'"MODIFY_RECOMMENDATION"',
@@ -129,14 +154,13 @@ def test_ui_assets_include_every_fixed_session_command_and_busy_boundary() -> No
         b'"REVALIDATE_MODIFIED_MANEUVER"',
         b'"APPLY_VALIDATED_MODIFIED_MANEUVER"',
         b'"APPLY_APPROVED_MANEUVER"',
-        b'"RESET"',
     ):
         assert command in script, command
 
     # 중복 제출 경계. 없으면 한 번의 판단이 두 번 기록될 수 있다.
     assert b"if (state.busy) return;" in script
     # 거부당한 이유를 삼키지 않는다.
-    assert b"say(String(error.message || error), \"bad\")" in script
+    assert b'say(String(error.message || error), "bad")' in script
     assert b"function renderConflictExplainability(session)" in script
     assert b"session?.primary_conflict" in script
     assert b"function renderDeviation(deviation)" in script
@@ -169,43 +193,67 @@ def test_ui_assets_draw_the_scope_from_reference_geometry_and_leave_trails() -> 
     assert b"function curvatureRadiiNm(latDeg)" in script
 
 
-def test_ui_assets_control_the_clock_and_expose_scenario_steps() -> None:
-    """75분짜리 시나리오를 화면에서 다룰 수 있는가."""
-    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+def test_scenario_screen_owns_the_clock_and_waits_for_the_controller() -> None:
+    """시연 진행 화면이 시계를 쥐고, 판단이 필요하면 스스로 멈추는가.
 
-    _, _, script = _request(app, path="/assets/app.js")
-    _, _, stylesheet = _request(app, path="/assets/app.css")
-
-    assert b"function start()" in script
-    assert b"function stop()" in script
-    assert b"async function seek(offsetSeconds)" in script
-    assert b'"ADVANCE"' in script
-    assert b"const RATES = [1, 2, 4, 8, 16]" in script
-    assert b"const RANGES = " in script
-    assert b"function buildSteps()" in script
-    assert b".track" in stylesheet
-    assert b".steps button" in stylesheet
-
-
-def test_ui_reads_session_start_state_from_the_server_not_a_local_flag() -> None:
-    """세션이 시작됐는지는 서버가 안다.
-
-    화면 안의 플래그로 기억하면 새로고침할 때마다 거짓으로 돌아가는데 세션은
-    서버에 살아 있어서, 이미 시작된 세션에 START 를 다시 보내고 409 를 받는다.
-    그러면 재생이 첫 틱에서 멈추고 화면에는 단추가 안 눌린 것처럼 보인다 —
-    실제로 그렇게 되어 재생이 동작하지 않았다.
+    멈추지 않으면 상신된 안이 검증된 시각과 관제사가 승인하는 시각이 벌어지고,
+    그 사이 교통은 계속 움직인다.
     """
     app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
 
-    _, _, script = _request(app, path="/assets/app.js")
+    _, _, body = _request(app, path="/scenario")
+    _, _, script = _request(app, path="/assets/scenario.js")
+    _, _, stylesheet = _request(app, path="/assets/scenario.css")
 
+    assert b"<!doctype html>" in body
+    assert b'<html lang="ko">' in body
+    assert b'id="play"' in body
+    assert b'id="rates"' in body
+    assert b'id="track"' in body
+    assert b"data-reset-command" in body
+    # 관제 콘솔로 건너갈 수 있어야 한다.
+    assert b'href="/"' in body
+
+    # 시계를 미는 명령은 이쪽에 있다.
+    for command in (b'"START"', b'"ADVANCE"', b'"RESET"'):
+        assert command in script, command
+
+    # 세션 시작 여부는 서버가 안다 — 콘솔과 같은 규칙이다.
     assert b"function needsStart()" in script
     assert b'stage === "READY"' in script
-    # 화면이 시작 여부를 기억하지 않는다.
-    assert b"state.started" not in script
 
-    # 실패는 화면에 남아야 한다. 콘솔에만 찍으면 왜 안 되는지 알 길이 없다.
-    assert script.count(b'say(String(error.message || error), "bad")') >= 3
+    # 판단이 필요한 단계에서 멈춘다.
+    assert b"const AWAITS_CONTROLLER" in script
+    assert b"function pauseIfControllerNeeded()" in script
+    assert b"RECOMMENDATION_AVAILABLE" in script
+    # 멈춰 있는 동안에도 콘솔의 판단을 알아채야 한다.
+    assert b"function watchWhilePaused()" in script
+
+    # 청중이 읽는 화면이므로 큰 글씨가 필요하다.
+    assert b".now-name" in stylesheet
+    assert b"clamp(30px" in stylesheet
+
+
+def test_scenario_endpoint_carries_the_act_structure() -> None:
+    """13단계는 네 막으로 묶여야 시연을 보는 쪽이 어디쯤인지 안다."""
+    import json
+
+    from sentry_atm.runtime import build_sortie_session_runtime
+
+    sortie = build_sortie_session_runtime()
+    _, _, body = _request(GoldenDemoWebWsgiApp(sortie.http_app, sortie), path=SCENARIO_PATH)
+    payload = json.loads(body)
+
+    acts = payload["acts"]
+    assert [act["n"] for act in acts] == [1, 2, 3, 4]
+    assert [act["name"] for act in acts] == ["평시", "출격", "비상복귀", "우선착륙"]
+    # 막은 빈틈 없이 이어지고 마지막은 시나리오 끝까지 간다.
+    for previous, current in zip(acts, acts[1:], strict=False):
+        assert previous["t1"] == current["t0"]
+    assert acts[-1]["t1"] == round(payload["duration_seconds"], 1)
+    # 모든 단계가 어느 막엔가 속한다.
+    covered = [n for act in acts for n in act["steps"]]
+    assert sorted(covered) == [step["n"] for step in payload["steps"]]
 
 
 def test_reference_and_advisory_endpoints_serve_json() -> None:
