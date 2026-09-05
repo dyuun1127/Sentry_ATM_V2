@@ -78,6 +78,9 @@ def test_root_serves_accessible_ui_shell_with_security_headers() -> None:
     for layer in (b'id="g-terrain"', b'id="g-airspace"', b'id="g-traffic"', b'id="g-links"'):
         assert layer in body, layer
 
+    # 관제 화면처럼 생긴 것을 관제 화면이 아니라고 말해 주는 것은 화면 자신뿐이다.
+    assert "POC · NOT FOR OPERATIONAL USE".encode() in body
+
     assert b"/assets/app.css" in body
     assert app.api_app is runtime.http_app
 
@@ -211,6 +214,7 @@ def test_scenario_screen_owns_the_clock_and_waits_for_the_controller() -> None:
     assert b'id="rates"' in body
     assert b'id="track"' in body
     assert b"data-reset-command" in body
+    assert "POC · NOT FOR OPERATIONAL USE".encode() in body
     # 관제 콘솔로 건너갈 수 있어야 한다.
     assert b'href="/"' in body
 

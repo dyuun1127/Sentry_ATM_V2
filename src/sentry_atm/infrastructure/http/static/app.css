@@ -641,3 +641,19 @@ h2 {
  * 숨긴 것이 화면에 그대로 남는다 — 실제로 「관제사 판단 대기」가 시작 화면에
  * 떠 있었다. */
 [hidden] { display: none !important; }
+
+/* 이 화면이 무엇인지 늘 보이게 둔다.
+ *
+ * 관제 화면처럼 생긴 것을 관제 화면이 아니라고 말해 주는 것은 화면 자신뿐이다.
+ * 시연을 보는 쪽이 이것을 운용 체계로 오해하면, 뒤에 붙는 모든 설명이 실제보다
+ * 크게 들린다. */
+.poc {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in oklab, var(--caution) 40%, transparent);
+  border-radius: var(--r);
+  color: var(--caution);
+  white-space: nowrap;
+}

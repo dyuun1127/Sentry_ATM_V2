@@ -1,38 +1,44 @@
-# Golden Demo 실행 Runbook
+# 시연 실행 Runbook
 
 ## 1. 목적과 범위
 
-이 문서는 발표용 노트북에서 SENTRY ATM Golden Demo를 사전 검증하고 실행하는 고정 절차다. 대상은
-process-local 단일 Session이며 외부 네트워크, Docker, PostgreSQL/PostGIS 또는 Node.js가 필요하지 않다.
-이 데모는 실제 관제 시스템이 아닌 RKTU Terminal Simulation Area PoC다.
+발표용 노트북에서 SENTRY ATM 시연을 사전 검증하고 실행하는 고정 절차다. 외부 네트워크, Docker,
+PostgreSQL/PostGIS, Node.js가 필요하지 않다.
+
+**이 데모는 실제 관제 시스템이 아니다.** RKTU 터미널 시뮬레이션 PoC이며, 두 화면 모두 상단에
+`POC · NOT FOR OPERATIONAL USE`를 표시한다.
+
+### 화면이 둘인 이유
+
+| 화면 | 주소 | 누가 보는가 | 무엇을 하는가 |
+|---|---|---|---|
+| 관제 콘솔 | `http://127.0.0.1:8000/` | 관제사 (발표자) | 스코프·예외 큐·근거를 보고 **판단한다** |
+| 시연 진행 화면 | `http://127.0.0.1:8000/scenario` | 청중 (빔프로젝터) | 13단계와 근거 조항을 보여주고 **시계를 쥔다** |
+
+관제 콘솔에는 재생 단추도 단계 이동도 없다. 실제 관제 화면에 그런 것이 있을 수 없기 때문이다.
+시간은 저절로 흐르는 것이고 판단은 사람이 하는 것이라, 그 나눔이 실제 관제와도 맞는다.
+
+둘은 서버의 **같은 세션 하나**를 본다. 따로 맞출 것이 없고, 한쪽에서 일어난 일이 다른 쪽에
+저절로 반영된다.
+
+### 시나리오 둘
+
+| | 기본값 | 내용 |
+|---|---|---|
+| `--scenario sortie` | ✅ | 13단계 소티. 75분, 15대, 동시 최대 5대. **발표에서 쓰는 것** |
+| `--scenario golden` | | 8대 골든 데모. 5분. 회귀 고정물이며 `--check`가 검사하는 대상 |
 
 ## 2. 발표 전 자동 점검
 
-저장소 루트의 VS Code PowerShell Terminal에서 다음 명령을 실행한다.
+저장소 루트의 PowerShell에서 실행한다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --check
 ```
 
-이 명령은 먼저 Python 3.12+, 패키지 버전, 정적 UI 자산, 외부 URL 부재와 `127.0.0.1` 고정 Bind의
-Release Preflight 5개를 검사한다. 통과하면 운영 서버와 별도의 임시 loopback Port를 사용하고 자동으로
-종료한다. 실제 HTTP와 독립된 Reset Run을 통해 다음 계약을 순서대로 검증한다.
-
-1. UI HTML/CSS/JavaScript와 Explainability 자산 응답
-2. `READY`에서 8대 초기 Traffic
-3. `MONITORING` 시작
-4. T+70 `CIV-A02 / MIL-F01` HIGH 충돌 탐지
-5. T+75 `CAND-A`, 9,000 ft, SAFE 후보 생성
-6. T+90 관제사 `ACCEPT` Audit 기록과 적용 전 Runtime 불변
-7. 승인 기동 적용 후 SAFE/LOW/RESOLVED 및 원 충돌 증거 보존
-8. Reset 후 새 Run ID와 빈 증거 상태
-9. SAFE 8,800 ft MODIFY의 격리 검증, 재승인, 실제 적용과 SAFE/LOW/RESOLVED
-10. UNSAFE 7,200 ft MODIFY의 최저고도 Rule, HTTP 409, Runtime 불변
-11. REJECT Audit과 재검증·적용 부재
-12. 마지막 Reset 후 Run 4의 깨끗한 `READY` 상태
-
-T+70 Checkpoint에서는 `MIL-F01`의 진입 고도·침로·수평·시간 편차도 확인하고, T+75 Checkpoint에서는
-CAND-A~E 전체 판정 행렬이 Golden Scenario Contract와 일치하는지 검증한다.
+Release Preflight 5개(Python 3.12+, 패키지 버전, 정적 UI 자산, 외부 URL 부재, `127.0.0.1` 고정
+Bind)를 먼저 보고, 이어서 **골든 데모** 10개 검문소를 실제 HTTP로 검증한다. 운영 서버와 별도의
+임시 loopback Port를 쓰고 자동 종료한다.
 
 정상 종료 기준은 다음 두 줄과 종료 코드 `0`이다.
 
@@ -41,76 +47,154 @@ SENTRY ATM RELEASE PREFLIGHT PASSED (5 checks)
 SENTRY ATM DEMO CHECK PASSED (10 checkpoints)
 ```
 
-`[FAIL]`이 한 줄이라도 있으면 발표 서버를 시작하지 말고 5절의 복구 절차를 따른다.
+`[FAIL]`이 한 줄이라도 있으면 발표 서버를 시작하지 말고 6절을 따른다.
+
+> **이 점검은 골든 데모를 검사한다.** 소티는 별도로 시험 묶음
+> `tests/acceptance/test_decision_chain_on_any_scenario.py`가 상신부터 적용까지 검증한다.
+> 전체 회귀는 5절의 명령으로 돌린다.
 
 ## 3. 발표 서버 실행
 
-자동 점검이 통과한 같은 Terminal에서 실행한다.
+같은 PowerShell에서 실행한다. 소티가 기본값이므로 시나리오를 적지 않아도 된다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m sentry_atm.infrastructure.http --port 8000
 ```
 
-다음 문구가 출력되면 브라우저에서 `http://127.0.0.1:8000/`을 연다.
+다음 문구가 나오면 브라우저를 연다.
 
 ```text
 SENTRY ATM Golden Demo API: http://127.0.0.1:8000
 Press Ctrl+C to stop.
 ```
 
-발표가 끝나면 해당 Terminal에서 `Ctrl+C`를 눌러 서버를 종료한다. 외부 장치에서 접속할 수 있도록
-Host를 변경하는 기능은 제공하지 않는다.
+- 발표자 화면: `http://127.0.0.1:8000/`
+- 빔프로젝터: `http://127.0.0.1:8000/scenario`
 
-## 4. 발표 시연 순서와 설명 포인트
+`localhost` 대신 **`127.0.0.1`을 쓴다.** `localhost`는 IPv6(`::1`)로 먼저 풀려 다른 프로세스에
+붙는 일이 있다. 외부 장치에서 접속하도록 Host를 바꾸는 기능은 제공하지 않는다.
 
-| 순서 | 화면 동작 | 확인할 화면 증거 | 발표 핵심 문장 |
+두 화면은 서로 링크로 건너갈 수 있다 — 시연 화면 우하단 「관제 콘솔 열기」, 콘솔 스코프 아래
+「시연 화면 열기」.
+
+발표가 끝나면 서버 Terminal에서 `Ctrl+C`를 누른다.
+
+## 4. 발표 시연 순서
+
+시연 화면의 **13단계 단추**로 이동한다. 처음부터 재생하면 4배속에서도 19분이 걸리므로 단계 이동이
+정상 경로다. 아래 시각은 시나리오 내부 시각(09:00 기준 경과)이다.
+
+### 1막 · 평시 — 민항과 군이 같은 활주로를 나눠 쓴다
+
+| 단계 | 시각 | 화면 | 발표 문장 |
 |---:|---|---|---|
-| 1 | `감시 시작` | 8대 Traffic, `MONITORING` | 같은 입력은 같은 시각과 상태로 재현된다. |
-| 2 | `충돌 시점으로 진행` | T+70, 붉은 충돌쌍과 연결선, HIGH 75 | 현재 거리가 아니라 미래 CPA/TCPA를 계산한다. |
-| 3 | `대응 후보 생성` | 2.30 NM / 500 ft 기준선, SAFE 후보 | 후보 생성과 안전성 검증은 분리돼 있다. |
-| 4 | `추천안 승인 기록` | Decision `ACCEPT`, 적용 전 상태 | 사람의 승인 기록만으로 Aircraft Runtime은 바뀌지 않는다. |
-| 5 | `승인 기동 적용` | 9,000 ft 적용, 1,792 ft, LOW/RESOLVED | 승인된 기동만 적용하고 같은 계산기로 다시 검증한다. |
-| 6 | `새 Run 시작` | `READY`, Run 번호 증가 | 모든 파생 결과를 지우고 동일 시나리오를 다시 시작한다. |
+| 1 | 13:56 | 민항 정상 운항 | 청주는 시간당 8회다. 하늘이 몇 분씩 비는 것이 정상이다. |
+| 2 | 18:56 | 군 작전지역 지정 (`ENR 5.2`) | 스코프에서 MOA 3A가 또렷해진다. |
 
-브라우저 육안 회귀 확인 항목:
+### 2막 · 출격 — 출격 비용은 도착 흐름에서 치러진다
 
-- 설명 가능성 Panel은 충돌 전에는 보이지 않고 충돌 탐지 후 나타난다.
-- 원 충돌은 `BEFORE · PREDICTED CPA`로 유지된다.
-- 추천 단계는 `AFTER · VALIDATED CANDIDATE`이며 실제 적용 결과로 표현되지 않는다.
-- 최종 단계는 `AFTER · POST-ACTION REVALIDATION`과 `SEPARATION RESTORED`를 표시한다.
-- Radar의 `CIV-A02`, `MIL-F01` Marker와 연결선이 붉게 강조된다.
-- 새로고침 후에도 backend의 현재 Stage와 동일한 화면이 복원된다.
-- 별도 Reset Run에서 `기동 수정` 후 `수정 기동 격리 검증`을 누르면 기본 8,800 ft 수정안은
-  `SAFE · NOT YET APPLIED`와 계산된 CPA 증거를 표시하고 실제 Aircraft 고도는 바뀌지 않는다. 이어서
-  `SAFE 수정 기동 재승인·적용`을 누른 뒤에만 고도가 8,800 ft로 바뀌고 `AUTHORIZED · APPLIED`와
-  SAFE/LOW/RESOLVED가 표시된다.
-- 별도 Reset Run에서 `추천안 거절`은 근거를 Audit에 표시하고 기동 적용 버튼을 노출하지 않는다.
+| 단계 | 시각 | 화면 | 발표 문장 |
+|---:|---|---|---|
+| 3 | 28:56 | 전투기 출격 · 활주로 우선권 (`3-9-6`) | 민항 슬롯 사이로 이륙한다. |
+| 4 | 29:56 | 경로 계획 (`ENR 5.1`) | |
+| 5 | 30:26 | 관제 이양 (`2-1-15`) | 콘솔 「항적」 패널에 관제기관이 바뀐다. |
+| 6 | 35:56 | 작전지역 진입 | 전투기가 스코프에서 사라진다 — 터미널 구역 밖은 관할이 아니다. |
+
+### 3막 · 비상복귀 — 판단이 필요한 것만 근거와 함께 상신한다
+
+| 단계 | 시각 | 화면 | 발표 문장 |
+|---:|---|---|---|
+| 7 | 55:56 | 비상복귀 발생 (`2-1-4 가`) | 콘솔 예외 큐에 `비상 선언`이 올라온다. |
+| 8 | 56:26 | 최단 복귀경로 | 「고시가 말하는 것」에 복귀 경로와 체공 지시가 나온다. |
+| 9 | 56:56 | 민항 도착기와 충돌 탐지 (`5-5-4 가`, `4-5-1`) | 현재 거리가 아니라 미래 CPA/TCPA를 계산한다. |
+| 10 | 57:26 | 체공 · 벡터 · 재시퀀싱 (`4-6-1`, `4-6-4`) | 여기서 관제사가 판단한다. |
+
+**9단계에서 시연 화면이 스스로 멈추고 「회피안 상신 대기」를 띄운다.** 이때 관제 콘솔로 넘어간다.
+
+| 콘솔 조작 | 확인할 증거 | 발표 문장 |
+|---|---|---|
+| 「회피안 상신」 | 후보 5개와 판정(SAFE/UNSAFE/INEFFECTIVE), 각각의 사유 | 후보 생성과 안전성 검증은 분리돼 있다. 탈락한 안도 함께 보여준다. |
+| 「승인」 | `DECISION_ACCEPTED` → `CONFLICT_RESOLVED` | 승인 기록만으로는 항공기가 움직이지 않는다. 적용은 별도 단계다. |
+
+승인 대신 **「수정 검증」**으로 관제사가 고도를 고쳐 보이는 것이 설득력이 높다.
+
+| 입력 | 결과 | 발표 문장 |
+|---|---|---|
+| 4,000 ft | `SAFE` → 「수정 적용」 가능 | 관제사가 고친 안도 같은 검증을 거친다. |
+| 7,000 ft | `UNSAFE` · `PERFORMANCE_ENVELOPE_EXCEEDED` · 적용 거부 | 사람이 고쳤다고 검증을 건너뛰지 않는다. |
+
+「거부」를 누르면 사유가 감사에 남고 어떤 기동도 적용되지 않는다.
+
+### 4막 · 우선착륙 — 순번이 아니라 물리적 최단 도달시각
+
+| 단계 | 시각 | 화면 | 발표 문장 |
+|---:|---|---|---|
+| 11 | 61:05 | 비상 전투기 우선 착륙 (`2-1-4 가`) | 비상기를 벡터로 돌리지 않는다. 움직이는 것은 민항이다. |
+| 12 | 62:05 | 민항 도착 순서 재구성 (`2-1-4`) | 최종접근에 안정된 항공기는 흔들지 않는다. |
+| 13 | 64:53 | 정상 운항 복귀 | |
+
+### 육안 회귀 확인
+
+- 시작 화면(`READY`)에서 「판단 대기」 상자가 **보이지 않는다.**
+- 콘솔에 재생 단추·배속·13단계 바가 **없다.**
+- 두 화면의 시각이 같다.
+- 콘솔에서 판단하면 시연 화면이 1초 안에 알아채고 대기 표시를 내린다.
+- 예외 큐는 비상(분홍) → 위험(빨강) 순으로 정렬된다.
+- 「고시가 말하는 것」의 활주로 순서에 조항 번호가 붙어 있다.
+- 새로고침해도 서버의 현재 단계와 같은 화면이 복원된다.
+- 두 화면 상단에 `POC · NOT FOR OPERATIONAL USE`가 보인다.
 
 ## 5. 실패 복구 절차
 
 | 증상 | 확인 | 조치 |
 |---|---|---|
-| Python 경로 오류 | 현재 위치가 저장소 루트인지 확인 | `cd`로 프로젝트 루트 이동 후 다시 실행 |
-| `.venv` 없음 | `.venv\Scripts\python.exe` 존재 여부 확인 | Python 3.12+로 가상환경을 만들고 개발 의존성 설치 |
-| `--check` 실패 | 첫 `[FAIL]` 메시지 확인 | `pytest`, `ruff` 실행 후 실패 원인 수정; 통과 전 발표 금지 |
-| Port 8000 사용 중 | PowerShell에서 `netstat -ano \| Select-String ':8000'` | 서버를 종료하거나 `--port 8001`처럼 다른 loopback Port 사용 |
-| `API OFFLINE` | 서버 Terminal이 실행 중인지 확인 | 페이지를 닫지 말고 서버 재실행 후 새로고침 |
-| 잘못된 Stage | 우측 상단 `RESET RUN` 확인 | Reset 후 `감시 시작`부터 고정 순서 재실행 |
-| 화면 배율 문제 | 브라우저 Zoom과 창 크기 확인 | Zoom 100%, 가로 1280px 이상 권장 |
+| `&&` 구문 오류 | PowerShell 5.1은 `&&`를 지원하지 않는다 | `;` 또는 `A; if ($?) { B }` 사용 |
+| Python 경로 오류 | 현재 위치가 저장소 루트인지 | `cd`로 루트 이동 후 재실행 |
+| `.venv` 없음 | `.venv\Scripts\python.exe` 존재 여부 | Python 3.12+로 가상환경 생성 후 개발 의존성 설치 |
+| `--check` 실패 | 첫 `[FAIL]` 메시지 | 원인 수정 전 발표 금지 |
+| Port 사용 중 | 아래 「서버가 겹쳐 떴을 때」 | 기존 프로세스 종료 후 재실행 |
+| 연결 표시등 빨강 | 서버 Terminal이 살아 있는지 | 페이지를 닫지 말고 서버 재실행 후 새로고침 |
+| 재생이 안 됨 | 화면 하단 메시지 확인 | 사유가 표시된다. 「처음으로」 후 재시도 |
+| 잘못된 단계 | 시연 화면 「처음으로」 | Reset 후 단계 단추로 이동 |
+| 화면 배율 | 브라우저 Zoom과 창 크기 | Zoom 100%, 가로 1280px 이상 |
 
-자동 점검 외 전체 개발 회귀 검사는 다음과 같다.
+### 서버가 겹쳐 떴을 때
+
+Windows에서는 `SO_REUSEADDR` 때문에 두 프로세스가 같은 포트를 함께 잡을 수 있었다. 그러면 옛
+프로세스가 요청을 받아 **코드를 고쳐도 화면이 그대로인** 상황이 된다. 지금은 겹치지 않고 바로
+실패하도록 막아 두었지만, 옛 프로세스가 남아 있으면 새 서버가 뜨지 않는다.
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*sentry_atm.infrastructure.http*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```
+
+무엇이 서비스되는지 의심되면 확인한다.
+
+```powershell
+(Invoke-WebRequest http://127.0.0.1:8000/assets/app.js).Content -match 'function follow'
+```
+
+### 전체 회귀 검사
 
 ```powershell
 .\.venv\Scripts\python.exe -m ruff check .
+```
+
+```powershell
 .\.venv\Scripts\python.exe -m pytest
 ```
 
+> `TMPDIR`이 ESTsoft `CreatorTemp`를 가리키는 환경에서는 `pytest` 오류 11개가 난다. 코드 문제가
+> 아니라 임시 폴더 접근 거부이며, 그 11개를 뺀 전부가 통과하면 정상이다.
+
 ## 6. 발표 직전 체크리스트
 
-- 최신 발표 대상 Commit인지 `git status --short --branch`로 확인했다.
-- Release Preflight 5개, 자동 점검 10개 Checkpoint와 마지막 Clean Reset이 모두 통과했다.
-- Wi-Fi를 끈 상태에서도 화면이 정상적으로 열린다.
-- 브라우저 Zoom 100%와 발표 해상도에서 핵심 Panel이 읽힌다.
-- Golden Demo를 Reset부터 최종 Revalidation까지 한 번 실행했다.
-- Backup Port와 서버 재실행 명령을 발표자 메모에 기록했다.
-- 화면의 `POC · NOT FOR OPERATIONAL USE` 고지가 보인다.
+- 발표 대상 Commit인지 `git status --short --branch`로 확인했다.
+- Release Preflight 5개와 골든 데모 10개 검문소가 통과했다.
+- 전체 시험과 `ruff`가 통과했다.
+- Wi-Fi를 끈 상태에서도 두 화면이 정상적으로 열린다.
+- 빔프로젝터에서 시연 화면의 단계 이름과 근거 조항이 읽힌다.
+- 소티를 7단계 → 승인/수정 → 13단계까지 한 번 끝까지 돌려 봤다.
+- 「수정 검증」에서 SAFE 값과 UNSAFE 값을 각각 한 번씩 눌러 봤다.
+- 서버 재실행 명령과 프로세스 종료 명령을 발표자 메모에 적어 두었다.
+- 두 화면에 `POC · NOT FOR OPERATIONAL USE` 고지가 보인다.
