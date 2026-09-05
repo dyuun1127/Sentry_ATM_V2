@@ -76,7 +76,7 @@ class RecoveryRouteAdvisory:
 
 @dataclass(frozen=True, slots=True)
 class RegulatoryAdvisory:
-    """한 단계에 대해 고시가 말하는 것 전부."""
+    """한 단계에 적용되는 관제 절차 전부."""
 
     step_id: str
     control_units: tuple[ControlUnitAssignment, ...]

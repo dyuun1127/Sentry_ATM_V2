@@ -84,7 +84,7 @@ class GoldenDemoWebWsgiApp:
         return runtime.runtime.definition.scenario_id
 
     def _advisory_asset(self) -> _StaticAsset | None:
-        """지금 이 시점에 고시가 말하는 것 — 관할·활주로 순서·체공·복귀경로.
+        """지금 이 시점의 관제 절차 — 관할·활주로 순서·체공·복귀경로.
 
         캐시하지 않는다. 시각이 바뀌면 답이 바뀌기 때문이다.
         """
