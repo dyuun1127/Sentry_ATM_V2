@@ -58,6 +58,22 @@ function toLocal(lat, lon) {
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RANGES = [15, 25, 40, 60];
 
+/* 처음 여는 범위. 청주 터미널과 접근로가 함께 들어오는 크기다. */
+const DEFAULT_RANGE_NM = 25;
+
+/* 확대 한계. 더 들어가면 활주로 하나가 화면을 채워 항적이 전부 밖으로 나가고,
+ * 더 나가면 전사 자료의 범위를 벗어난다. */
+const MIN_RANGE_NM = 2;
+const MAX_RANGE_NM = 120;
+
+/* 휠 한 칸이 바꾸는 배율. 작게 잡으면 여러 번 굴려야 하고 크게 잡으면 한 칸에
+ * 화면이 튄다. 브라우저마다 `deltaY` 크기가 달라 지수로 눌러 준다. */
+const ZOOM_SENSITIVITY = 0.0015;
+
+/* 이보다 많이 끌면 항적을 고른 것이 아니라 화면을 민 것으로 본다. 손이 조금
+ * 떨렸다고 선택이 풀리면 안 되고, 화면을 밀었는데 항적이 골라져도 안 된다. */
+const DRAG_SLOP_PX = 4;
+
 /* 항적 꼬리 — 지나온 자리를 몇 개 남긴다. 레이더 화면이 과거 위치를 남기는
  * 이유는 방향과 속도 변화를 한 눈에 읽기 위해서다. 현재 위치와 속도벡터만
  * 있으면 선회 중인지 직진 중인지 알 수 없다. */
@@ -85,7 +101,8 @@ const state = {
   layers: Object.fromEntries(LAYERS.map(([k, , on]) => [k, on])),
   busy: false,
   trails: new Map(),
-  view: { cx: 0, cy: 0, halfNm: 25 },
+  dragged: false,
+  view: { cx: 0, cy: 0, halfNm: DEFAULT_RANGE_NM },
 };
 
 /* ------------------------------------------------------------------ 서버 */
@@ -171,13 +188,22 @@ function fitView() {
   state.view.h = h;
   // 짧은 변에 지름이 들어가도록 잡는다. 긴 변에 맞추면 세로가 잘린다.
   state.view.scale = Math.min(w, h) / (2 * state.view.halfNm);
-  $("scale").textContent = `${state.view.halfNm.toFixed(0)} NM 반경`;
+  // 휠로 확대하면 정수가 아니다. 한 자리까지 보여 준다 — 지금 범위를 모르면
+  // 화면의 거리를 읽을 수 없다.
+  const nm = state.view.halfNm;
+  $("scale").textContent = `${nm < 10 ? nm.toFixed(1) : nm.toFixed(0)} NM 반경`;
 }
 
 /** 국지 x/y(NM) → 화면 픽셀. 북쪽이 위이므로 y 를 뒤집는다. */
 function px(x, y) {
   const { w, h, scale, cx, cy } = state.view;
   return [w / 2 + (x - cx) * scale, h / 2 - (y - cy) * scale];
+}
+
+/** 화면 픽셀 → 국지 x/y(NM). `px` 의 역이며 확대·이동의 기준점을 잡는 데 쓴다. */
+function nmAt(screenX, screenY) {
+  const { w, h, scale, cx, cy } = state.view;
+  return [cx + (screenX - w / 2) / scale, cy - (screenY - h / 2) / scale];
 }
 
 function node(tag, attrs, parent) {
@@ -447,6 +473,8 @@ function drawTraffic() {
       traffic,
     );
     group.addEventListener("click", () => {
+      // 화면을 민 끝의 클릭은 선택이 아니다.
+      if (state.dragged) return;
       state.selected = state.selected === aircraft.aircraft_id ? null : aircraft.aircraft_id;
       render();
     });
@@ -1125,22 +1153,121 @@ function buildControls() {
     button.textContent = `${nm}`;
     button.setAttribute("aria-pressed", String(nm === state.view.halfNm));
     button.addEventListener("click", () => {
+      // 프리셋은 범위와 중심을 함께 되돌린다. 확대해서 구석을 보다가 범위만
+      // 바뀌면 어디를 보고 있는지 알 수 없다.
       state.view.halfNm = nm;
-      for (const other of ranges.children) {
-        other.setAttribute("aria-pressed", String(other === button));
-      }
+      recentre();
       fitView();
+      syncRangeButtons();
       render();
     });
     ranges.appendChild(button);
   }
 
+  wireScopeNavigation();
   wireDecision();
 
   window.addEventListener("resize", () => {
     fitView();
     render();
   });
+}
+
+/* 스코프 조작 — 휠로 확대, 끌어서 이동.
+ *
+ * 관제 스코프는 범위를 바꿔 가며 쓴다. 프리셋 단추만으로는 지금 보고 싶은 곳이
+ * 화면 구석에 있을 때 할 수 있는 것이 없다.
+ *
+ * 확대는 **커서 아래 지점을 붙잡는다.** 화면 가운데를 기준으로 확대하면 보려던
+ * 항적이 확대할수록 화면 밖으로 밀려나, 확대할 때마다 다시 찾아야 한다. */
+function wireScopeNavigation() {
+  const scope = $("scope");
+
+  scope.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      const box = scope.getBoundingClientRect();
+      const screenX = event.clientX - box.left;
+      const screenY = event.clientY - box.top;
+
+      const [anchorX, anchorY] = nmAt(screenX, screenY);
+      const next = state.view.halfNm * Math.exp(event.deltaY * ZOOM_SENSITIVITY);
+      state.view.halfNm = Math.min(MAX_RANGE_NM, Math.max(MIN_RANGE_NM, next));
+      fitView();
+
+      // 같은 화면 위치가 이제 다른 지점을 가리킨다. 그 차이만큼 중심을 옮겨
+      // 커서 아래 지점을 제자리에 둔다.
+      const [afterX, afterY] = nmAt(screenX, screenY);
+      state.view.cx += anchorX - afterX;
+      state.view.cy += anchorY - afterY;
+
+      syncRangeButtons();
+      render();
+    },
+    { passive: false },
+  );
+
+  let drag = null;
+  state.dragged = false;
+
+  scope.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    drag = { x: event.clientX, y: event.clientY, cx: state.view.cx, cy: state.view.cy };
+    state.dragged = false;
+  });
+
+  scope.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (!state.dragged && Math.hypot(dx, dy) < DRAG_SLOP_PX) return;
+    state.dragged = true;
+    scope.setPointerCapture(event.pointerId);
+    scope.style.cursor = "grabbing";
+    state.view.cx = drag.cx - dx / state.view.scale;
+    state.view.cy = drag.cy + dy / state.view.scale;
+    render();
+  });
+
+  for (const name of ["pointerup", "pointercancel", "pointerleave"]) {
+    scope.addEventListener(name, () => {
+      drag = null;
+      scope.style.cursor = "";
+      // 클릭 처리가 끝난 뒤에 내린다. 끌기가 끝나는 순간 바로 내리면 그 직후의
+      // click 이 항적 선택으로 새어 들어간다.
+      setTimeout(() => (state.dragged = false), 0);
+    });
+  }
+
+  // 길을 잃었을 때 공항으로 돌아오는 수단. 두 번 누르면 기본 범위로 되돌린다.
+  scope.addEventListener("dblclick", () => {
+    state.view.halfNm = DEFAULT_RANGE_NM;
+    recentre();
+    fitView();
+    syncRangeButtons();
+    render();
+  });
+}
+
+/** 공항 기준점으로 중심을 되돌린다. */
+function recentre() {
+  const centre = state.geometry?.centre;
+  if (!centre) return;
+  const [cx, cy] = toLocal(centre[0], centre[1]);
+  state.view.cx = cx;
+  state.view.cy = cy;
+}
+
+/** 휠로 확대한 뒤에는 어느 프리셋과도 맞지 않는다. 그때는 아무것도 눌린 상태로
+ * 두지 않는다 — 맞지 않는 단추가 눌려 있으면 범위를 잘못 읽는다. */
+function syncRangeButtons() {
+  for (const button of $("ranges").children) {
+    button.setAttribute(
+      "aria-pressed",
+      String(Math.abs(Number(button.textContent) - state.view.halfNm) < 0.05),
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ 시작 */

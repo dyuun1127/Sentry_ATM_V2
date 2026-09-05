@@ -38,6 +38,21 @@
   --sans: "Pretendard", "Malgun Gothic", -apple-system, system-ui, sans-serif;
 
   --r: 3px;
+
+  /* 글씨 크기 — 한 곳에서 조절한다.
+   *
+   * 예전에는 40곳 넘게 흩어진 px 값이었다. 하나를 키우면 옆의 것과 어긋나고,
+   * 화면 전체를 키우려면 전부를 손대야 했다.
+   *
+   * 관제 콘솔은 관제사가 가까이서 오래 읽는 화면이다. 처음 잡았던 크기는
+   * 정보를 많이 넣는 데 치우쳐서 실제로 읽기에 작았다. 한 단계씩 올렸다. */
+  --fs-2xs: 10px;   /* 스코프 안의 픽스·공역 이름 */
+  --fs-xs: 12px;    /* 데이터블록, 조항 이름표 */
+  --fs-sm: 13px;    /* 보조 설명, 단추 */
+  --fs-md: 14px;    /* 본문 */
+  --fs-lg: 16px;    /* 콜사인, 입력칸 */
+  --fs-xl: 19px;    /* 큰 숫자 */
+  --fs-clock: 24px; /* 시각 */
 }
 
 * { box-sizing: border-box; }
@@ -47,14 +62,14 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: var(--fs-lg);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 h2 {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-md);
   font-weight: 600;
   letter-spacing: .09em;
   text-transform: uppercase;
@@ -86,7 +101,7 @@ h2 {
 
 .mark {
   font-family: var(--mono);
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 700;
   letter-spacing: .18em;
   color: var(--ink);
@@ -94,7 +109,7 @@ h2 {
 
 .where {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-md);
   letter-spacing: .06em;
   color: var(--ink-3);
   white-space: nowrap;
@@ -106,19 +121,19 @@ h2 {
 
 .clock {
   font-family: var(--mono);
-  font-size: 19px;
+  font-size: var(--fs-clock);
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
 }
 
-.clock.dim { font-size: 13px; color: var(--ink-3); }
+.clock.dim { font-size: var(--fs-lg); color: var(--ink-3); }
 .sep { color: var(--ink-3); }
 
 .bar-right { display: flex; align-items: center; gap: 8px; }
 
 .chip {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   letter-spacing: .08em;
   padding: 3px 8px;
   border: 1px solid var(--line-2);
@@ -174,7 +189,7 @@ h2 {
 
 .layers button {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   letter-spacing: .06em;
   padding: 3px 7px;
   background: transparent;
@@ -201,6 +216,9 @@ h2 {
 
 #svg { display: block; width: 100%; height: 100%; }
 
+/* 끌어서 옮길 수 있다는 것이 커서로 보여야 한다. */
+.scope { cursor: grab; touch-action: none; }
+
 .scope-legend {
   position: absolute;
   left: 10px;
@@ -208,7 +226,7 @@ h2 {
   display: flex;
   gap: 12px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--ink-3);
   pointer-events: none;
 }
@@ -226,7 +244,7 @@ h2 {
   right: 10px;
   bottom: 8px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--ink-3);
   pointer-events: none;
 }
@@ -237,7 +255,7 @@ h2 {
 .terrain-coast { fill: none; stroke: var(--terrain-2); stroke-width: 1; }
 
 .ring { fill: none; stroke: var(--ring); stroke-width: 1; }
-.ring-label { fill: var(--ink-3); font-family: var(--mono); font-size: 8px; opacity: .7; }
+.ring-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); opacity: .7; }
 
 .sector { fill: none; stroke: var(--airspace); stroke-width: 1; stroke-dasharray: 5 4; opacity: .85; }
 .sector-2 { fill: none; stroke: var(--airspace); stroke-width: 1; stroke-dasharray: 2 5; opacity: .55; }
@@ -246,7 +264,7 @@ h2 {
 .restricted { fill: color-mix(in oklab, var(--danger) 4%, transparent); stroke: color-mix(in oklab, var(--danger) 26%, transparent); stroke-width: 1; }
 .moa { fill: none; stroke: color-mix(in oklab, var(--caution) 20%, transparent); stroke-width: 1; stroke-dasharray: 6 5; }
 .moa.live { fill: color-mix(in oklab, var(--caution) 8%, transparent); stroke: color-mix(in oklab, var(--caution) 62%, transparent); stroke-dasharray: none; }
-.zone-label { fill: var(--ink-3); font-family: var(--mono); font-size: 8.5px; letter-spacing: .05em; opacity: .55; }
+.zone-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: .05em; opacity: .55; }
 
 .runway-line { stroke: var(--runway); stroke-width: 2.5; stroke-linecap: square; }
 .centreline { stroke: color-mix(in oklab, var(--runway) 35%, transparent); stroke-width: 1; stroke-dasharray: 8 6; }
@@ -255,19 +273,19 @@ h2 {
 .hold.live { stroke: var(--caution); stroke-dasharray: none; stroke-width: 1.4; }
 
 .fix { fill: none; stroke: var(--fix); stroke-width: 1; }
-.fix-label { fill: var(--ink-3); font-family: var(--mono); font-size: 8.5px; }
+.fix-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); }
 
 .link { stroke-width: 1.2; stroke-dasharray: 4 3; }
 .link.caution { stroke: var(--caution); }
 .link.danger { stroke: var(--danger); }
-.link-label { font-family: var(--mono); font-size: 9px; }
+.link-label { font-family: var(--mono); font-size: var(--fs-xs); }
 
 .ac { cursor: pointer; }
 .ac-body { stroke-width: 1.4; fill: var(--scope-bg); }
 .ac-vec { stroke-width: 1; opacity: .75; }
 .ac-tag {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   fill: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -289,7 +307,7 @@ h2 {
    사람이 알 수 있어야 한다. */
 .scope-foot {
   margin: 10px 14px 12px;
-  font-size: 11px;
+  font-size: var(--fs-md);
   color: var(--ink-3);
 }
 
@@ -321,14 +339,14 @@ h2 {
 
 .count {
   font-family: var(--mono);
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 .count.hot { color: var(--danger); }
 .count.warm { color: var(--caution); }
 
-.card-sub { margin: 0 0 10px; font-size: 11px; color: var(--ink-3); }
+.card-sub { margin: 0 0 10px; font-size: var(--fs-md); color: var(--ink-3); }
 
 .qlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 
@@ -349,28 +367,28 @@ h2 {
 
 .qcs {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--ink);
 }
 
-.qlevel { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.qlevel { font-family: var(--mono); font-size: var(--fs-sm); color: var(--ink-3); }
 .qitem[data-level="주의"] .qlevel { color: var(--caution); }
 .qitem[data-level="위험"] .qlevel { color: var(--danger); }
 
-.qwhy { margin: 3px 0 0; font-size: 11px; color: var(--ink-2); }
+.qwhy { margin: 3px 0 0; font-size: var(--fs-md); color: var(--ink-2); }
 
 .qmeta {
   margin-top: 5px;
   display: flex;
   gap: 10px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
-.empty { margin: 4px 0 0; font-size: 11px; color: var(--ink-3); }
+.empty { margin: 4px 0 0; font-size: var(--fs-md); color: var(--ink-3); }
 
 .detail { display: flex; flex-direction: column; gap: 7px; }
 
@@ -379,7 +397,7 @@ h2 {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11px;
+  font-size: var(--fs-md);
 }
 .dk { color: var(--ink-3); }
 .dv { font-family: var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -391,14 +409,14 @@ h2 {
   padding-bottom: 7px;
   border-bottom: 1px solid var(--line);
 }
-.dcs { font-family: var(--mono); font-size: 15px; font-weight: 600; }
-.dtype { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.dcs { font-family: var(--mono); font-size: var(--fs-xl); font-weight: 600; }
+.dtype { font-family: var(--mono); font-size: var(--fs-md); color: var(--ink-3); }
 
 .rec { display: flex; flex-direction: column; gap: 8px; }
 
 .rec-line {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-lg);
   color: var(--ink);
   padding: 8px 10px;
   background: var(--bg-2);
@@ -406,13 +424,13 @@ h2 {
   border-radius: var(--r);
 }
 
-.rec-why { font-size: 11px; color: var(--ink-2); margin: 0; }
+.rec-why { font-size: var(--fs-md); color: var(--ink-2); margin: 0; }
 
 .clauses { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 
 .clause {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   padding: 2px 6px;
   border: 1px solid var(--line-2);
   border-radius: var(--r);
@@ -421,13 +439,13 @@ h2 {
 
 .meta .step-now {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--fs-lg);
   color: var(--ink);
 }
 
 .meta .step-detail {
   margin: 5px 0 0;
-  font-size: 11px;
+  font-size: var(--fs-md);
   color: var(--ink-3);
   line-height: 1.55;
 }
@@ -455,7 +473,7 @@ h2 {
 
 .subhead {
   margin: 8px 0 2px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -479,7 +497,7 @@ h2 {
 
 .slot-cs {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 .slot-cs::before {
@@ -490,7 +508,7 @@ h2 {
 
 .slot-d {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-md);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -498,7 +516,7 @@ h2 {
 .slot-gap {
   margin-top: 2px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--caution);
 }
 
@@ -525,7 +543,7 @@ h2 {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11px;
+  font-size: var(--fs-md);
 }
 .why-k { color: var(--ink-3); }
 .why-v { font-family: var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -541,14 +559,14 @@ h2 {
   gap: 8px;
 }
 
-.form-note { margin: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.5; }
+.form-note { margin: 0; font-size: var(--fs-sm); color: var(--ink-3); line-height: 1.5; }
 
 .field { display: flex; flex-direction: column; gap: 3px; }
-.field span { font-size: 10px; color: var(--ink-3); letter-spacing: .04em; }
+.field span { font-size: var(--fs-sm); color: var(--ink-3); letter-spacing: .04em; }
 
 .field input {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-lg);
   padding: 5px 7px;
   background: var(--bg-2);
   border: 1px solid var(--line-2);
@@ -560,7 +578,7 @@ h2 {
 .actions { display: flex; gap: 5px; flex-wrap: wrap; }
 
 .act {
-  font-size: 11px;
+  font-size: var(--fs-md);
   padding: 6px 11px;
   flex: 1 1 auto;
   background: var(--bg-2);
@@ -576,7 +594,7 @@ h2 {
 .act.no { color: var(--danger); border-color: color-mix(in oklab, var(--danger) 40%, transparent); }
 .act[disabled] { opacity: .4; cursor: not-allowed; }
 
-.form-msg { margin: 0; font-size: 10.5px; color: var(--ink-3); min-height: 1.4em; line-height: 1.45; }
+.form-msg { margin: 0; font-size: var(--fs-sm); color: var(--ink-3); min-height: 1.4em; line-height: 1.45; }
 .form-msg.bad { color: var(--danger); }
 .form-msg.good { color: var(--ok); }
 
@@ -591,7 +609,7 @@ h2 {
   border: 1px solid var(--line-2);
   border-radius: var(--r);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--fs-lg);
 }
 .skip-link:focus { left: 8px; top: 8px; }
 
@@ -616,13 +634,13 @@ h2 {
 
 .cand-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 
-.cand-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+.cand-id { font-family: var(--mono); font-size: var(--fs-md); font-weight: 600; }
 
-.cand-verdict { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.cand-verdict { font-family: var(--mono); font-size: var(--fs-sm); color: var(--ink-3); }
 .cand[data-verdict="SAFE"] .cand-verdict { color: var(--ok); }
 .cand[data-verdict="UNSAFE"] .cand-verdict { color: var(--danger); }
 
-.cand-what { margin-top: 2px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); }
+.cand-what { margin-top: 2px; font-family: var(--mono); font-size: var(--fs-sm); color: var(--ink-2); }
 
 
 .act.next {
@@ -649,7 +667,7 @@ h2 {
  * 크게 들린다. */
 .poc {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   letter-spacing: .1em;
   padding: 3px 8px;
   border: 1px solid color-mix(in oklab, var(--caution) 40%, transparent);

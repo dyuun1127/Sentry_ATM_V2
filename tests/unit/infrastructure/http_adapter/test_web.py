@@ -196,6 +196,52 @@ def test_ui_assets_draw_the_scope_from_reference_geometry_and_leave_trails() -> 
     assert b"function curvatureRadiiNm(latDeg)" in script
 
 
+def test_console_type_scale_is_defined_in_one_place() -> None:
+    """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
+
+    예전에는 40곳 넘게 흩어진 px 값이었다. 하나를 키우면 옆의 것과 어긋나고,
+    관제사가 읽기에 작다는 말에 손댈 자리를 찾을 수 없었다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, stylesheet = _request(app, path="/assets/app.css")
+
+    for name in (b"--fs-2xs", b"--fs-xs", b"--fs-sm", b"--fs-md", b"--fs-lg", b"--fs-clock"):
+        assert name in stylesheet, name
+    # 스케일 밖의 날 px 값이 남아 있으면 그것만 안 따라 커진다.
+    import re
+
+    raw = re.findall(rb"font-size:\s*([\d.]+px)", stylesheet)
+    assert raw == [], raw
+
+
+def test_console_scope_zooms_with_the_wheel_and_pans_by_drag() -> None:
+    """스코프를 휠로 확대하고 끌어서 옮길 수 있는가.
+
+    프리셋 범위만으로는 보려는 곳이 화면 구석에 있을 때 할 수 있는 것이 없다.
+    확대는 커서 아래 지점을 붙잡아야 한다 — 화면 가운데 기준이면 보려던 항적이
+    확대할수록 밖으로 밀려난다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+    _, _, stylesheet = _request(app, path="/assets/app.css")
+
+    assert b"function wireScopeNavigation()" in script
+    assert b'"wheel"' in script
+    assert b"function nmAt(screenX, screenY)" in script
+    assert b"MIN_RANGE_NM" in script and b"MAX_RANGE_NM" in script
+    # 확대 뒤 커서 아래 지점을 제자리에 두는 보정.
+    assert b"state.view.cx += anchorX - afterX" in script
+    # 끌기와 항적 선택을 가른다.
+    assert b"DRAG_SLOP_PX" in script
+    assert b"if (state.dragged) return;" in script
+    # 길을 잃었을 때 돌아오는 수단.
+    assert b"function recentre()" in script
+    assert b'"dblclick"' in script
+    assert b"touch-action: none" in stylesheet
+
+
 def test_scenario_screen_owns_the_clock_and_waits_for_the_controller() -> None:
     """시연 진행 화면이 시계를 쥐고, 판단이 필요하면 스스로 멈추는가.
 
