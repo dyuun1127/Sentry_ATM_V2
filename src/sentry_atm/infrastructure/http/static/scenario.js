@@ -125,7 +125,10 @@ async function seek(offsetSeconds) {
     // 되돌린 뒤이므로 세션은 반드시 READY 다.
     await post("RESET");
     state.session = await post("START");
-    const target = Math.round(offsetSeconds);
+    // 올림한다. 시계는 초 단위인데 단계 시각은 소수를 갖는다 — 13단계는
+    // 3,893.0116 초다. 반올림하면 3,893 이 되어 그 단계에 0.01 초 못 미치고,
+    // 화면은 여전히 앞 단계를 가리킨다. 1초 늦게 서는 것이 덜 나쁘다.
+    const target = Math.ceil(offsetSeconds);
     if (target >= 1) {
       state.session = await post("ADVANCE", { seconds: target });
     }

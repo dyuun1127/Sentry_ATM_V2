@@ -186,3 +186,77 @@ class TestGoldenDemoIsUnchanged:
         assert _assignable_altitude_ft(7_200.0, climbing=False, ceiling_ft=50_000.0) == 7_000.0
         # 상한을 넘지 않는다 — 올림한 고도가 갈 수 없는 고도이면 안 된다.
         assert _assignable_altitude_ft(9_400.0, climbing=True, ceiling_ft=9_500.0) == 9_000.0
+
+
+class TestEveryStepIsReachable:
+    """시연 화면의 단계 단추가 전부 실제로 동작하는가.
+
+    화면은 각 단계로 `RESET → START → ADVANCE(단계 시각)` 로 이동한다. 그러므로
+    가장 늦은 단계까지 한 번에 진행할 수 있어야 한다.
+
+    이 시험이 없어서 `ADVANCE` 상한을 3,600 초(한 시간)로 잡은 것이 오래 숨어
+    있었다. 소티는 75분이라 11~13단계가 그 밖에 있었고, 앞의 열 단계가 우연히
+    한 시간 안에 들어서 마지막 막에 가서야 드러났다 — 그 단추들만 눌러도 아무
+    반응이 없었다.
+    """
+
+    def test_the_advance_cap_covers_the_whole_scenario(self):
+        from sentry_atm.infrastructure.http.web import _sortie_scenario_payload
+        from sentry_atm.runtime.session import _MAX_ADVANCE_SECONDS
+
+        payload = _sortie_scenario_payload()
+        assert payload["duration_seconds"] <= _MAX_ADVANCE_SECONDS
+        assert max(step["t_s"] for step in payload["steps"]) <= _MAX_ADVANCE_SECONDS
+
+    def test_every_step_can_be_seeked_to(self):
+        """단계마다 실제로 이동해 본다. 시각이 그 단계에 닿아야 한다."""
+        from sentry_atm.infrastructure.http.web import _sortie_scenario_payload
+
+        steps = _sortie_scenario_payload()["steps"]
+        session = build_sortie_session_runtime()
+        for step in steps:
+            session.command_service.execute(GoldenDemoSessionCommand.RESET)
+            session.command_service.execute(GoldenDemoSessionCommand.START)
+            target = round(step["t_s"])
+            current = session.command_service.execute(
+                GoldenDemoSessionCommand.ADVANCE, seconds=target
+            )
+            assert current.elapsed_seconds == float(target), step["n"]
+
+    def test_seeking_to_a_step_actually_lands_on_that_step(self):
+        """정수 초로 진행해도 그 단계에 **도달**해야 한다.
+
+        단계 시각은 소수를 갖는데 시계는 초 단위다. 13단계는 3,893.0116 초라
+        반올림하면 3,893 이 되어 0.01 초 못 미치고, 화면은 앞 단계를 가리킨다.
+        올림해야 한다 — 1초 늦게 서는 것이 덜 나쁘다.
+        """
+        import math
+
+        from sentry_atm.infrastructure.http.web import _sortie_scenario_payload
+
+        steps = _sortie_scenario_payload()["steps"]
+        session = build_sortie_session_runtime()
+        for step in steps:
+            session.command_service.execute(GoldenDemoSessionCommand.RESET)
+            session.command_service.execute(GoldenDemoSessionCommand.START)
+            current = session.command_service.execute(
+                GoldenDemoSessionCommand.ADVANCE, seconds=math.ceil(step["t_s"])
+            )
+            # 그 시각에서 되짚은 "현재 단계" 가 이동하려던 단계여야 한다.
+            reached = max(
+                (item for item in steps if item["t_s"] <= current.elapsed_seconds),
+                key=lambda item: item["t_s"],
+            )
+            assert reached["n"] == step["n"], (step["n"], reached["n"])
+
+    def test_an_absurd_advance_is_still_refused(self):
+        """상한을 올렸다고 아무 값이나 받지는 않는다."""
+        from sentry_atm.api.session import GoldenDemoSessionCommandValidationError
+
+        session = build_sortie_session_runtime()
+        session.command_service.execute(GoldenDemoSessionCommand.START)
+        for bad in (0, -1, 10**9):
+            with pytest.raises(GoldenDemoSessionCommandValidationError):
+                session.command_service.execute(
+                    GoldenDemoSessionCommand.ADVANCE, seconds=bad
+                )

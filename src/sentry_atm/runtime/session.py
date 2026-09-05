@@ -35,6 +35,18 @@ from sentry_atm.runtime.modified_revalidation_orchestrator import (
 from sentry_atm.runtime.orchestrator import GoldenDemoStepOrchestrator
 from sentry_atm.runtime.resolution_orchestrator import GoldenDemoResolutionOrchestrator
 
+# 한 번에 진행할 수 있는 최대 초.
+#
+# 처음에 3,600(한 시간)으로 잡았는데, 그것은 시나리오 길이를 확인하지 않고 고른
+# 어림수였다. 13단계 소티는 75분이라 마지막 막(11~13단계)이 그 밖에 있었고,
+# 시연 화면에서 그 단계 단추만 아무 반응이 없었다 — 앞의 열 단계가 우연히
+# 한 시간 안에 들어서 마지막에 가서야 드러났다.
+#
+# 이 상한이 막아야 하는 것은 시나리오 길이가 아니라 **실수로 들어온 터무니없는
+# 값**이다. 단계 진행은 한 번에 건너뛰므로 큰 값이 비싸지도 않다(3,400초도 4ms).
+# 하루로 둔다 — 어떤 시나리오보다 길고, 오타는 여전히 걸린다.
+_MAX_ADVANCE_SECONDS = 24 * 60 * 60
+
 
 class GoldenDemoSessionCommandService:
     """Execute only the calibrated Golden Demo checkpoint sequence."""
@@ -168,9 +180,9 @@ class GoldenDemoSessionCommandService:
                 raise GoldenDemoSessionCommandValidationError(
                     "ADVANCE must state how many seconds to advance"
                 )
-            if type(seconds) is not int or not 1 <= seconds <= 3_600:
+            if type(seconds) is not int or not 1 <= seconds <= _MAX_ADVANCE_SECONDS:
                 raise GoldenDemoSessionCommandValidationError(
-                    "seconds must be an integer from 1 through 3600"
+                    f"seconds must be an integer from 1 through {_MAX_ADVANCE_SECONDS}"
                 )
             # 시계가 아직 서 있으면 먼저 돌린다. 세워 둔 채로 진행하면 단계는
             # 계산되지만 시각이 그대로라 화면이 멈춘 것처럼 보인다.
