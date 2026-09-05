@@ -693,7 +693,7 @@ function drawQueue() {
     const subjects = entry.subject_aircraft_ids || [];
     const row = document.createElement("li");
     row.className = "qitem";
-    row.dataset.level = severity.ko;
+    row.dataset.level = severity.css;
     if (subjects.includes(state.selected)) row.dataset.sel = "1";
 
     const head = document.createElement("div");

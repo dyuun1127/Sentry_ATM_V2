@@ -299,7 +299,11 @@ h2 {
 .link-label { font-family: var(--mono); font-size: var(--fs-xs); }
 
 .ac { cursor: pointer; }
-.ac-body { stroke-width: 1.4; fill: var(--scope-bg); }
+/* 기본 테두리를 깔아 둔다. 등급 이름이 어긋나면 stroke 가 none 으로 남는데,
+   몸통 채움이 스코프 바탕과 같은 색이라 항적이 통째로 사라진다. 색이 틀리는
+   것보다 안 보이는 것이 훨씬 나쁘므로, 규칙이 하나도 안 맞아도 무엇인가는
+   그려지게 한다. */
+.ac-body { stroke-width: 1.4; fill: var(--scope-bg); stroke: var(--normal); }
 .ac-vec { stroke-width: 1; opacity: .75; }
 .ac-tag {
   font-family: var(--mono);
@@ -311,9 +315,12 @@ h2 {
 .ac-lead { stroke: var(--line-2); stroke-width: 1; }
 .ac-halo { fill: none; stroke-width: 1; opacity: .5; }
 
-.ac[data-level="정상"] .ac-body, .ac[data-level="정상"] .ac-vec { stroke: var(--normal); }
-.ac[data-level="주의"] .ac-body, .ac[data-level="주의"] .ac-vec { stroke: var(--caution); }
-.ac[data-level="위험"] .ac-body, .ac[data-level="위험"] .ac-vec { stroke: var(--danger); }
+/* 등급 이름표는 severity.css — 영문 낱말 한 벌만 쓴다. 화면에 보이는 우리말
+   이름(severity.ko)을 선택자에 쓰면 번역을 손보는 순간 색이 조용히 끊긴다. */
+.ac[data-level="normal"] .ac-body, .ac[data-level="normal"] .ac-vec { stroke: var(--normal); }
+.ac[data-level="caution"] .ac-body, .ac[data-level="caution"] .ac-vec { stroke: var(--caution); }
+.ac[data-level="danger"] .ac-body, .ac[data-level="danger"] .ac-vec { stroke: var(--danger); }
+.ac[data-level="emerg"] .ac-body, .ac[data-level="emerg"] .ac-vec { stroke: var(--emerg); }
 .ac[data-emerg="1"] .ac-body, .ac[data-emerg="1"] .ac-vec { stroke: var(--emerg); }
 .ac[data-emerg="1"] .ac-body { fill: color-mix(in oklab, var(--emerg) 22%, var(--scope-bg)); }
 .ac[data-sel="1"] .ac-tag { fill: var(--ink); }
@@ -377,8 +384,9 @@ h2 {
   cursor: pointer;
 }
 .qitem:hover { border-color: var(--line-2); }
-.qitem[data-level="주의"] { border-left-color: var(--caution); }
-.qitem[data-level="위험"] { border-left-color: var(--danger); }
+.qitem[data-level="caution"] { border-left-color: var(--caution); }
+.qitem[data-level="danger"] { border-left-color: var(--danger); }
+.qitem[data-level="emerg"] { border-left-color: var(--emerg); }
 .qitem[data-sel="1"] { background: #16222c; }
 
 .qrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -391,8 +399,9 @@ h2 {
 }
 
 .qlevel { font-family: var(--mono); font-size: var(--fs-sm); color: var(--ink-3); }
-.qitem[data-level="주의"] .qlevel { color: var(--caution); }
-.qitem[data-level="위험"] .qlevel { color: var(--danger); }
+.qitem[data-level="caution"] .qlevel { color: var(--caution); }
+.qitem[data-level="danger"] .qlevel { color: var(--danger); }
+.qitem[data-level="emerg"] .qlevel { color: var(--emerg); }
 
 .qwhy { margin: 3px 0 0; font-size: var(--fs-md); color: var(--ink-2); }
 

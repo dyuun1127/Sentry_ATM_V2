@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 
 import pytest
@@ -266,6 +267,41 @@ def test_console_offers_both_aircraft_symbol_styles() -> None:
     assert b"localStorage.getItem(SYMBOL_STORAGE_KEY)" in script
     assert b"function loadSymbolStyle()" in script
     assert script.count(b"} catch {") >= 2
+
+
+def test_scope_paints_every_aircraft_it_draws() -> None:
+    """스코프에 그린 항적이 실제로 보이는가.
+
+    몸통 채움색은 스코프 바탕과 같은 검정이다. 색을 입히는 규칙이 하나도 맞지
+    않으면 SVG 기본값인 `stroke: none` 이 남고, 검은 바탕에 검은 원이 된다 —
+    항적이 화면에서 조용히 사라진다.
+
+    실제로 그런 적이 있었다. 스코프는 `severity.css`(영문)를 이름표로 붙이는데
+    스타일시트는 `severity.ko`(우리말)를 찾고 있었다. 선택자가 한 번도 맞지
+    않아 비상 항적을 뺀 전부가 안 보였고, 시험 1491개가 이것을 놓쳤다.
+
+    그래서 두 가지를 함께 못박는다. 이름표 낱말이 한 벌인가, 그리고 그 한 벌이
+    다 어긋나도 무엇인가는 그려지는가.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+    _, _, sheet = _request(app, path="/assets/app.css")
+
+    # 선택자가 물고 있는 이름표는 severity.css 한 벌뿐이다. 보이는 우리말
+    # 이름(severity.ko)을 이름표로 쓰면 번역을 손보는 순간 색이 끊긴다.
+    # 사람이 읽는 글자에는 그대로 severity.ko 를 쓴다 — 그쪽은 막지 않는다.
+    assert b"dataset.level = severity.css;" in script
+    assert b"dataset.level = severity.ko" not in script
+
+    levels = {value.decode() for value in re.findall(rb'\[data-level="([^"]+)"\]', sheet)}
+    assert levels, "위험도 색 규칙이 사라졌다"
+    vocabulary = {"normal", "caution", "danger", "emerg"}
+    assert levels <= vocabulary, f"스타일시트가 모르는 등급 이름을 쓴다: {levels - vocabulary}"
+
+    # 규칙이 하나도 안 맞아도 테두리는 남는다.
+    body_rule = sheet[sheet.index(b".ac-body {") : sheet.index(b".ac-vec {")]
+    assert b"stroke: var(--normal)" in body_rule
 
 
 def test_console_type_scale_is_defined_in_one_place() -> None:
