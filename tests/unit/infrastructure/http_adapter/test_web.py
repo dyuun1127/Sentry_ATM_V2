@@ -238,6 +238,36 @@ def test_console_polling_does_not_block_controller_decisions() -> None:
     assert b'say("")' in body
 
 
+def test_console_offers_both_aircraft_symbol_styles() -> None:
+    """항적 기호를 두 방식 중에 고를 수 있는가.
+
+    관제 표시 관행에도 두 갈래가 있고, 어느 쪽이 읽기 쉬운지는 화면 크기와 보는
+    사람에 따라 다르다. 한쪽을 지우면 비교할 수 없으므로 둘 다 남긴다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, body = _request(app)
+    _, _, script = _request(app, path="/assets/app.js")
+
+    assert b'id="symbols"' in body
+    assert b'const SYMBOL_STYLES = ["circle", "shape"]' in script
+    assert b"function drawAircraftBody(group, aircraft, sx, sy)" in script
+
+    # 원형은 원 하나, 기호는 삼각형·사각형. 진행방향 선은 두 방식 모두에 있다.
+    start = script.index(b"function drawAircraftBody(")
+    end = script.index("/* 서버가 쓰는 심각도".encode(), start)
+    drawn = script[start:end]
+    assert b'"circle"' in drawn
+    assert b'"path"' in drawn
+    assert b'"rect"' in drawn
+    assert b'class: "ac-vec"' in script
+
+    # 고른 방식은 이 브라우저에 남는다. 저장이 막힌 환경에서도 화면은 떠야 한다.
+    assert b"localStorage.getItem(SYMBOL_STORAGE_KEY)" in script
+    assert b"function loadSymbolStyle()" in script
+    assert script.count(b"} catch {") >= 2
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 

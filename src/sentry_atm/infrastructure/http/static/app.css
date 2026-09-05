@@ -201,7 +201,25 @@ h2 {
 }
 .layers button:hover { color: var(--ink-2); border-color: var(--line-2); }
 .layers button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-2); background: var(--bg-2); }
-.layers button:focus-visible { outline: 2px solid var(--normal); outline-offset: 1px; }
+.layers button:focus-visible,
+.symbols:focus-visible { outline: 2px solid var(--normal); outline-offset: 1px; }
+
+/* 기호 전환은 켜고 끄는 것이 아니라 두 방식을 오가는 것이라, 계층 토글과
+   같은 모양이되 눌린 상태를 갖지 않는다. */
+.symbols {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  letter-spacing: .06em;
+  padding: 3px 7px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.symbols:hover { color: var(--ink); border-color: var(--ink-3); }
 
 .scope {
   position: relative;

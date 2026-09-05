@@ -79,6 +79,20 @@ const DRAG_SLOP_PX = 4;
  * 있으면 선회 중인지 직진 중인지 알 수 없다. */
 const TRAIL_POINTS = 8;
 
+/* 항적을 어떤 기호로 그릴 것인가.
+ *
+ * 두 가지를 다 남긴다. 관제 표시 관행에도 두 갈래가 있고, 어느 쪽이 읽기 쉬운지는
+ * 화면 크기와 보는 사람에 따라 다르다 — 한쪽을 지우면 비교할 수 없다.
+ *
+ *   원형  원 하나에 진행방향 선. ASR 표시 관행이며 민항·군을 구분하지 않는다.
+ *         기호가 단순해 항적이 많아도 겹쳐 읽히지 않는다.
+ *   기호  군용 삼각형, 민항 사각형. 소속이 한 눈에 보이지만 기호가 커진다.
+ *
+ * 어느 쪽이든 색은 위험도에만 쓴다. 소속까지 색으로 나누면 둘이 섞인다. */
+const SYMBOL_STYLES = ["circle", "shape"];
+const SYMBOL_LABEL = { circle: "심볼 원형", shape: "심볼 기호" };
+const SYMBOL_STORAGE_KEY = "sentry.console.symbols";
+
 /* 어떤 계층을 켜 둘 것인가. 지형과 링은 배경이라 기본으로 켜고, 픽스 이름은
  * 항적이 많을 때 겹치므로 끌 수 있게 둔다. */
 const LAYERS = [
@@ -92,6 +106,27 @@ const LAYERS = [
 
 const $ = (id) => document.getElementById(id);
 
+/* 고른 기호 방식은 이 브라우저에만 남긴다. 관제사가 자기 화면을 한 번 맞춰 놓으면
+ * 새로고침해도 그대로여야 한다. 저장이 막힌 환경(사생활 보호 창 등)에서도 화면은
+ * 기본값으로 정상 동작해야 하므로 실패를 삼킨다. */
+function loadSymbolStyle() {
+  try {
+    const saved = localStorage.getItem(SYMBOL_STORAGE_KEY);
+    if (SYMBOL_STYLES.includes(saved)) return saved;
+  } catch {
+    // 저장소를 못 읽는 환경이면 기본값으로 간다.
+  }
+  return SYMBOL_STYLES[0];
+}
+
+function saveSymbolStyle(style) {
+  try {
+    localStorage.setItem(SYMBOL_STORAGE_KEY, style);
+  } catch {
+    // 저장하지 못해도 이번 세션에는 적용된다.
+  }
+}
+
 const state = {
   geometry: null,
   scenario: null,
@@ -102,6 +137,7 @@ const state = {
   busy: false,
   trails: new Map(),
   dragged: false,
+  symbols: loadSymbolStyle(),
   view: { cx: 0, cy: 0, halfNm: DEFAULT_RANGE_NM },
 };
 
@@ -418,6 +454,28 @@ function label(parent, centre, text) {
     text;
 }
 
+/** 항적 하나의 몸통. 기호 방식에 따라 갈린다. */
+function drawAircraftBody(group, aircraft, sx, sy) {
+  if (state.symbols === "circle") {
+    // ASR 표시 관행 — 소속을 구분하지 않는다. 방향은 속도 벡터가 말한다.
+    node("circle", { cx: sx, cy: sy, r: 4.2, class: "ac-body" }, group);
+    return;
+  }
+  // 군용은 삼각형, 민항은 사각형.
+  if (/^ROKAF/.test(aircraft.aircraft_id)) {
+    node(
+      "path",
+      {
+        d: `M${sx} ${sy - 5} L${sx + 4.5} ${sy + 3.5} L${sx - 4.5} ${sy + 3.5} Z`,
+        class: "ac-body",
+      },
+      group,
+    );
+    return;
+  }
+  node("rect", { x: sx - 4, y: sy - 4, width: 8, height: 8, class: "ac-body" }, group);
+}
+
 /* 서버가 쓰는 심각도 어휘. 화면에서 다시 등급을 매기지 않는다 — 자기 기준으로
  * 색을 칠하기 시작하면 예외 큐와 스코프가 서로 다른 말을 하게 되고, 어느 쪽이
  * 판정인지 알 수 없어진다. */
@@ -559,18 +617,7 @@ function drawTraffic() {
       group,
     );
 
-    // 군용은 삼각형, 민항은 사각형. 화면에서 둘을 색이 아니라 모양으로 가른다 —
-    // 색은 위험도에 쓰고 있으므로 소속까지 색으로 나누면 둘이 섞인다.
-    const military = /^ROKAF/.test(aircraft.aircraft_id);
-    if (military) {
-      node(
-        "path",
-        { d: `M${sx} ${sy - 5} L${sx + 4.5} ${sy + 3.5} L${sx - 4.5} ${sy + 3.5} Z`, class: "ac-body" },
-        group,
-      );
-    } else {
-      node("rect", { x: sx - 4, y: sy - 4, width: 8, height: 8, class: "ac-body" }, group);
-    }
+    drawAircraftBody(group, aircraft, sx, sy);
 
     if (!state.layers.tags) continue;
 
@@ -1206,6 +1253,17 @@ function buildControls() {
     });
     layers.appendChild(button);
   }
+
+  const symbols = $("symbols");
+  symbols.textContent = SYMBOL_LABEL[state.symbols];
+  symbols.addEventListener("click", () => {
+    const next =
+      SYMBOL_STYLES[(SYMBOL_STYLES.indexOf(state.symbols) + 1) % SYMBOL_STYLES.length];
+    state.symbols = next;
+    saveSymbolStyle(next);
+    symbols.textContent = SYMBOL_LABEL[next];
+    render();
+  });
 
   const ranges = $("ranges");
   for (const nm of RANGES) {
