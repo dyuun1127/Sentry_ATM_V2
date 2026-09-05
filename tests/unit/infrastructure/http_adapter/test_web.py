@@ -187,6 +187,27 @@ def test_ui_assets_control_the_clock_and_expose_scenario_steps() -> None:
     assert b".steps button" in stylesheet
 
 
+def test_ui_reads_session_start_state_from_the_server_not_a_local_flag() -> None:
+    """세션이 시작됐는지는 서버가 안다.
+
+    화면 안의 플래그로 기억하면 새로고침할 때마다 거짓으로 돌아가는데 세션은
+    서버에 살아 있어서, 이미 시작된 세션에 START 를 다시 보내고 409 를 받는다.
+    그러면 재생이 첫 틱에서 멈추고 화면에는 단추가 안 눌린 것처럼 보인다 —
+    실제로 그렇게 되어 재생이 동작하지 않았다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+
+    assert b"function needsStart()" in script
+    assert b'stage === "READY"' in script
+    # 화면이 시작 여부를 기억하지 않는다.
+    assert b"state.started" not in script
+
+    # 실패는 화면에 남아야 한다. 콘솔에만 찍으면 왜 안 되는지 알 길이 없다.
+    assert script.count(b'say(String(error.message || error), "bad")') >= 3
+
+
 def test_reference_and_advisory_endpoints_serve_json() -> None:
     """스코프 배경과 규정 권고가 API 로 나오는가."""
     runtime = build_golden_demo_session_runtime()

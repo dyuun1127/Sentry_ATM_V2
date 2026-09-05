@@ -84,7 +84,6 @@ const state = {
   rate: 4,
   selected: null,
   layers: Object.fromEntries(LAYERS.map(([k, , on]) => [k, on])),
-  started: false,
   busy: false,
   trails: new Map(),
   view: { cx: 0, cy: 0, halfNm: 25 },
@@ -117,9 +116,12 @@ async function advance(seconds) {
   if (state.busy) return;
   state.busy = true;
   try {
-    if (!state.started) {
+    // 세션이 시작됐는지는 **서버가 알고 있다.** 화면 안의 플래그로 기억하면
+    // 새로고침할 때마다 그 플래그가 거짓으로 돌아가는데 세션은 서버에 그대로
+    // 살아 있어서, 이미 시작된 세션에 START 를 다시 보내고 409 를 받는다.
+    // 그러면 재생이 첫 틱에서 멈추고, 화면에는 단추가 안 눌린 것처럼 보인다.
+    if (needsStart()) {
       state.session = await post("START");
-      state.started = true;
     }
     const step = Math.max(1, Math.round(seconds));
     state.session = await post("ADVANCE", { seconds: step });
@@ -131,10 +133,21 @@ async function advance(seconds) {
   } catch (error) {
     setLink(false);
     stop();
-    console.error(error);
+    state.busy = false;
+    // 화면에도 남긴다. 콘솔에만 찍으면 재생이 왜 안 되는지 알 길이 없다.
+    say(String(error.message || error), "bad");
+    render();
   } finally {
     state.busy = false;
   }
+}
+
+/** 아직 START 를 보내야 하는 상태인가. 판단 근거는 서버가 낸 단계다. */
+function needsStart() {
+  const stage = state.session?.stage;
+  // 상태를 못 받았으면 시작 전으로 본다. 이미 시작돼 있었다면 START 가 409 를
+  // 내고 그 사유가 화면에 뜨므로, 조용히 아무 일도 안 하는 것보다 낫다.
+  return stage === undefined || stage === null || stage === "READY";
 }
 
 /** 처음으로 되돌린 뒤 지정한 시각까지 한 번에 민다. */
@@ -145,9 +158,9 @@ async function seek(offsetSeconds) {
   stop();
   state.trails.clear();
   try {
+    // 되돌린 뒤이므로 세션은 반드시 READY 다. 여기서는 START 가 늘 성립한다.
     await post("RESET");
     state.session = await post("START");
-    state.started = true;
     const target = Math.round(offsetSeconds);
     if (target >= 1) {
       state.session = await post("ADVANCE", { seconds: target });
@@ -158,7 +171,9 @@ async function seek(offsetSeconds) {
     render();
   } catch (error) {
     setLink(false);
-    console.error(error);
+    state.busy = false;
+    say(String(error.message || error), "bad");
+    render();
   } finally {
     state.busy = false;
     if (wasPlaying) start();
