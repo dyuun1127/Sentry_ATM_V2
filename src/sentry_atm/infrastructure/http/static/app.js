@@ -533,11 +533,79 @@ function label(parent, centre, text) {
     text;
 }
 
+/* 데이터블록을 어디에 놓을 것인가.
+ *
+ * 늘 오른쪽 위에 붙이면 가까운 두 기의 블록이 겹쳐 콜사인이 서로를 지운다.
+ * 글자를 키우면서 실제로 그렇게 됐다 — 크게 만든 것이 오히려 못 읽게 됐다.
+ *
+ * 실제 관제 스코프는 관제사가 인출선을 돌려 자리를 옮긴다. 여기서는 네 방향을
+ * 차례로 시도해 먼저 비어 있는 자리에 앉힌다. 순서가 고정이라 같은 배치에서는
+ * 같은 자리가 나오고, 화면이 매초 흔들리지 않는다.
+ *
+ * 네 자리가 다 차면 오른쪽 위로 되돌린다. 겹치더라도 자리를 잃는 것보다 낫다. */
+const BLOCK_PLACES = [
+  { dx: 1, dy: -1 },
+  { dx: 1, dy: 1 },
+  { dx: -1, dy: -1 },
+  { dx: -1, dy: 1 },
+];
+
+function drawDataBlock(group, aircraft, sx, sy, placed) {
+  const lead = node("line", { class: "ac-lead" }, group);
+  const text = node("text", { class: "ac-tag" }, group);
+  const callsign = node("tspan", { class: "cs" }, text);
+  callsign.textContent = aircraft.aircraft_id;
+  const line2 = node("tspan", {}, text);
+  line2.textContent = `${Math.round(aircraft.altitude_ft / 100)
+    .toString()
+    .padStart(3, "0")} ${Math.round(aircraft.ground_speed_kt)}`;
+  const line3 = node("tspan", {}, text);
+  const vertical =
+    aircraft.vertical_speed_fpm > 200 ? "↑" : aircraft.vertical_speed_fpm < -200 ? "↓" : "→";
+  line3.textContent = `${aircraft.aircraft_type} ${vertical}`;
+
+  let chosen = null;
+  for (const place of BLOCK_PLACES) {
+    positionDataBlock(lead, text, [line2, line3], sx, sy, place);
+    const box = text.getBBox();
+    if (!placed.some((other) => overlaps(box, other))) {
+      chosen = box;
+      break;
+    }
+  }
+  if (!chosen) {
+    positionDataBlock(lead, text, [line2, line3], sx, sy, BLOCK_PLACES[0]);
+    chosen = text.getBBox();
+  }
+  placed.push(chosen);
+}
+
+function positionDataBlock(lead, text, tails, sx, sy, place) {
+  const x = sx + 16 * place.dx;
+  const y = sy + (place.dy < 0 ? -15 : 24);
+  // 오른쪽으로 뻗을 때는 글자가 인출선 끝에서 시작하고, 왼쪽으로 뻗을 때는
+  // 글자가 인출선 끝에서 끝나야 한다 — 그러지 않으면 선과 글자가 겹친다.
+  lead.setAttribute("x1", sx + 6 * place.dx);
+  lead.setAttribute("y1", sy + 6 * place.dy);
+  lead.setAttribute("x2", sx + 14 * place.dx);
+  lead.setAttribute("y2", sy + 14 * place.dy);
+  text.setAttribute("x", x);
+  text.setAttribute("y", y);
+  text.setAttribute("text-anchor", place.dx < 0 ? "end" : "start");
+  for (const tail of tails) {
+    tail.setAttribute("x", x);
+    tail.setAttribute("dy", 13);
+  }
+}
+
+const overlaps = (a, b) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
 /** 항적 하나의 몸통. 기호 방식에 따라 갈린다. */
 function drawAircraftBody(group, aircraft, sx, sy) {
   if (state.symbols === "circle") {
     // ASR 표시 관행 — 소속을 구분하지 않는다. 방향은 속도 벡터가 말한다.
-    node("circle", { cx: sx, cy: sy, r: 4.2, class: "ac-body" }, group);
+    node("circle", { cx: sx, cy: sy, r: 5.5, class: "ac-body" }, group);
     return;
   }
   // 군용은 삼각형, 민항은 사각형.
@@ -545,14 +613,14 @@ function drawAircraftBody(group, aircraft, sx, sy) {
     node(
       "path",
       {
-        d: `M${sx} ${sy - 5} L${sx + 4.5} ${sy + 3.5} L${sx - 4.5} ${sy + 3.5} Z`,
+        d: `M${sx} ${sy - 6.5} L${sx + 6} ${sy + 4.5} L${sx - 6} ${sy + 4.5} Z`,
         class: "ac-body",
       },
       group,
     );
     return;
   }
-  node("rect", { x: sx - 4, y: sy - 4, width: 8, height: 8, class: "ac-body" }, group);
+  node("rect", { x: sx - 5.2, y: sy - 5.2, width: 10.4, height: 10.4, class: "ac-body" }, group);
 }
 
 /* 서버가 쓰는 심각도 어휘. 화면에서 다시 등급을 매기지 않는다 — 자기 기준으로
@@ -644,10 +712,10 @@ function drawTraffic() {
         {
           cx: tx,
           cy: ty,
-          r: 1.4,
+          r: 2,
           class: "ac-trail",
           // 오래된 자리일수록 흐리다. 그래야 어느 쪽으로 가고 있는지 읽힌다.
-          opacity: (0.12 + 0.5 * (index / Math.max(1, trail.length - 1))).toFixed(2),
+          opacity: (0.2 + 0.6 * (index / Math.max(1, trail.length - 1))).toFixed(2),
         },
         traffic,
       );
@@ -655,6 +723,8 @@ function drawTraffic() {
   }
 
   // --- 항적 ---
+  // 이번에 놓은 데이터블록 자리. 다음 블록이 이것을 피해 앉는다.
+  const placedBlocks = [];
   for (const aircraft of states) {
     const level = levelOf(aircraft.aircraft_id).css;
     const emergency = aircraft.emergency_status === "DECLARED";
@@ -679,7 +749,7 @@ function drawTraffic() {
     });
 
     if (state.selected === aircraft.aircraft_id) {
-      node("circle", { cx: sx, cy: sy, r: 13, class: "ac-halo" }, group);
+      node("circle", { cx: sx, cy: sy, r: 16, class: "ac-halo" }, group);
     }
 
     // 속도 벡터 — 1분 뒤 위치까지.
@@ -700,19 +770,7 @@ function drawTraffic() {
     drawAircraftBody(group, aircraft, sx, sy);
 
     if (!state.layers.tags) continue;
-
-    node("line", { x1: sx + 5, y1: sy - 5, x2: sx + 11, y2: sy - 11, class: "ac-lead" }, group);
-    const text = node("text", { x: sx + 13, y: sy - 12, class: "ac-tag" }, group);
-    const callsign = node("tspan", { class: "cs" }, text);
-    callsign.textContent = aircraft.aircraft_id;
-    const line2 = node("tspan", { x: sx + 13, dy: 10 }, text);
-    line2.textContent = `${Math.round(aircraft.altitude_ft / 100)
-      .toString()
-      .padStart(3, "0")} ${Math.round(aircraft.ground_speed_kt)}`;
-    const line3 = node("tspan", { x: sx + 13, dy: 10 }, text);
-    const vertical =
-      aircraft.vertical_speed_fpm > 200 ? "↑" : aircraft.vertical_speed_fpm < -200 ? "↓" : "→";
-    line3.textContent = `${aircraft.aircraft_type} ${vertical}`;
+    drawDataBlock(group, aircraft, sx, sy, placedBlocks);
   }
 }
 

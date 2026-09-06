@@ -53,6 +53,18 @@
   --fs-lg: 16px;    /* 콜사인, 입력칸 */
   --fs-xl: 19px;    /* 큰 숫자 */
   --fs-clock: 24px; /* 시각 */
+
+  /* 스코프 안의 글자. 본문과 따로 두는 이유는, 스코프만 빔프로젝터로 크게
+     쏘기 때문이다. 옆 패널은 발표자가 코앞에서 본다. */
+  --fs-scope-label: 12px; /* 픽스·공역·거리링 이름 */
+  --fs-scope-tag: 14px;   /* 데이터블록, 충돌선 수치 */
+
+  /* 스코프 안의 선 굵기. 전부 1px 이었는데, 빔프로젝터에서는 그 굵기가
+     배경에 묻혀 사라진다. 한 곳에 모아 두어 화면을 보고 한 번에 조정한다. */
+  --sw-hair: 1.4px; /* 지형·거리링·인출선 — 배경 */
+  --sw-thin: 1.7px; /* 공역 경계, 픽스, 중심선 */
+  --sw-mid: 2.2px;  /* 항적, 속도벡터, 충돌선, 활성 체공 */
+  --sw-bold: 4px;   /* 활주로 */
 }
 
 * { box-sizing: border-box; }
@@ -282,14 +294,14 @@ h2 {
 
 /* 스코프 안의 그림 */
 
-.terrain-land { fill: var(--terrain); stroke: var(--terrain-2); stroke-width: 1; }
-.terrain-coast { fill: none; stroke: var(--terrain-2); stroke-width: 1; }
+.terrain-land { fill: var(--terrain); stroke: var(--terrain-2); stroke-width: var(--sw-hair); }
+.terrain-coast { fill: none; stroke: var(--terrain-2); stroke-width: var(--sw-hair); }
 
-.ring { fill: none; stroke: var(--ring); stroke-width: 1; }
-.ring-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); opacity: .7; }
+.ring { fill: none; stroke: var(--ring); stroke-width: var(--sw-hair); }
+.ring-label { fill: var(--ink-2); font-family: var(--mono); font-size: var(--fs-scope-label); opacity: .9; }
 
-.sector { fill: none; stroke: var(--airspace); stroke-width: 1; stroke-dasharray: 5 4; opacity: .85; }
-.sector-2 { fill: none; stroke: var(--airspace); stroke-width: 1; stroke-dasharray: 2 5; opacity: .55; }
+.sector { fill: none; stroke: var(--airspace); stroke-width: var(--sw-thin); stroke-dasharray: 7 5; opacity: .95; }
+.sector-2 { fill: none; stroke: var(--airspace); stroke-width: var(--sw-thin); stroke-dasharray: 3 6; opacity: .7; }
 
 /* 눌러서 고를 수 있는 공역.
  *
@@ -301,44 +313,44 @@ h2 {
  * 큰 섹터가 안쪽까지 받으면 그 위에 겹친 작은 구역을 전부 삼킨다. */
 .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .hit.area { fill: transparent; pointer-events: all; }
-.zone-sel { stroke: var(--ink); stroke-width: 1.6; opacity: 1; stroke-dasharray: none; }
+.zone-sel { stroke: var(--ink); stroke-width: 2.6px; opacity: 1; stroke-dasharray: none; }
 /* 공역은 배경이다. 채움이 진하면 항적보다 먼저 눈에 들어오고, 스코프에서
    가장 먼저 보여야 할 것은 항적이다. 지정된 작전지역만 또렷하게 둔다. */
-.restricted { fill: color-mix(in oklab, var(--danger) 4%, transparent); stroke: color-mix(in oklab, var(--danger) 26%, transparent); stroke-width: 1; }
-.moa { fill: none; stroke: color-mix(in oklab, var(--caution) 20%, transparent); stroke-width: 1; stroke-dasharray: 6 5; }
+.restricted { fill: color-mix(in oklab, var(--danger) 6%, transparent); stroke: color-mix(in oklab, var(--danger) 48%, transparent); stroke-width: var(--sw-thin); }
+.moa { fill: none; stroke: color-mix(in oklab, var(--caution) 40%, transparent); stroke-width: var(--sw-thin); stroke-dasharray: 8 6; }
 .moa.live { fill: color-mix(in oklab, var(--caution) 8%, transparent); stroke: color-mix(in oklab, var(--caution) 62%, transparent); stroke-dasharray: none; }
-.zone-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: .05em; opacity: .55; }
+.zone-label { fill: var(--ink-2); font-family: var(--mono); font-size: var(--fs-scope-label); letter-spacing: .05em; opacity: .85; }
 
-.runway-line { stroke: var(--runway); stroke-width: 2.5; stroke-linecap: square; }
-.centreline { stroke: color-mix(in oklab, var(--runway) 35%, transparent); stroke-width: 1; stroke-dasharray: 8 6; }
+.runway-line { stroke: var(--runway); stroke-width: var(--sw-bold); stroke-linecap: square; }
+.centreline { stroke: color-mix(in oklab, var(--runway) 55%, transparent); stroke-width: var(--sw-thin); stroke-dasharray: 10 7; }
 
-.hold { fill: none; stroke: color-mix(in oklab, var(--normal) 45%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
-.hold.live { stroke: var(--caution); stroke-dasharray: none; stroke-width: 1.4; }
+.hold { fill: none; stroke: color-mix(in oklab, var(--normal) 62%, transparent); stroke-width: var(--sw-thin); stroke-dasharray: 4 4; }
+.hold.live { stroke: var(--caution); stroke-dasharray: none; stroke-width: var(--sw-mid); }
 
-.fix { fill: none; stroke: var(--fix); stroke-width: 1; }
-.fix-label { fill: var(--ink-3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.fix { fill: none; stroke: var(--fix); stroke-width: var(--sw-thin); }
+.fix-label { fill: var(--ink-2); font-family: var(--mono); font-size: var(--fs-scope-label); }
 
-.link { stroke-width: 1.2; stroke-dasharray: 4 3; }
+.link { stroke-width: var(--sw-mid); stroke-dasharray: 5 4; }
 .link.caution { stroke: var(--caution); }
 .link.danger { stroke: var(--danger); }
-.link-label { font-family: var(--mono); font-size: var(--fs-xs); }
+.link-label { font-family: var(--mono); font-size: var(--fs-scope-tag); font-weight: 600; }
 
 .ac { cursor: pointer; }
 /* 기본 테두리를 깔아 둔다. 등급 이름이 어긋나면 stroke 가 none 으로 남는데,
    몸통 채움이 스코프 바탕과 같은 색이라 항적이 통째로 사라진다. 색이 틀리는
    것보다 안 보이는 것이 훨씬 나쁘므로, 규칙이 하나도 안 맞아도 무엇인가는
    그려지게 한다. */
-.ac-body { stroke-width: 1.4; fill: var(--scope-bg); stroke: var(--normal); }
-.ac-vec { stroke-width: 1; opacity: .75; }
+.ac-body { stroke-width: var(--sw-mid); fill: var(--scope-bg); stroke: var(--normal); }
+.ac-vec { stroke-width: var(--sw-mid); opacity: .9; }
 .ac-tag {
   font-family: var(--mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-scope-tag);
   fill: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
-.ac-tag .cs { font-weight: 600; fill: var(--ink); }
-.ac-lead { stroke: var(--line-2); stroke-width: 1; }
-.ac-halo { fill: none; stroke-width: 1; opacity: .5; }
+.ac-tag .cs { font-weight: 700; fill: var(--ink); }
+.ac-lead { stroke: var(--ink-3); stroke-width: var(--sw-hair); }
+.ac-halo { fill: none; stroke-width: var(--sw-thin); opacity: .8; }
 
 /* 등급 이름표는 severity.css — 영문 낱말 한 벌만 쓴다. 화면에 보이는 우리말
    이름(severity.ko)을 선택자에 쓰면 번역을 손보는 순간 색이 조용히 끊긴다. */

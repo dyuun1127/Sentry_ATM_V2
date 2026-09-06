@@ -481,6 +481,60 @@ def test_gates_say_what_actually_happens_next() -> None:
     assert b".chain .now " not in sheet
 
 
+def test_scope_line_weights_live_in_one_place() -> None:
+    """스코프 안의 선 굵기가 한 곳에 모여 있는가.
+
+    전부 `stroke-width: 1` 이었다. 발표자가 코앞에서 보는 화면에서는 읽히지만
+    빔프로젝터로 쏘면 그 굵기가 배경에 묻혀 사라진다. 스무 곳에 흩어져 있으면
+    화면을 보고 한 번에 조정할 수 없고, 하나를 키우면 옆의 것과 어긋난다.
+
+    글자도 같다. 스코프 안의 이름표는 옆 패널의 본문과 쓰임이 달라 — 하나는
+    빔프로젝터, 하나는 코앞 — 따로 둔다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, sheet = _request(app, path="/assets/app.css")
+
+    for token in (b"--sw-hair:", b"--sw-thin:", b"--sw-mid:", b"--sw-bold:"):
+        assert token in sheet, token
+    for token in (b"--fs-scope-label:", b"--fs-scope-tag:"):
+        assert token in sheet, token
+
+    # 스코프 도형은 굵기를 직접 적지 않고 눈금을 쓴다.
+    scope = sheet[sheet.index(b".terrain-land {") : sheet.index(b".scope-foot {")]
+    for selector in (b".ring {", b".sector {", b".fix {", b".ac-body {", b".ac-vec {"):
+        rule = scope[scope.index(selector) : scope.index(b"}", scope.index(selector))]
+        assert b"var(--sw-" in rule, selector
+
+
+def test_data_blocks_step_aside_instead_of_covering_each_other() -> None:
+    """가까운 두 기의 데이터블록이 서로를 지우지 않는가.
+
+    늘 오른쪽 위에 붙이면 근접한 항적끼리 블록이 겹쳐 콜사인이 서로를 덮는다.
+    글자를 키우면서 실제로 그렇게 됐다 — 크게 만든 것이 오히려 못 읽게 됐다.
+
+    실제 관제 스코프는 관제사가 인출선을 돌려 자리를 옮긴다. 여기서는 네 방향을
+    정해진 순서로 시도해 먼저 비어 있는 자리에 앉힌다. 순서가 고정이라 같은
+    배치에서는 같은 자리가 나오고, 화면이 매초 흔들리지 않는다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/app.js")
+
+    assert b"const BLOCK_PLACES = [" in script
+    assert b"function drawDataBlock(group, aircraft, sx, sy, placed)" in script
+    assert b"const placedBlocks = [];" in script
+
+    body = script[
+        script.index(b"function drawDataBlock(") : script.index(b"function positionDataBlock(")
+    ]
+    # 이미 놓인 것과 겹치지 않는 자리를 고른다.
+    assert b"placed.some((other) => overlaps(box, other))" in body
+    # 네 자리가 다 차도 블록은 그린다 — 겹치더라도 자리를 잃는 것보다 낫다.
+    assert b"BLOCK_PLACES[0]" in body
+    assert b"placed.push(chosen);" in body
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 
