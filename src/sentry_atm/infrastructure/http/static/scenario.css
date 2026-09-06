@@ -436,3 +436,30 @@ body {
   background: var(--normal);
   white-space: nowrap;
 }
+
+/* 판단 연쇄의 현재 위치.
+   시계가 멈춰 있는 동안에도 눌렀을 때 무언가 진행됐다는 것이 보여야 한다 —
+   그것이 없으면 관문이 하나 더 있는 것과 고장난 것을 구별할 수 없다. */
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.chain li { display: flex; align-items: center; gap: 6px; }
+.chain li::after { content: "›"; color: var(--line-2); }
+.chain li:last-child::after { content: ""; }
+/* 이름을 `chain-` 으로 붙인다. `.now` 는 이미 「현재 단계」 블록이 쓰고 있고
+   그 규칙에 `flex: 1` 이 있어, 그대로 쓰면 가운데 칸이 줄 전체로 늘어난다. */
+.chain .chain-done { color: var(--ink-3); }
+.chain .chain-done b::before { content: "✓ "; }
+.chain .chain-now { color: var(--caution); }
+.chain .chain-now b { font-weight: 600; }
+.chain .chain-todo { color: var(--line-2); }
+.chain b { font-weight: 400; }

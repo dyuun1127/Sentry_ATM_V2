@@ -423,6 +423,64 @@ def test_scenario_screen_resumes_after_the_controller_decides() -> None:
     assert script.count(b"state.autoPaused = false;") >= 4
 
 
+def test_gates_say_what_actually_happens_next() -> None:
+    """관문 문구가 지킬 수 있는 말만 하는가.
+
+    한동안 모든 관문이 「누르면 이어서 진행합니다」라고 적어 두었다. 그런데
+    회피안 상신의 다음은 또 관문(판단 대기)이라 시계가 그대로 멈춰 있었고,
+    화면이 약속한 것과 일어난 일이 달라 고장으로 읽혔다.
+
+    시계가 다시 흐르는 것은 **판단이 끝나 적용되거나 거부되었을 때뿐**이다.
+    그러니 마지막 관문만 그렇게 적고, 중간 관문은 다음에 무엇이 올라오는지를
+    적는다.
+
+    그리고 시계가 멈춰 있는 동안에도 「눌렀더니 한 칸 갔다」가 보여야 한다.
+    그것이 없으면 관문이 하나 더 있는 것과 고장난 것을 구별할 수 없다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/scenario.js")
+    _, _, page = _request(app, path="/scenario")
+    _, _, sheet = _request(app, path="/assets/scenario.css")
+
+    gates = script[
+        script.index(b"const AWAITS_CONTROLLER = {") : script.index(
+            b"function needsStart("
+        )
+    ]
+
+    def entry_for(stage: bytes) -> bytes:
+        start = gates.index(stage)
+        return gates[start : gates.index(b"},", start)]
+
+    # 중간 관문은 「누르면/선택하면 이어서 진행합니다」라고 약속하지 않는다.
+    # 누르면 다음 관문이 나올 뿐 시계는 그대로다.
+    assert "누르면 이어서 진행합니다".encode() not in entry_for(b"CONFLICT_DETECTED")
+    recommendation = entry_for(b"RECOMMENDATION_AVAILABLE")
+    assert "선택하면 이어서 진행합니다".encode() not in recommendation
+    # 대신 무엇까지 마쳐야 흐르는지를 적는다.
+    assert "마쳐야 이어서 진행합니다".encode() in recommendation
+    assert "이어서 진행합니다".encode() not in entry_for(b"DECISION_MODIFIED")
+
+    # 마지막 관문만 그렇게 적는다 — 적용하면 실제로 이어서 진행한다.
+    for stage in (b"DECISION_ACCEPTED", b"MODIFICATION_REVALIDATED"):
+        start = gates.index(stage)
+        entry = gates[start : gates.index(b"},", start)]
+        assert "적용하면 이어서 진행합니다".encode() in entry, stage
+
+    # 판단 연쇄의 현재 위치를 그린다.
+    assert b'id="chain"' in page
+    assert b"const CHAIN_BY_STAGE = {" in script
+    assert b"function drawChain(stage)" in script
+    assert b"drawChain(stage);" in script
+
+    # `.now` 는 이미 「현재 단계」 블록이 쓰고 그 규칙에 flex:1 이 있다. 그대로
+    # 쓰면 가운데 칸이 줄 전체로 늘어난다 — 실제로 그렇게 깨졌다.
+    assert b'"chain-now"' in script
+    assert b".chain .chain-now" in sheet
+    assert b".chain .now " not in sheet
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 

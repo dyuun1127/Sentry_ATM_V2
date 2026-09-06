@@ -22,26 +22,34 @@ const RATES = [1, 2, 4, 8, 16];
 const TICK_MS = 400;
 
 /* 관제사의 손이 필요한 단계. 여기에 닿으면 재생을 멈춘다. */
+/* 판단 연쇄의 관문들.
+ *
+ * **연쇄의 마지막 관문만 「이어서 진행합니다」라고 적는다.** 한동안 전부 그렇게
+ * 적어 두었는데, 상신을 누르면 다음이 또 관문(판단 대기)이라 시계가 그대로
+ * 멈춰 있었다. 화면이 약속한 것과 일어난 일이 달라 고장으로 읽혔다.
+ *
+ * 중간 관문은 **다음에 무엇이 올라오는지**를 적는다. 시계가 다시 흐르는 것은
+ * 판단이 끝나 적용되거나 거부되었을 때뿐이다. */
 const AWAITS_CONTROLLER = {
   CONFLICT_DETECTED: {
     title: "회피안 상신 대기",
-    sub: "관제 콘솔에서 「회피안 상신」을 누르면 이어서 진행합니다.",
+    sub: "콘솔에서 「회피안 상신」을 누르면 후보와 근거가 올라옵니다. 시각은 판단이 끝나야 다시 흐릅니다.",
   },
   RECOMMENDATION_AVAILABLE: {
     title: "관제사 판단 대기",
-    sub: "관제 콘솔에서 승인·수정·거부를 선택하면 이어서 진행합니다.",
+    sub: "콘솔에서 승인·수정·거부를 선택하십시오. 승인은 적용까지, 수정은 검증과 적용까지 마쳐야 이어서 진행합니다.",
   },
   DECISION_ACCEPTED: {
     title: "승인 기동 적용 대기",
-    sub: "승인만으로는 항공기가 움직이지 않습니다. 콘솔에서 적용하십시오.",
+    sub: "승인만으로는 항공기가 움직이지 않습니다. 콘솔에서 적용하면 이어서 진행합니다.",
   },
   DECISION_MODIFIED: {
     title: "수정안 검증 대기",
-    sub: "관제사가 고친 안도 검증을 거칩니다. 콘솔에서 진행하십시오.",
+    sub: "관제사가 고친 안도 검증을 거칩니다. 콘솔에서 검증하면 적용 단추가 나옵니다.",
   },
   MODIFICATION_REVALIDATED: {
     title: "수정 기동 적용 대기",
-    sub: "검증을 통과했습니다. 콘솔에서 적용하십시오.",
+    sub: "검증을 통과했습니다. 콘솔에서 적용하면 이어서 진행합니다.",
   },
 };
 
@@ -205,6 +213,39 @@ async function seek(offsetSeconds) {
 
 /* 판단이 필요한 단계에 닿으면 멈춘다. 계속 밀면 상신된 안이 검증된 시각과
  * 승인하는 시각이 벌어진다. */
+/* 판단 연쇄를 어디까지 왔는가.
+ *
+ * 시계가 멈춰 있는 동안에도 「눌렀더니 한 칸 갔다」가 보여야 한다. 그것이
+ * 없으면 관문이 하나 더 있는 것과 고장난 것을 구별할 수 없다 — 실제로
+ * 상신을 누르고 「아무 일도 안 일어난다」고 읽혔다.
+ *
+ * 갈래가 셋이라 승인·수정·거부 중 무엇을 골랐는지에 따라 남은 칸이 달라진다.
+ * 고르기 전에는 승인 갈래를 기본으로 보여 준다 — 가장 흔한 길이다. */
+const CHAIN_BY_STAGE = {
+  CONFLICT_DETECTED: { steps: ["상신", "판단", "적용"], at: 0 },
+  RECOMMENDATION_AVAILABLE: { steps: ["상신", "판단", "적용"], at: 1 },
+  DECISION_ACCEPTED: { steps: ["상신", "승인", "적용"], at: 2 },
+  DECISION_MODIFIED: { steps: ["상신", "수정", "검증", "적용"], at: 2 },
+  MODIFICATION_REVALIDATED: { steps: ["상신", "수정", "검증", "적용"], at: 3 },
+};
+
+function drawChain(stage) {
+  const box = $("chain");
+  box.textContent = "";
+  const chain = CHAIN_BY_STAGE[stage];
+  if (!chain) return;
+  chain.steps.forEach((name, index) => {
+    const item = document.createElement("li");
+    // 이름표에 `chain-` 을 붙인다 — `.now` 는 이미 「현재 단계」 블록이 쓴다.
+    item.className =
+      index < chain.at ? "chain-done" : index === chain.at ? "chain-now" : "chain-todo";
+    const label = document.createElement("b");
+    label.textContent = name;
+    item.appendChild(label);
+    box.appendChild(item);
+  });
+}
+
 function pauseIfControllerNeeded() {
   const waiting = AWAITS_CONTROLLER[state.session?.stage];
   if (waiting && state.playing) {
@@ -332,6 +373,7 @@ function render() {
   if (waiting) {
     $("await-title").textContent = waiting.title;
     $("await-sub").textContent = waiting.sub;
+    drawChain(stage);
   }
 
   // 막
