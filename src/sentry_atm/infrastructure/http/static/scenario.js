@@ -53,6 +53,9 @@ const state = {
   playing: false,
   rate: 4,
   busy: false,
+  // 판단을 기다리느라 우리가 멈춘 것인가, 사람이 멈춘 것인가. 이것을 구분하지
+  // 않으면 발표자가 일부러 세워 둔 화면을 판단이 끝났다고 멋대로 다시 돌린다.
+  autoPaused: false,
 };
 
 /* ------------------------------------------------------------------ 서버 */
@@ -171,6 +174,9 @@ async function advance(seconds) {
 async function seek(offsetSeconds) {
   if (state.busy) return;
   state.busy = true;
+  // 단계를 골라 옮기는 것은 사람의 조작이다. 옮긴 자리에서 저절로 흐르면
+  // 그 단계를 설명할 틈이 없다.
+  state.autoPaused = false;
   stop();
   try {
     // 되돌린 뒤이므로 세션은 반드시 READY 다.
@@ -203,8 +209,26 @@ function pauseIfControllerNeeded() {
   const waiting = AWAITS_CONTROLLER[state.session?.stage];
   if (waiting && state.playing) {
     stop();
+    state.autoPaused = true;
     say(`${waiting.title} — 재생을 멈췄습니다.`, "good");
   }
+}
+
+/* 판단이 끝났으면 다시 돌린다.
+ *
+ * 화면은 「누르면 이어서 진행합니다」라고 적어 놓고 실제로는 멈춰 있었다.
+ * 관제사가 콘솔에서 판단해도 이 화면은 단계만 바꾸고 시계를 세운 채였고,
+ * 발표자가 재생을 다시 눌러야 했다 — 화면이 한 약속을 지키지 않은 것이다.
+ *
+ * 우리가 세운 것만 다시 돌린다. 사람이 세운 화면을 마음대로 돌리면 설명하다
+ * 말고 시각이 흘러간다. */
+function resumeIfControllerDecided() {
+  if (!state.autoPaused || state.playing || state.busy) return;
+  if (AWAITS_CONTROLLER[state.session?.stage]) return;
+  state.autoPaused = false;
+  if (elapsed() >= duration()) return;
+  say("판단이 끝났습니다 — 이어서 진행합니다.", "good");
+  start();
 }
 
 /* ------------------------------------------------------------------ 재생 */
@@ -238,11 +262,12 @@ function watchWhilePaused() {
     if (state.playing || state.busy) return;
     try {
       const next = await get(API);
-      if (next.stage !== state.session?.stage || next.elapsed_seconds !== elapsed()) {
-        state.session = next;
-        setLink(true);
-        render();
-      }
+      const moved =
+        next.stage !== state.session?.stage || next.elapsed_seconds !== elapsed();
+      state.session = next;
+      setLink(true);
+      if (moved) render();
+      resumeIfControllerDecided();
     } catch {
       setLink(false);
     }
@@ -347,7 +372,11 @@ function buildControls() {
     rates.appendChild(button);
   }
 
-  $("play").addEventListener("click", () => (state.playing ? stop() : start()));
+  $("play").addEventListener("click", () => {
+    // 손으로 만진 순간부터는 사람 것이다.
+    state.autoPaused = false;
+    state.playing ? stop() : start();
+  });
   $("reset").addEventListener("click", () => seek(0));
   $("prev").addEventListener("click", () => jump(-1));
   $("next-step").addEventListener("click", () => jump(1));
@@ -361,6 +390,7 @@ function buildControls() {
     if (event.target instanceof HTMLInputElement) return;
     if (event.code === "Space") {
       event.preventDefault();
+      state.autoPaused = false;
       state.playing ? stop() : start();
     }
     if (event.code === "ArrowRight") jump(1);

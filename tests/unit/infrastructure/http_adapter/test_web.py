@@ -378,6 +378,51 @@ def test_both_screens_go_read_only_for_a_viewer() -> None:
     assert b'$("play").hidden = true;' in scenario_script
 
 
+def test_scenario_screen_resumes_after_the_controller_decides() -> None:
+    """판단이 끝나면 시연 화면이 스스로 이어서 진행하는가.
+
+    화면은 관문마다 「…를 누르면 이어서 진행합니다」라고 적어 놓는다. 그런데
+    실제로는 단계만 바꾸고 시계를 세운 채였다 — 관제사가 콘솔에서 승인해도
+    시연 화면은 멈춰 있었고, 발표자가 재생을 다시 눌러야 했다. 화면이 자기가
+    한 약속을 지키지 않은 것이다.
+
+    되돌아가면 안 되는 것이 하나 있다. **사람이 세운 화면은 건드리지 않는다.**
+    설명하려고 일부러 멈춰 둔 것을 판단이 끝났다고 멋대로 돌리면, 발표자가
+    말하는 중에 시각이 흘러간다. 그래서 우리가 세운 것인지를 기억한다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, script = _request(app, path="/assets/scenario.js")
+
+    assert b"function resumeIfControllerDecided()" in script
+
+    # 우리가 세웠다는 표시를 남기고, 재개할 때 지운다.
+    pause = script[
+        script.index(b"function pauseIfControllerNeeded()") : script.index(
+            b"function resumeIfControllerDecided()"
+        )
+    ]
+    assert b"state.autoPaused = true;" in pause
+
+    resume = script[
+        script.index(b"function resumeIfControllerDecided()") : script.index(
+            "/* ------------------------------------------------------------------ 재생".encode()
+        )
+    ]
+    # 우리가 세운 것만, 관문이 풀렸을 때만, 끝나지 않았을 때만 다시 돌린다.
+    assert b"if (!state.autoPaused || state.playing || state.busy) return;" in resume
+    assert b"if (AWAITS_CONTROLLER[state.session?.stage]) return;" in resume
+    assert b"if (elapsed() >= duration()) return;" in resume
+    assert b"start();" in resume
+
+    # 멈춰 있는 동안 도는 감시가 재개까지 본다 — 그러지 않으면 아무도 못 돌린다.
+    watcher = script[script.index(b"function watchWhilePaused()") :]
+    assert b"resumeIfControllerDecided();" in watcher
+
+    # 손으로 만지면 그 순간부터 사람 것이다.
+    assert script.count(b"state.autoPaused = false;") >= 4
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 
