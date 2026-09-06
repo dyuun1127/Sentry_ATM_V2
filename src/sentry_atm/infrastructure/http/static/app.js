@@ -138,6 +138,7 @@ const state = {
   trails: new Map(),
   dragged: false,
   symbols: loadSymbolStyle(),
+  zone: null,
   view: { cx: 0, cy: 0, halfNm: DEFAULT_RANGE_NM },
 };
 
@@ -357,12 +358,17 @@ function drawBackground() {
   const airspace = clear("g-airspace");
   if (state.layers.airspace) {
     for (const zone of geometry.restricted || []) {
-      node("path", { d: `${pathFromGeodetic(zone.points)} Z`, class: "restricted" }, airspace);
+      const shape = node(
+        "path",
+        { d: `${pathFromGeodetic(zone.points)} Z`, class: "restricted" },
+        airspace,
+      );
+      selectable(airspace, shape, zone, "restricted", true);
       label(airspace, zone.centre, zone.id);
     }
     const activeArea = state.scenario?.operating_area_id;
     for (const zone of geometry.moa || []) {
-      node(
+      const shape = node(
         "path",
         {
           d: `${pathFromGeodetic(zone.points)} Z`,
@@ -370,10 +376,16 @@ function drawBackground() {
         },
         airspace,
       );
+      selectable(airspace, shape, zone, "moa", true);
       label(airspace, centroid(zone.points), zone.id);
     }
     for (const zone of geometry.neighbour_ctr || []) {
-      node("path", { d: `${pathFromGeodetic(zone.points)} Z`, class: "sector-2" }, airspace);
+      const shape = node(
+        "path",
+        { d: `${pathFromGeodetic(zone.points)} Z`, class: "sector-2" },
+        airspace,
+      );
+      selectable(airspace, shape, zone, "ctr", true);
       label(airspace, zone.centre, zone.id);
     }
     // 중원 TMA. 담당 섹터(T17)는 진하게, 인접 기관은 흐리게 — 어디까지가 우리
@@ -382,7 +394,7 @@ function drawBackground() {
     for (const sector of geometry.tma || []) {
       if (!sector.points?.length) continue;
       if (sector.id === "T17_UPPER") continue;
-      node(
+      const shape = node(
         "path",
         {
           d: `${pathFromGeodetic(sector.points)} Z`,
@@ -390,6 +402,9 @@ function drawBackground() {
         },
         airspace,
       );
+      // 섹터는 경계선 근처만 받는다. 안쪽까지 받으면 위에 겹친 제한구역과
+      // 훈련공역 클릭을 전부 삼킨다 — 큰 도형이 나중에 그려지기 때문이다.
+      selectable(airspace, shape, sector, "tma", false);
       if (!sector.target) label(airspace, centroid(sector.points), sector.id);
     }
   }
@@ -449,6 +464,58 @@ function drawBackground() {
       node("text", { x: sx + 5, y: sy + 3, class: "fix-label" }, fixes).textContent = fix.name;
     }
   }
+}
+
+/* 공역 하나를 고를 수 있게 만든다.
+ *
+ * 보이는 도형과 별개로 「잡는 도형」을 하나 더 깐다. 보이는 쪽의 굵기를 키우면
+ * 화면이 바뀌므로, 투명한 굵은 선을 겹쳐 두고 그쪽이 클릭을 받는다.
+ *
+ * `inside` 가 참이면 안쪽까지 받는다. 작은 구역만 그렇게 두고 큰 섹터는 경계선
+ * 근처만 받는다 — 그러지 않으면 나중에 그려지는 큰 섹터가 위를 덮어 그 안의
+ * 작은 구역을 아무도 못 고르게 된다. */
+function selectable(parent, shape, zone, kind, inside) {
+  const chosen = state.zone?.kind === kind && state.zone?.zone.id === zone.id;
+  if (chosen) shape.classList.add("zone-sel");
+  const hit = node(
+    "path",
+    { d: shape.getAttribute("d"), class: `hit${inside ? " area" : ""}` },
+    parent,
+  );
+  hit.addEventListener("click", (event) => {
+    // 화면을 민 끝의 클릭은 선택이 아니다.
+    if (state.dragged) return;
+    event.stopPropagation();
+    state.zone = chosen ? null : { kind, zone };
+    // 공역과 항적은 한 번에 하나만 고른다. 둘 다 켜 두면 어느 쪽 이야기를
+    // 하고 있는지 화면이 말해 주지 못한다.
+    if (state.zone) state.selected = null;
+    render();
+  });
+}
+
+/* 이 공역 안에 있는가. 평면은 위경도 그대로 보고, 고도는 AMSL 로 본다.
+ *
+ * 서버가 이미 AGL/GND/SFC/FL 을 AMSL 로 환산해 보낸다. 화면에서 다시 환산하면
+ * 두 벌이 되고, 두 벌은 반드시 어긋난다. */
+function insideZone(entry, aircraft) {
+  const altitude = aircraft.altitude_ft;
+  const { zone } = entry;
+  if (!(altitude >= zone.lower_ft && altitude <= zone.upper_ft)) return false;
+  const [x, y] = [aircraft.x_nm, aircraft.y_nm];
+  if (zone.centre && zone.radius_nm) {
+    const [cx, cy] = toLocal(zone.centre[0], zone.centre[1]);
+    return Math.hypot(x - cx, y - cy) <= zone.radius_nm;
+  }
+  const ring = zone.points.map(([lat, lon]) => toLocal(lat, lon));
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const straddles = yi > y !== yj > y;
+    if (straddles && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 function centroid(points) {
@@ -605,6 +672,7 @@ function drawTraffic() {
       // 화면을 민 끝의 클릭은 선택이 아니다.
       if (state.dragged) return;
       state.selected = state.selected === aircraft.aircraft_id ? null : aircraft.aircraft_id;
+      if (state.selected) state.zone = null;
       render();
     });
 
@@ -742,9 +810,105 @@ function drawQueue() {
     row.addEventListener("click", () => {
       const first = subjects[0] || null;
       state.selected = state.selected === first ? null : first;
+      if (state.selected) state.zone = null;
       render();
     });
     list.appendChild(row);
+  }
+}
+
+function drawZone() {
+  const card = $("zone-card");
+  const entry = state.zone;
+  if (!entry) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const box = $("zone");
+  box.textContent = "";
+  const { zone } = entry;
+
+  const head = document.createElement("div");
+  head.className = "dhead";
+  const name = document.createElement("span");
+  name.className = "dcs";
+  name.textContent = zone.id;
+  const kind = document.createElement("span");
+  kind.className = "dtype";
+  kind.textContent = zone.name ? `${zone.kind} · ${zone.name}` : zone.kind;
+  head.append(name, kind);
+  box.appendChild(head);
+
+  const rows = [];
+  if (zone.unit) rows.push(["관제기관", zone.unit]);
+  if (zone.class) rows.push(["등급", `Class ${zone.class}`]);
+  rows.push(["고도", `${zone.lower_label} ~ ${zone.upper_label}`]);
+  if (zone.radius_nm) rows.push(["반경", `${zone.radius_nm} NM`]);
+  if (zone.activity) rows.push(["활동", zone.activity]);
+  if (zone.authority) rows.push(["관할", zone.authority]);
+  if (zone.frequencies?.length) {
+    rows.push(["주파수", zone.frequencies.map((mhz) => `${mhz}`).join(" / ")]);
+  }
+  if (entry.kind === "tma") {
+    // 등급이 무엇을 뜻하는지 화면이 말해 준다. Class D/E 회랑 안에서는 교통정보만
+    // 나가고, Class C 에서는 분리를 제공한다 — 두 공역이 붙어 있어 헷갈린다.
+    rows.push(["IFR-VFR 분리", zone.ifr_vfr_separation ? "제공" : "미제공 (교통정보)"]);
+  }
+  if (entry.kind === "moa") {
+    const active = zone.id === state.scenario?.operating_area_id;
+    rows.push(["지금", active ? "이 시나리오의 작전지역" : "비활성"]);
+  }
+  for (const [key, value] of rows) {
+    const row = document.createElement("div");
+    row.className = "drow";
+    const k = document.createElement("span");
+    k.className = "dk";
+    k.textContent = key;
+    const v = document.createElement("span");
+    v.className = "dv";
+    v.textContent = value;
+    row.append(k, v);
+    box.appendChild(row);
+  }
+
+  // 지금 이 공역 안에 무엇이 있는가. 관할 이양을 설명할 때 「이 항적이 곧
+  // 저쪽으로 넘어간다」를 숫자로 보일 수 있다.
+  const traffic = (state.session?.traffic || []).filter((item) => insideZone(entry, item));
+  const sub = document.createElement("div");
+  sub.className = "dsub";
+  sub.innerHTML = "";
+  const count = document.createElement("b");
+  count.textContent = `${traffic.length} 대`;
+  sub.append("이 공역 안 ", count);
+  box.appendChild(sub);
+
+  if (traffic.length) {
+    const list = document.createElement("div");
+    list.className = "dlist";
+    for (const aircraft of traffic) {
+      const button = document.createElement("button");
+      button.type = "button";
+      const cs = document.createElement("span");
+      cs.textContent = aircraft.aircraft_id;
+      const altitude = document.createElement("span");
+      altitude.textContent = `${Math.round(aircraft.altitude_ft).toLocaleString()} ft`;
+      button.append(cs, altitude);
+      button.addEventListener("click", () => {
+        state.selected = aircraft.aircraft_id;
+        state.zone = null;
+        render();
+      });
+      list.appendChild(button);
+    }
+    box.appendChild(list);
+  }
+
+  if (zone.note) {
+    const note = document.createElement("p");
+    note.className = "dnote";
+    note.textContent = zone.note;
+    box.appendChild(note);
   }
 }
 
@@ -1242,6 +1406,7 @@ function render() {
   drawQueue();
   drawNextCommand();
   renderDeviation(session?.deviation);
+  drawZone();
   drawDetail();
   drawRecommendation();
   drawAdvisory();

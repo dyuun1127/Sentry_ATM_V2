@@ -304,6 +304,48 @@ def test_scope_paints_every_aircraft_it_draws() -> None:
     assert b"stroke: var(--normal)" in body_rule
 
 
+def test_console_lets_the_controller_open_an_airspace() -> None:
+    """공역을 눌러 그 공역의 고시 정보를 볼 수 있는가.
+
+    채움이 없는 도형은 SVG 가 칠해진 곳에서만 클릭을 받는다. 그래서 1px 파선
+    위를 정확히 찍어야 잡히는데, 그것은 사실상 못 누르는 것이다. 보이지 않는
+    굵은 선을 겹쳐 깔아 경계 근처를 받게 한다.
+
+    안쪽까지 받는 것은 작은 구역뿐이다. 큰 섹터가 안쪽을 받으면 나중에 그려지는
+    쪽이 위에 오므로, 그 위에 겹친 제한구역·훈련공역 클릭을 전부 삼킨다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, body = _request(app)
+    _, _, script = _request(app, path="/assets/app.js")
+    _, _, sheet = _request(app, path="/assets/app.css")
+
+    assert b'id="zone-card"' in body
+    assert b'id="zone"' in body
+    assert b"function drawZone()" in script
+    assert b"function selectable(parent, shape, zone, kind, inside)" in script
+
+    # 잡는 도형은 보이지 않되 굵어야 한다.
+    hit_rule = sheet[sheet.index(b".hit {") : sheet.index(b".zone-sel {")]
+    assert b"stroke: transparent" in hit_rule
+    assert b"fill: none" in hit_rule
+    assert b"pointer-events: all" in hit_rule  # .hit.area — 작은 구역만
+
+    # 섹터는 경계선만, 작은 구역은 안쪽까지.
+    start = script.index(b"for (const sector of geometry.tma")
+    end = script.index("// --- 거리 링".encode(), start)
+    assert b'selectable(airspace, shape, sector, "tma", false)' in script[start:end]
+    assert b'selectable(airspace, shape, zone, "restricted", true)' in script
+    assert b'selectable(airspace, shape, zone, "moa", true)' in script
+
+    # 화면을 민 끝의 클릭은 선택이 아니다.
+    assert script.count(b"if (state.dragged) return;") >= 2
+
+    # 공역과 항적은 한 번에 하나만 고른다.
+    assert b"if (state.zone) state.selected = null;" in script
+    assert b"if (state.selected) state.zone = null;" in script
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 

@@ -67,6 +67,31 @@ def _sector_polygon(block: dict, blocks: list[dict]) -> list[dict]:
     return origin.get("polygon", []) if origin else []
 
 
+def _zone_detail(item: dict, elevation_ft: float, **extra) -> dict:
+    """공역 하나를 눌렀을 때 보여 줄 것.
+
+    전부 전사 데이터에 있는 값이다. 화면에서 다시 계산하거나 채워 넣지 않는다 —
+    관제사가 이 상자를 보고 판단하므로, 여기 뜬 것은 고시가 말한 것이어야 한다.
+
+    포함 판정에 필요한 고도는 AMSL ft 로 환산해 함께 보낸다. AGL/GND/SFC/FL 이
+    섞여 있어 화면에서 환산하게 두면 두 벌이 되고 언젠가 어긋난다.
+    """
+    detail = {
+        "id": item["id"],
+        "name": item.get("name", ""),
+        "lower_ft": resolve_altitude_ft(item["lower"], elevation_ft),
+        "upper_ft": resolve_altitude_ft(item["upper"], elevation_ft),
+        "lower_label": _altitude_label(item["lower"]),
+        "upper_label": _altitude_label(item["upper"]),
+        "note": item.get("note") or item.get("_note") or "",
+        **extra,
+    }
+    for key in ("activity", "authority", "class", "unit"):
+        if item.get(key):
+            detail[key] = item[key]
+    return detail
+
+
 def _altitude_label(spec: dict) -> str:
     """AIP 표기를 그대로 읽히게. 환산값이 아니라 고시된 형태로 보여 준다."""
     if "fl" in spec:
@@ -103,6 +128,8 @@ def airspace_geometry(dataset=None, sequencer=None) -> dict:
     centre_lat = parse_latlon(terminal["center"]["lat"])
     centre_lon = parse_latlon(terminal["center"]["lon"])
 
+    elevation_ft = dataset.procedures.raw["aerodrome"]["elev_ft"]
+
     runway_24r = dataset.procedures.runways["24R"]
     runway_06l = dataset.procedures.runways["06L"]
 
@@ -121,56 +148,59 @@ def airspace_geometry(dataset=None, sequencer=None) -> dict:
     # 바로 옆 8~18 NM 에 붙어 있어, 이 공역이 까다로운 이유가 화면으로 설명된다.
     special_use = airspace.get("special_use", {})
     restricted = [
-        {
-            "id": item["id"],
-            "name": item.get("name", ""),
-            "activity": item.get("activity", ""),
-            "radius_nm": item["radius_nm"],
-            "points": _circle(
+        _zone_detail(
+            item,
+            elevation_ft,
+            kind="제한구역",
+            radius_nm=item["radius_nm"],
+            points=_circle(
                 parse_latlon(item["center"]["lat"]),
                 parse_latlon(item["center"]["lon"]),
                 item["radius_nm"],
                 _CIRCLE_SEGMENTS,
             ),
-            "centre": [
+            centre=[
                 parse_latlon(item["center"]["lat"]),
                 parse_latlon(item["center"]["lon"]),
             ],
-        }
+        )
         for item in special_use.get("restricted", [])
     ]
     moa = [
-        {
-            "id": item["id"],
-            "points": [
+        _zone_detail(
+            item,
+            elevation_ft,
+            kind="훈련공역",
+            points=[
                 [parse_latlon(node.split()[0]), parse_latlon(node.split()[1])]
                 for node in item["polygon"]
             ],
-        }
+        )
         for item in special_use.get("moa", [])
     ]
     neighbour_ctr = [
-        {
-            "id": item["id"],
-            "name": item.get("name", ""),
-            "points": _circle(
+        _zone_detail(
+            item,
+            elevation_ft,
+            kind="인접 관제권",
+            radius_nm=item["radius_nm"],
+            points=_circle(
                 parse_latlon(item["center"]["lat"]),
                 parse_latlon(item["center"]["lon"]),
                 item["radius_nm"],
                 _CIRCLE_SEGMENTS,
             ),
-            "centre": [
+            centre=[
                 parse_latlon(item["center"]["lat"]),
                 parse_latlon(item["center"]["lon"]),
             ],
-        }
+        )
         for item in special_use.get("neighbour_ctr", [])
     ]
 
     # 중원 TMA 전체. 담당 섹터 하나만 그리면 그 경계 밖이 빈 곳처럼 보이는데,
     # 실제로는 인접 기관이 이어받는 공역이다. 어디로 이양되는지가 화면에 있어야
     # 「관할이 넘어간다」는 말이 그림으로 설명된다.
-    elevation_ft = dataset.procedures.raw["aerodrome"]["elev_ft"]
     tma = [
         {
             "id": block["id"],
@@ -179,7 +209,13 @@ def airspace_geometry(dataset=None, sequencer=None) -> dict:
             "lower_ft": resolve_altitude_ft(block["lower"], elevation_ft),
             "upper_ft": resolve_altitude_ft(block["upper"], elevation_ft),
             "target": bool(block.get("is_target_sector")),
+            "kind": "담당 섹터" if block.get("is_target_sector") else "인접 섹터",
             "label": _sector_label(block),
+            "lower_label": _altitude_label(block["lower"]),
+            "upper_label": _altitude_label(block["upper"]),
+            "ifr_vfr_separation": block["ifr_vfr_separation"],
+            "frequencies": block.get("freq_mhz_aip") or block.get("freq_mhz") or [],
+            "note": block.get("_note", ""),
             "points": [
                 [parse_latlon(node["lat"]), parse_latlon(node["lon"])]
                 for node in _sector_polygon(block, airspace["tma"]["blocks"])

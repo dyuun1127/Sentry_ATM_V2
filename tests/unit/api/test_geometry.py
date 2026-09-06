@@ -70,3 +70,52 @@ def test_scope_draws_the_whole_tma_and_marks_which_one_is_ours() -> None:
         "T17 CHEONGJU GCA 1,000ft AGL~6,500ft AMSL Class D/E"
     )
     assert sectors["T22"]["label"] == "T22 JUNGWON APP 9,500ft AMSL~FL175 Class E"
+
+
+def test_every_clickable_zone_carries_what_the_panel_shows() -> None:
+    """눌렀을 때 띄울 것이 형상에 실려 오는가.
+
+    화면이 고도 기준을 스스로 환산하거나 활동·관할을 채워 넣기 시작하면 전사
+    데이터와 두 벌이 되고, 두 벌은 반드시 어긋난다. 관제사가 이 상자를 보고
+    판단하므로 여기 뜬 것은 고시가 말한 것이어야 한다.
+
+    포함 판정에 쓸 AMSL 환산값(`lower_ft`/`upper_ft`)과 사람이 읽을 고시 표기
+    (`lower_label`/`upper_label`)를 함께 낸다 — 앞은 계산용, 뒤는 표시용이다.
+    """
+    geometry = airspace_geometry()
+
+    zones = [
+        *geometry["restricted"],
+        *geometry["moa"],
+        *geometry["neighbour_ctr"],
+        *geometry["tma"],
+    ]
+    assert len(zones) == 3 + 5 + 1 + 7
+
+    for zone in zones:
+        assert zone["id"]
+        assert zone["kind"]
+        assert zone["points"], zone["id"]
+        assert zone["lower_ft"] < zone["upper_ft"], zone["id"]
+        assert zone["lower_label"] and zone["upper_label"], zone["id"]
+
+    by_id = {zone["id"]: zone for zone in zones}
+
+    # 제한구역은 무엇을 하는 곳인지가 핵심이다. 고도만 보여 주면 왜 피해야 하는지
+    # 알 수 없다.
+    gwaesan = by_id["RK R152"]
+    assert gwaesan["name"] == "괴산"
+    assert gwaesan["activity"] == "강하훈련"
+    assert gwaesan["authority"] == "제13특수임무여단"
+    assert gwaesan["radius_nm"] == 2.0
+    assert gwaesan["upper_label"] == "2,100ft AMSL"
+
+    # 원은 반경으로, 폴리곤은 꼭짓점으로 포함을 본다 — 화면이 둘을 갈라 쓴다.
+    assert by_id["RK R152"]["centre"]
+    assert "centre" not in by_id["MOA 3A"]
+
+    # 등급이 무엇을 뜻하는지까지 실어 보낸다. Class D/E 회랑과 Class C 터미널이
+    # 붙어 있어, 등급만으로는 분리를 제공하는지 알기 어렵다.
+    assert by_id["T17"]["ifr_vfr_separation"] is False
+    assert by_id["T18"]["ifr_vfr_separation"] is True
+    assert by_id["T17"]["frequencies"] == [134.0, 265.75]
