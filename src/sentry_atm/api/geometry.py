@@ -25,6 +25,7 @@ from sentry_atm.regulation.geo import (
     separation_distance_nm,
     vincenty_direct,
 )
+from sentry_atm.regulation.sector import resolve_altitude_ft
 
 # 스코프에 그릴 거리 링. 관제권과 터미널 경계가 먼저 오고 나머지는 눈금이다.
 _RINGS = (
@@ -48,6 +49,40 @@ def _circle(lat: float, lon: float, radius_nm: float, segments: int) -> list[lis
         list(vincenty_direct(lat, lon, 360.0 * index / segments, radius_nm * M_PER_NM))
         for index in range(segments + 1)
     ]
+
+
+def _sector_polygon(block: dict, blocks: list[dict]) -> list[dict]:
+    """이 블록의 평면 경계.
+
+    ENR 2.1 은 T17 폴리곤을 두 번 고시한다 — 중원 TMA 항(6,500ft 아래, 청주 GCA)과
+    오산 TMA 항(FL145~6,500ft, 오산 APP). 두 번째는 좌표를 다시 적지 않고 같은
+    도형을 가리키므로, 여기서 그것을 이어 준다.
+    """
+    if block.get("polygon"):
+        return block["polygon"]
+    shared = block.get("same_polygon_as")
+    if not shared:
+        return []
+    origin = next((item for item in blocks if item["id"] == shared), None)
+    return origin.get("polygon", []) if origin else []
+
+
+def _altitude_label(spec: dict) -> str:
+    """AIP 표기를 그대로 읽히게. 환산값이 아니라 고시된 형태로 보여 준다."""
+    if "fl" in spec:
+        return f"FL{spec['fl']}"
+    reference = spec.get("ref", "AMSL")
+    if reference in ("GND", "SFC"):
+        return reference
+    return f"{spec['ft']:,}ft {reference}"
+
+
+def _sector_label(block: dict) -> str:
+    return (
+        f"{block['id']} {block['unit']} "
+        f"{_altitude_label(block['lower'])}~{_altitude_label(block['upper'])} "
+        f"Class {block['class'].replace(', ', '/')}"
+    )
 
 
 def _terrain() -> dict:
@@ -132,25 +167,34 @@ def airspace_geometry(dataset=None, sequencer=None) -> dict:
         for item in special_use.get("neighbour_ctr", [])
     ]
 
-    # 인접 섹터 T19 — 중원 APP. 도착기가 여기서 인수된다.
-    t19 = next((b for b in airspace["tma"]["blocks"] if b["id"] == "T19"), None)
-    t19_polygon = (
-        [[parse_latlon(n["lat"]), parse_latlon(n["lon"])] for n in t19["polygon"]]
-        if t19 and t19.get("polygon")
-        else []
-    )
+    # 중원 TMA 전체. 담당 섹터 하나만 그리면 그 경계 밖이 빈 곳처럼 보이는데,
+    # 실제로는 인접 기관이 이어받는 공역이다. 어디로 이양되는지가 화면에 있어야
+    # 「관할이 넘어간다」는 말이 그림으로 설명된다.
+    elevation_ft = dataset.procedures.raw["aerodrome"]["elev_ft"]
+    tma = [
+        {
+            "id": block["id"],
+            "unit": block["unit"],
+            "class": block["class"],
+            "lower_ft": resolve_altitude_ft(block["lower"], elevation_ft),
+            "upper_ft": resolve_altitude_ft(block["upper"], elevation_ft),
+            "target": bool(block.get("is_target_sector")),
+            "label": _sector_label(block),
+            "points": [
+                [parse_latlon(node["lat"]), parse_latlon(node["lon"])]
+                for node in _sector_polygon(block, airspace["tma"]["blocks"])
+            ],
+        }
+        for block in airspace["tma"]["blocks"]
+        if _sector_polygon(block, airspace["tma"]["blocks"])
+    ]
 
     return {
         "restricted": restricted,
         "moa": moa,
         "neighbour_ctr": neighbour_ctr,
         "terrain": _terrain(),
-        "t19": t19_polygon,
-        "t17": [[lat, lon] for lat, lon in dataset.airspace.sector_polygon],
-        "t17_label": (
-            f"T17 {dataset.airspace.target_sector['unit']} "
-            "1,000ft AGL~6,500ft AMSL Class D/E"
-        ),
+        "tma": tma,
         "rings": [
             {
                 "radius_nm": radius_nm,

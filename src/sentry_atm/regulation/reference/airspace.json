@@ -2,7 +2,7 @@
   "_meta": {
     "description": "청주 접근관제구역 공역 형상과 관제 분리기준. 코드에 상수를 하드코딩하지 않고 이 파일만 참조한다.",
     "sources": {
-      "ENR_2.1": "AIP Republic of Korea, ENR 2.1 — JUNGWON Terminal Control Area (1 MAY 2025)",
+      "ENR_2.1": "AIP Republic of Korea, ENR 2.1-6 — Jungwon Terminal Control Area (AIRAC AIP AMDT 11/25, effective 1600UTC 26 NOV 2025). T17~T22 의 lateral limits 를 전사했다.",
       "AD_2.17": "RKTU AD 2.17 ATS AIRSPACE (관제권)",
       "고시": "국토교통부고시 제2022-534호 「항공교통관제절차」",
       "항공안전법": "항공안전법 시행규칙 [별표 2] 항공기준사고의 범위(제9조 관련)"
@@ -156,7 +156,7 @@
   },
   "tma": {
     "name": "JUNGWON Terminal Control Area",
-    "_source": "ENR 2.1",
+    "_source": "ENR 2.1-6 (AIRAC AIP AMDT 11/25)",
     "blocks": [
       {
         "id": "T17",
@@ -234,7 +234,46 @@
         "upper": {
           "fl": 175
         },
-        "ifr_vfr_separation": true
+        "ifr_vfr_separation": true,
+        "polygon": [
+          {
+            "lat": "370640N",
+            "lon": "1273952E"
+          },
+          {
+            "lat": "370710N",
+            "lon": "1275052E"
+          },
+          {
+            "lat": "371010N",
+            "lon": "1275452E"
+          },
+          {
+            "lat": "371410N",
+            "lon": "1280352E"
+          },
+          {
+            "lat": "373110N",
+            "lon": "1281952E"
+          },
+          {
+            "lat": "373310N",
+            "lon": "1283622E"
+          },
+          {
+            "lat": "370710N",
+            "lon": "1284052E"
+          },
+          {
+            "lat": "365710N",
+            "lon": "1284052E"
+          },
+          {
+            "lat": "365010N",
+            "lon": "1280952E"
+          }
+        ],
+        "_note": "중원 관제권을 품는 Class C 본체. 중원 ARP(370149N 1275309E) 기준 5NM 및 5~10NM 반경이 이 안에 든다."
       },
       {
         "id": "T19",
@@ -303,7 +342,26 @@
         "upper": {
           "fl": 145
         },
-        "ifr_vfr_separation": false
+        "ifr_vfr_separation": false,
+        "polygon": [
+          {
+            "lat": "364458N",
+            "lon": "1275752E"
+          },
+          {
+            "lat": "365010N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "362911N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "362911N",
+            "lon": "1275052E"
+          }
+        ],
+        "_note": "T19 위에 겹쳐 얹힌 5,500ft AMSL 이상 블록. 평면은 T19 남동부와 겹치고 고도로 갈린다."
       },
       {
         "id": "T21",
@@ -317,7 +375,26 @@
           "ft": 3500,
           "ref": "AMSL"
         },
-        "ifr_vfr_separation": true
+        "ifr_vfr_separation": true,
+        "polygon": [
+          {
+            "lat": "370640N",
+            "lon": "1273952E"
+          },
+          {
+            "lat": "371010N",
+            "lon": "1274552E"
+          },
+          {
+            "lat": "371010N",
+            "lon": "1275452E"
+          },
+          {
+            "lat": "370710N",
+            "lon": "1275052E"
+          }
+        ],
+        "_note": "중원 관제권 북서쪽에 붙은 저고도 Class C 조각. 상한 3,500ft AMSL 로 낮다."
       },
       {
         "id": "T22",
@@ -330,7 +407,26 @@
         "upper": {
           "fl": 175
         },
-        "ifr_vfr_separation": false
+        "ifr_vfr_separation": false,
+        "polygon": [
+          {
+            "lat": "365010N",
+            "lon": "1280952E"
+          },
+          {
+            "lat": "365710N",
+            "lon": "1284052E"
+          },
+          {
+            "lat": "364810N",
+            "lon": "1282752E"
+          },
+          {
+            "lat": "364540N",
+            "lon": "1281752E"
+          }
+        ],
+        "_note": "9,500ft AMSL 이상 Class E. 하한이 높아 터미널 흐름과 만나지 않는다."
       }
     ]
   },
@@ -444,8 +540,16 @@
       "departure_wake_time_s": {
         "_clause": "3-9-6 바 1), 2)",
         "_note": "동일활주로 또는 2,500ft 미만 평행활주로에서 이륙할 때. 선행기가 이륙활주를 시작한 시점부터 센다. 3-9-6 마항에 따라 이 시간간격 대신 5-5-4 사항의 거리 기준을 적용할 수도 있다.",
-        "초대형": { "대형": 180, "중형": 180, "소형": 180 },
-        "대형": { "대형": 120, "중형": 120, "소형": 120 }
+        "초대형": {
+          "대형": 180,
+          "중형": 180,
+          "소형": 180
+        },
+        "대형": {
+          "대형": 120,
+          "중형": 120,
+          "소형": 120
+        }
       },
       "arrival_then_departure": {
         "_clause": "3-9-6 나",
@@ -486,7 +590,6 @@
     "published_phraseology": "AS PUBLISHED",
     "_phraseology_clause": "4-6-1 나 2) — 체공장주가 비행정보간행물에 공고되었을 때는 공고된 체공방향과 'AS PUBLISHED' 만 쓰고 나머지 체공지시를 생략할 수 있다."
   },
-
   "priority": {
     "_clause": "2-1-4",
     "principle": "First Come, First Served",
@@ -511,10 +614,26 @@
       "_description": "출발기가 고도를 올리며 거치는 관제기관 순서. 각 단계의 상한은 공역 블록에서 그대로 온다 — 이양 고도를 따로 지어내지 않는다.",
       "_clause": "2-1-15 — 합의된 위치·고도에서, 충돌요인 제거 후 이양하며 통신 인수가 곧 관제책임 인수다.",
       "steps": [
-        { "unit": "CHEONGJU TWR", "from": "ctr", "_note": "관제권 5NM, SFC~5,000ft AGL (AD 2.17). 이륙 후 초기 상승까지." },
-        { "unit": "CHEONGJU GCA", "from": "tma:T17", "_note": "접근관제. T17 회랑 + 터미널 Class C." },
-        { "unit": "OSAN APP", "from": "tma:T17_UPPER", "_note": "T17 상한 6,500ft 초과 시 수직 인수처 (ENR 2.1)." },
-        { "unit": "ACC", "from": "above", "_note": "T17_UPPER 상한(FL145) 위. 기관명은 ENR 2.1 대조 전이므로 일반명으로 둔다." }
+        {
+          "unit": "CHEONGJU TWR",
+          "from": "ctr",
+          "_note": "관제권 5NM, SFC~5,000ft AGL (AD 2.17). 이륙 후 초기 상승까지."
+        },
+        {
+          "unit": "CHEONGJU GCA",
+          "from": "tma:T17",
+          "_note": "접근관제. T17 회랑 + 터미널 Class C."
+        },
+        {
+          "unit": "OSAN APP",
+          "from": "tma:T17_UPPER",
+          "_note": "T17 상한 6,500ft 초과 시 수직 인수처 (ENR 2.1)."
+        },
+        {
+          "unit": "ACC",
+          "from": "above",
+          "_note": "T17_UPPER 상한(FL145) 위. 기관명은 ENR 2.1 대조 전이므로 일반명으로 둔다."
+        }
       ],
       "lateral_unit_block": "T19",
       "_lateral_note": "남동측으로 벗어나면 고도와 무관하게 중원 APP(T19) 이 인수한다. 수직 사슬과 별개 경로다.",

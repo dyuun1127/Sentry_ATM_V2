@@ -376,11 +376,21 @@ function drawBackground() {
       node("path", { d: `${pathFromGeodetic(zone.points)} Z`, class: "sector-2" }, airspace);
       label(airspace, zone.centre, zone.id);
     }
-    if (geometry.t17?.length) {
-      node("path", { d: `${pathFromGeodetic(geometry.t17)} Z`, class: "sector" }, airspace);
-    }
-    if (geometry.t19?.length) {
-      node("path", { d: `${pathFromGeodetic(geometry.t19)} Z`, class: "sector-2" }, airspace);
+    // 중원 TMA. 담당 섹터(T17)는 진하게, 인접 기관은 흐리게 — 어디까지가 우리
+    // 관할이고 어디부터가 남의 관할인지가 선 굵기로 읽혀야 한다. T17_UPPER 는
+    // T17 과 같은 도형이라 겹쳐 그리면 담당 섹터 선만 두꺼워지므로 뺀다.
+    for (const sector of geometry.tma || []) {
+      if (!sector.points?.length) continue;
+      if (sector.id === "T17_UPPER") continue;
+      node(
+        "path",
+        {
+          d: `${pathFromGeodetic(sector.points)} Z`,
+          class: sector.target ? "sector" : "sector-2",
+        },
+        airspace,
+      );
+      if (!sector.target) label(airspace, centroid(sector.points), sector.id);
     }
   }
 

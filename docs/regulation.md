@@ -71,6 +71,23 @@ PoC 는 수평 5NM 을 `ASM-018 PROVISIONAL POC ASSUMPTION` 으로 명시하고 
 T17 회랑만 쓰면 RWY 24R 최종접근(TURTU~TU746)이 전부 회랑 밖으로 나온다.
 회랑의 남동측 경계가 공항을 스치듯 지나가고 접근로는 그 남동쪽에 있기 때문이다.
 
+**중원 TMA 전체가 전사돼 있다** (ENR 2.1-6, AIRAC AIP AMDT 11/25). 담당은 T17
+하나뿐이고 나머지는 인접 기관이지만, 경계가 있어야 어디로 이양되는지 판정할 수
+있고 스코프에도 그릴 수 있다.
+
+| 섹터 | 기관 | 고도 | 등급 |
+|---|---|---|---|
+| **T17** | **CHEONGJU GCA** | 1,000ft AGL ~ 6,500ft AMSL | D, E |
+| T17_UPPER | OSAN APP | 6,500ft AMSL ~ FL145 | D, E |
+| T18 | JUNGWON APP | 1,000ft AGL ~ FL175 | C, E |
+| T19 | JUNGWON APP | 1,000ft AGL ~ FL145 | D, E |
+| T20 | JUNGWON APP | 5,500ft AMSL ~ FL145 | D, E |
+| T21 | JUNGWON APP | 1,000ft AGL ~ 3,500ft AMSL | C, E |
+| T22 | JUNGWON APP | 9,500ft AMSL ~ FL175 | E |
+
+T17_UPPER 는 좌표를 다시 적지 않고 T17 과 같은 도형을 가리킨다 — 두 벌로 두면
+언젠가 어긋난다.
+
 경로는 **임의 곡선을 그리지 않는다.** 관제사가 낼 수 있는 것은 "DIRECT (픽스)"
 또는 "레이더 유도 침로 XXX" 이므로, 경로는 고시된 픽스를 잇는 직선 구간의
 연속이어야 한다. 부드러운 최적 곡선은 계산상 짧아도 지시로 옮길 수 없다.
