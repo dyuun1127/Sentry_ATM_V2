@@ -24,6 +24,7 @@ from sentry_atm.regulation.geo import (
     parse_latlon,
     separation_distance_nm,
     vincenty_direct,
+    vincenty_inverse,
 )
 from sentry_atm.regulation.sector import resolve_altitude_ft
 
@@ -108,6 +109,73 @@ def _sector_label(block: dict) -> str:
         f"{_altitude_label(block['lower'])}~{_altitude_label(block['upper'])} "
         f"Class {block['class'].replace(', ', '/')}"
     )
+
+
+def _msa(dataset) -> dict:
+    """최저고도 차트 (AD 2-16) — 경계·고도 숫자·장애물.
+
+    **표시 전용이다.** 판정에 쓰지 않는다 (`ASM-037`). 화면에 그리는 이유는,
+    비상기를 낮게 복귀시킬 때 왜 그 경로가 아닌지가 숫자로 보여야 하기 때문이다.
+
+    라디얼은 직선이라 두 점을 잇기만 하면 되고, 원호는 CHO 를 중심으로 두 점
+    사이를 잘게 나눠 그린다 — 직선으로 이으면 24 NM 호에서 눈에 보이게 꺾인다.
+    """
+    chart = dataset.msa
+    navaid = dataset.procedures.raw["navaids"][chart.raw["reference_navaid"]]
+    centre = (parse_latlon(navaid["lat"]), parse_latlon(navaid["lon"]))
+
+    def point(name: str) -> tuple[float, float]:
+        node = chart.vertices[name]
+        return parse_latlon(node["lat"]), parse_latlon(node["lon"])
+
+    def arc_between(start, end, radius_nm):
+        """CHO 중심 원호. 짧은 쪽으로 돈다 — 섹터 경계는 늘 짧은 쪽이다."""
+        _, from_brg, _ = vincenty_inverse(*centre, *start)
+        _, to_brg, _ = vincenty_inverse(*centre, *end)
+        sweep = (to_brg - from_brg + 540.0) % 360.0 - 180.0
+        steps = max(2, int(abs(sweep) / 2.0) + 1)
+        return [
+            list(vincenty_direct(*centre, from_brg + sweep * i / steps, radius_nm * M_PER_NM))
+            for i in range(steps + 1)
+        ]
+
+    lines = []
+    for segment in chart.boundaries:
+        via = segment["via"]
+        if segment["kind"] == "radial":
+            lines.append({"kind": "radial", "label": segment.get("label", ""),
+                          "points": [list(point(name)) for name in via]})
+            continue
+        points: list[list[float]] = []
+        for first, second in zip(via, via[1:], strict=False):
+            leg = arc_between(point(first), point(second), segment["radius_nm"])
+            points.extend(leg if not points else leg[1:])
+        lines.append({"kind": "arc", "label": f"{segment['radius_nm']:.0f} NM",
+                      "points": points})
+
+    return {
+        "lines": lines,
+        "vertices": [
+            list(point(name)) for name in chart.vertices
+        ],
+        "altitudes": [
+            {
+                "altitude_ft": item["altitude_ft"],
+                "low_temperature_ft": item["low_temperature_ft"],
+                "at": [item["lat"], item["lon"]],
+            }
+            for item in chart.minimum_altitudes
+        ],
+        "obstacles": [
+            {
+                "id": item["id"],
+                "elevation_ft": item["elevation_ft"],
+                "at": [parse_latlon(item["lat"]), parse_latlon(item["lon"])],
+                "remark": item.get("remark", ""),
+            }
+            for item in chart.obstacles
+        ],
+    }
 
 
 def _terrain() -> dict:
@@ -230,6 +298,7 @@ def airspace_geometry(dataset=None, sequencer=None) -> dict:
         "moa": moa,
         "neighbour_ctr": neighbour_ctr,
         "terrain": _terrain(),
+        "msa": _msa(dataset),
         "tma": tma,
         "rings": [
             {

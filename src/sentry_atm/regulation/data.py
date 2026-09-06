@@ -229,12 +229,41 @@ class Airspace:
 
 
 @dataclass
+class MinimumAltitudeChart:
+    """msa.json 접근자 — AD 2-16 최저고도 차트.
+
+    **표시 전용이다.** 회피안 검증의 최저고도는 여전히 `ASM-037` 의 잠정값을 쓴다.
+    여기 값을 판정에 넣으면 어떤 후보가 살아남는지가 달라지므로, 넣을 때는 시연
+    전체를 다시 돌려 확인해야 한다. 그 전까지는 화면에만 그린다.
+    """
+
+    raw: dict
+
+    @property
+    def vertices(self) -> dict:
+        return self.raw["vertices"]
+
+    @property
+    def boundaries(self) -> list:
+        return self.raw["boundaries"]
+
+    @property
+    def minimum_altitudes(self) -> list:
+        return self.raw["minimum_altitudes"]
+
+    @property
+    def obstacles(self) -> list:
+        return self.raw["obstacles"]
+
+
+@dataclass
 class Dataset:
     """공역 + 절차 + 기종을 묶은 단일 진입점."""
 
     airspace: Airspace
     procedures: Procedures
     fleet: Fleet
+    msa: MinimumAltitudeChart
 
     @cached_property
     def frame(self) -> LocalFrame:
@@ -254,4 +283,5 @@ def load(data_dir: Path | str | None = None) -> Dataset:
         Airspace(_read("airspace.json")),
         Procedures(_read("procedures.json")),
         Fleet(_read("aircraft.json")),
+        MinimumAltitudeChart(_read("msa.json")),
     )

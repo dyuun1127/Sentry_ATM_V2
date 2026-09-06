@@ -21,6 +21,8 @@
   --line-2: #27384a;
 
   --scope-bg: #060a0d;
+  --msa: #6f8f5c;      /* 최저고도 차트 — 지형 계열 초록 */
+  --obstacle: #c08a3e; /* 장애물 첨두 */
   --terrain: #0e1a16;
   --terrain-2: #132420;
   --airspace: #2a3f52;
@@ -319,6 +321,25 @@ h2 {
 .restricted { fill: color-mix(in oklab, var(--danger) 6%, transparent); stroke: color-mix(in oklab, var(--danger) 48%, transparent); stroke-width: var(--sw-thin); }
 .moa { fill: none; stroke: color-mix(in oklab, var(--caution) 40%, transparent); stroke-width: var(--sw-thin); stroke-dasharray: 8 6; }
 .moa.live { fill: color-mix(in oklab, var(--caution) 8%, transparent); stroke: color-mix(in oklab, var(--caution) 62%, transparent); stroke-dasharray: none; }
+/* 최저고도 차트 (AD 2-16). 배경이지 판정이 아니다 — 항적보다 뒤로 물린다. */
+.msa-line { fill: none; stroke: var(--msa); stroke-width: var(--sw-thin); stroke-dasharray: 9 4 2 4; opacity: .8; }
+.msa-dot { fill: var(--msa); opacity: .9; }
+.msa-alt {
+  fill: var(--msa);
+  font-family: var(--mono);
+  font-size: var(--fs-scope-tag);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.msa-cold { font-weight: 400; font-size: var(--fs-scope-label); opacity: .8; }
+.obstacle { fill: var(--obstacle); stroke: none; }
+.msa-obst {
+  fill: var(--obstacle);
+  font-family: var(--mono);
+  font-size: var(--fs-scope-label);
+  font-weight: 700;
+}
+
 .zone-label { fill: var(--ink-2); font-family: var(--mono); font-size: var(--fs-scope-label); letter-spacing: .05em; opacity: .85; }
 
 .runway-line { stroke: var(--runway); stroke-width: var(--sw-bold); stroke-linecap: square; }

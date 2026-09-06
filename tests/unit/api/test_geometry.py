@@ -6,8 +6,11 @@
 
 from __future__ import annotations
 
+from math import radians
+
 from sentry_atm.api.geometry import airspace_geometry
 from sentry_atm.regulation import data as regulation_data
+from sentry_atm.regulation.geo import M_PER_NM, parse_latlon, vincenty_inverse
 
 # ENR 2.1-6 「Jungwon Terminal Control Area」가 고시한 섹터. T17 은 청주 GCA 담당이고
 # 나머지는 인접 기관이다. T17_UPPER 는 오산 TMA 항이 같은 폴리곤을 다시 고시한 것.
@@ -119,3 +122,101 @@ def test_every_clickable_zone_carries_what_the_panel_shows() -> None:
     assert by_id["T17"]["ifr_vfr_separation"] is False
     assert by_id["T18"]["ifr_vfr_separation"] is True
     assert by_id["T17"]["frequencies"] == [134.0, 265.75]
+
+
+CHO = (36 + 43 / 60 + 4.9 / 3600, 127 + 29 / 60 + 38.7 / 3600)
+
+
+def _range_and_radial(lat: float, lon: float) -> tuple[float, float]:
+    """CHO VOR 기준 거리(NM)와 자기방위(VAR 9°W)."""
+    metres, bearing, _ = vincenty_inverse(CHO[0], CHO[1], lat, lon)
+    return metres / M_PER_NM, (bearing + 9.0) % 360.0
+
+
+def test_minimum_altitude_chart_vertices_sit_where_the_chart_says() -> None:
+    """AD 2-16 의 꼭짓점이 고시한 라디얼·거리에 실제로 앉는가.
+
+    차트는 경계를 「24 NM/050°」처럼 VOR 라디얼로 적고, 그 옆에 도분초 좌표를
+    함께 준다. 우리가 전사한 것은 좌표 쪽이다 — 라디얼 값은 VOR 이 교정된 시점의
+    자기편차를 따라 계산값과 3~5° 어긋나기 때문이다.
+
+    그래서 이 시험은 좌표가 **이름이 말하는 자리에 있는지**를 본다. 이름을
+    `R24_050` 처럼 지었으므로, 옮겨 적다 한 줄이 밀리면 여기서 걸린다.
+    """
+    chart = regulation_data.load().msa
+
+    assert len(chart.vertices) == 23
+
+    offsets: dict[str, float] = {}
+    for name, node in chart.vertices.items():
+        radius_text, radial_text = name.lstrip("R").split("_")
+        nm, mag = _range_and_radial(parse_latlon(node["lat"]), parse_latlon(node["lon"]))
+        # 차트는 호의 이름을 내림으로 적는다 (14.9 NM 점이 「14 NM」 호 위에 있다).
+        assert abs(nm - float(radius_text)) < 1.2, f"{name}: {nm:.1f} NM"
+        # 방위는 각도가 아니라 **거리**로 본다. 라디얼 값은 5° 단위로 반올림돼
+        # 있고 VOR 교정 편차까지 얹히므로, 4 NM 점에서는 그 합이 12° 가 되지만
+        # 옆으로는 1 NM 도 벌어지지 않는다. 각도로 재면 안쪽 점이 늘 걸린다.
+        offset_deg = (mag - float(radial_text) + 180) % 360 - 180
+        offsets[name] = offset_deg
+        assert radians(abs(offset_deg)) * nm < 2.0, (
+            f"{name}: 옆으로 {radians(abs(offset_deg)) * nm:.2f} NM"
+        )
+
+
+    # 남은 차이는 라디얼마다 다르다 (남쪽 -1.3° ~ 북동쪽 +4.6°). 한 방향으로
+    # 쏠린 것이 아니므로 「상수 편차」로 설명할 수 없고, 라디얼별 VOR 정렬 차이와
+    # 5° 반올림이 섞인 결과로 본다. 어느 쪽이든 옆으로 2 NM 을 넘지 않는다.
+
+
+def test_minimum_altitude_chart_is_display_only() -> None:
+    """이 자료가 판정으로 새어 들어가지 않았는가.
+
+    최저고도를 판정에 넣으면 어떤 회피안이 살아남는지가 달라진다. 발표 직전에
+    조용히 바뀌면 안 되므로, **판정 계층이 이 자료를 읽지 않는다**는 것을 못박는다.
+    넣기로 결정하면 이 시험을 먼저 고치게 된다 — 그때 시연 전체를 다시 돌린다.
+    """
+    from pathlib import Path
+
+    chart = regulation_data.load().msa
+    assert "표시 전용" in chart.raw["_scope"]
+
+    root = Path(__file__).resolve().parents[3] / "src" / "sentry_atm"
+    judging = [
+        root / "resolution",
+        root / "conflict",
+        root / "risk",
+        root / "regulation" / "rules.py",
+        root / "regulation" / "separation.py",
+    ]
+    for target in judging:
+        files = target.rglob("*.py") if target.is_dir() else [target]
+        for path in files:
+            assert "msa" not in path.read_text(encoding="utf-8"), path
+
+
+def test_scope_gets_the_chart_boundaries_obstacles_and_numbers() -> None:
+    """스코프가 그릴 형상으로 나오는가.
+
+    원호는 잘게 나눠 보낸다 — 두 점을 직선으로 이으면 24 NM 호에서 눈에 보이게
+    꺾인다. 장애물 좌표와 표고는 AIP AD 2.10 전사값이다.
+    """
+    chart = airspace_geometry()["msa"]
+
+    assert len(chart["lines"]) == 15
+    assert len(chart["altitudes"]) == 10
+    assert len(chart["obstacles"]) == 3
+
+    arcs = [line for line in chart["lines"] if line["kind"] == "arc"]
+    radials = [line for line in chart["lines"] if line["kind"] == "radial"]
+    assert arcs and radials
+    # 호는 촘촘하고, 라디얼은 두세 점이면 족하다.
+    assert max(len(line["points"]) for line in arcs) > 10
+    assert max(len(line["points"]) for line in radials) <= 3
+
+    by_id = {item["id"]: item for item in chart["obstacles"]}
+    assert by_id["RKTUOB001"]["elevation_ft"] == 1962
+    assert by_id["RKTUOB003"]["elevation_ft"] == 1828
+
+    # 저온보정값은 있는 것만 싣는다. 없는 자리를 0 으로 채우면 화면이 0 을 그린다.
+    cold = [item["low_temperature_ft"] for item in chart["altitudes"]]
+    assert None in cold and 5100 in cold

@@ -103,6 +103,9 @@ const LAYERS = [
   ["holds", "체공장주", true],
   ["fixes", "픽스", true],
   ["tags", "데이터블록", true],
+  // 최저고도는 기본으로 꺼 둔다. 늘 켜 두면 스코프가 숫자로 덮인다 — 필요한
+  // 것은 「이 방향으로 낮게 내려도 되는가」를 물을 때뿐이다.
+  ["msa", "최저고도", false],
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -408,6 +411,37 @@ function drawBackground() {
       // 훈련공역 클릭을 전부 삼킨다 — 큰 도형이 나중에 그려지기 때문이다.
       selectable(airspace, shape, sector, "tma", false);
       if (!sector.target) label(airspace, centroid(sector.points), sector.id);
+    }
+  }
+
+  // --- 최저고도 (AD 2-16) ---
+  // 표시 전용이다. 판정에 쓰지 않는다 — 회피안 검증의 최저고도는 여전히
+  // ASM-037 의 잠정값이며, 이 그림은 관제사가 눈으로 대조하라고 있는 것이다.
+  const msa = clear("g-msa");
+  if (state.layers.msa && geometry.msa) {
+    for (const line of geometry.msa.lines || []) {
+      node("path", { d: pathFromGeodetic(line.points), class: "msa-line" }, msa);
+    }
+    for (const point of geometry.msa.vertices || []) {
+      const [vx, vy] = px(...toLocal(point[0], point[1]));
+      node("circle", { cx: vx, cy: vy, r: 2.4, class: "msa-dot" }, msa);
+    }
+    for (const item of geometry.msa.altitudes || []) {
+      const [ax, ay] = px(...toLocal(item.at[0], item.at[1]));
+      const text = node("text", { x: ax, y: ay, class: "msa-alt", "text-anchor": "middle" }, msa);
+      text.textContent = item.altitude_ft.toLocaleString();
+      if (item.low_temperature_ft) {
+        // 저온보정값. 괄호로 묶어 원 수치와 구별한다 — 차트가 그렇게 적는다.
+        const cold = node("tspan", { x: ax, dy: 13, class: "msa-cold" }, text);
+        cold.textContent = `(${item.low_temperature_ft.toLocaleString()})`;
+      }
+    }
+    for (const item of geometry.msa.obstacles || []) {
+      const [ox, oy] = px(...toLocal(item.at[0], item.at[1]));
+      node("path", { d: `M${ox} ${oy - 7} L${ox + 6} ${oy + 4} L${ox - 6} ${oy + 4} Z`,
+                     class: "obstacle" }, msa);
+      const label = node("text", { x: ox + 9, y: oy + 4, class: "msa-obst" }, msa);
+      label.textContent = `${item.elevation_ft.toLocaleString()}`;
     }
   }
 
