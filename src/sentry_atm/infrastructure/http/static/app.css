@@ -221,6 +221,19 @@ h2 {
 }
 .symbols:hover { color: var(--ink); border-color: var(--ink-3); }
 
+/* 관람 모드 표시. 밖에서 연결한 사람은 조작 단추를 못 보므로, 왜 없는지를
+   화면이 말해 주어야 한다 — 없는 것과 고장난 것은 다르다. */
+.viewer {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border-radius: var(--r);
+  color: var(--bg-0);
+  background: var(--normal);
+  white-space: nowrap;
+}
+
 .scope {
   position: relative;
   flex: 1;

@@ -60,7 +60,10 @@ def run_golden_demo_release_preflight() -> GoldenDemoReleasePreflightReport:
             "index.html, app.css and app.js packaged and non-empty",
         ),
         GoldenDemoReleasePreflightCheck("OFFLINE", "UI assets contain no external URL"),
-        GoldenDemoReleasePreflightCheck("LOOPBACK", f"server host fixed to {host}"),
+        # 기본값이 여전히 루프백인지를 본다. `--host` 로 밖에 여는 것은 명시적인
+        # 선택이며, 그때는 서버가 시작하면서 큰 글씨로 알린다. 이 검문소가
+        # 보증하는 것은 **아무것도 안 주고 띄웠을 때 밖으로 새지 않는다**는 것이다.
+        GoldenDemoReleasePreflightCheck("LOOPBACK", f"default server host is {host}"),
     )
     return GoldenDemoReleasePreflightReport(checks=checks)
 

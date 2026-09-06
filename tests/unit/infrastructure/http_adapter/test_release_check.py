@@ -21,7 +21,7 @@ def test_release_preflight_verifies_runtime_assets_offline_and_loopback() -> Non
     )
     assert report.checks[0].detail.endswith(">= 3.12")
     assert report.checks[1].detail == "sentry-atm 0.1.0"
-    assert report.checks[-1].detail == "server host fixed to 127.0.0.1"
+    assert report.checks[-1].detail == "default server host is 127.0.0.1"
 
 
 def test_preflight_rejects_unsupported_python_external_assets_and_non_loopback() -> None:

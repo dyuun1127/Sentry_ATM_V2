@@ -15,6 +15,7 @@
 "use strict";
 
 const API = "/api/v1/golden-demo/session";
+const ACCESS = "/api/v1/reference/access";
 const SCENARIO = "/api/v1/reference/scenario";
 
 const RATES = [1, 2, 4, 8, 16];
@@ -426,11 +427,28 @@ function buildRail() {
 
 /* ------------------------------------------------------------------ 시작 */
 
+/* 밖에서 연결한 화면은 시계를 건드리지 못한다. 서버가 막지만, 막힌 단추를
+ * 남겨 두면 눌러 보고 아무 일도 일어나지 않는 것처럼 보인다. */
+function applyAccess(access) {
+  const operator = access ? access.operator !== false : true;
+  $("viewer").hidden = operator;
+  if (operator) return;
+  for (const element of document.querySelectorAll(
+    ".play, .rates, .stage-bar button, .ghost",
+  )) {
+    element.disabled = true;
+  }
+  $("play").hidden = true;
+}
+
 async function boot() {
   buildControls();
   try {
     state.scenario = await get(SCENARIO);
     state.session = await get(API);
+    // 시각을 움직이는 것은 발표자뿐이다. 밖에서 본 사람이 재생을 누르면
+    // 발표 중인 시계가 함께 움직인다 — 세션이 하나이기 때문이다.
+    applyAccess(await get(ACCESS).catch(() => null));
     setLink(true);
   } catch (error) {
     setLink(false);

@@ -22,6 +22,7 @@ _STATIC_PACKAGE = "sentry_atm.infrastructure.http"
 _GEOMETRY_PATH = "/api/v1/reference/geometry"
 _SCENARIO_PATH = "/api/v1/reference/scenario"
 _ADVISORY_PATH = "/api/v1/advisory"
+_ACCESS_PATH = "/api/v1/reference/access"
 _SECURITY_HEADERS = (
     ("Cache-Control", "no-store"),
     ("X-Content-Type-Options", "nosniff"),
@@ -44,12 +45,22 @@ class _StaticAsset:
 class GoldenDemoWebWsgiApp:
     """Serve the UI shell and delegate every non-static route to the Session API."""
 
-    __slots__ = ("_api_app", "_assets", "_session_runtime")
+    __slots__ = ("_api_app", "_assets", "_session_runtime", "_settings")
 
-    def __init__(self, api_app: GoldenDemoSessionWsgiApp, session_runtime=None) -> None:
+    def __init__(
+        self,
+        api_app: GoldenDemoSessionWsgiApp,
+        session_runtime=None,
+        *,
+        settings=None,
+    ) -> None:
         if not isinstance(api_app, GoldenDemoSessionWsgiApp):
             raise TypeError("api_app must be a GoldenDemoSessionWsgiApp")
         self._api_app = api_app
+        # 밖으로 열려 있는가, 그리고 이 요청이 조작할 수 있는가. 화면은 이것을
+        # 보고 단추를 감춘다 — 눌렀는데 403 이 나는 것은 누르지 못하는 것보다
+        # 나쁘다. 없으면 루프백 전용으로 본다.
+        self._settings = settings
         # 규정 권고를 내려면 현재 단계 결과가 필요하고, 그것은 세션 읽기 모델이
         # 아니라 런타임이 들고 있다. 없으면 권고 경로만 404 가 된다 — 나머지
         # 화면은 그대로 동작해야 하므로 필수로 두지 않는다.
@@ -156,6 +167,23 @@ class GoldenDemoWebWsgiApp:
             "application/json; charset=utf-8",
         )
 
+    def _access_asset(self, environ: dict[str, object]) -> _StaticAsset:
+        """이 화면이 조작할 수 있는가 — 요청마다 답이 다르다."""
+        from sentry_atm.infrastructure.http.access import is_operator
+
+        external = bool(self._settings and self._settings.external)
+        control = self._settings.control if self._settings else "local"
+        payload = {
+            "external": external,
+            "control": control,
+            # 루프백 전용이면 붙은 사람이 곧 발표자다.
+            "operator": True if not external else is_operator(environ, control=control),
+        }
+        return _StaticAsset(
+            json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            "application/json; charset=utf-8",
+        )
+
     def __call__(
         self,
         environ: dict[str, object],
@@ -174,6 +202,8 @@ class GoldenDemoWebWsgiApp:
             asset = self._scenario_asset()
         elif path == _ADVISORY_PATH:
             asset = self._advisory_asset()
+        elif path == _ACCESS_PATH:
+            asset = self._access_asset(environ)
         else:
             asset = self._assets.get(path)
         if asset is None:

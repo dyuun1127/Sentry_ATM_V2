@@ -346,6 +346,38 @@ def test_console_lets_the_controller_open_an_airspace() -> None:
     assert b"if (state.selected) state.zone = null;" in script
 
 
+def test_both_screens_go_read_only_for_a_viewer() -> None:
+    """밖에서 연 화면은 조작 단추를 감추는가.
+
+    막는 것은 서버가 한다 (`test_access.py`). 화면이 하는 일은 **왜 단추가
+    없는지 말해 주는 것**이다 — 없는 것과 고장난 것은 다르고, 눌렀는데 403 이
+    나는 것은 누르지 못하는 것보다 나쁘다.
+    """
+    app = GoldenDemoWebWsgiApp(build_golden_demo_session_runtime().http_app)
+
+    _, _, console = _request(app)
+    _, _, scenario = _request(app, path="/scenario")
+    _, _, console_script = _request(app, path="/assets/app.js")
+    _, _, scenario_script = _request(app, path="/assets/scenario.js")
+
+    # 관람 배지는 두 화면 모두에 있고, 기본은 감춰져 있다.
+    for body in (console, scenario):
+        assert b'id="viewer"' in body
+        assert b'class="viewer"' in body
+        assert "POC · NOT FOR OPERATIONAL USE".encode() in body
+
+    for script in (console_script, scenario_script):
+        assert b'const ACCESS = "/api/v1/reference/access";' in script
+        assert b"function applyAccess(access)" in script
+        # 서버가 답을 못 주면 조작할 수 있는 것으로 본다 — 루프백 전용일 때
+        # 화면이 멋대로 잠기면 발표가 멈춘다.
+        assert b"access.operator !== false : true" in script
+
+    # 콘솔은 판단 단추를, 시연 화면은 시계 단추를 감춘다.
+    assert b"[data-primary-command], [data-decision-actions]" in console_script
+    assert b'$("play").hidden = true;' in scenario_script
+
+
 def test_console_type_scale_is_defined_in_one_place() -> None:
     """글씨 크기가 흩어져 있으면 화면 전체를 키울 수 없다.
 

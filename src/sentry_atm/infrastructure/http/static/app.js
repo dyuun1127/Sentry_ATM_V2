@@ -22,6 +22,7 @@
 
 const API = "/api/v1/golden-demo/session";
 const GEOMETRY = "/api/v1/reference/geometry";
+const ACCESS = "/api/v1/reference/access";
 const SCENARIO = "/api/v1/reference/scenario";
 const ADVISORY = "/api/v1/advisory";
 
@@ -139,6 +140,7 @@ const state = {
   dragged: false,
   symbols: loadSymbolStyle(),
   zone: null,
+  operator: true,
   view: { cx: 0, cy: 0, halfNm: DEFAULT_RANGE_NM },
 };
 
@@ -1566,6 +1568,21 @@ function syncRangeButtons() {
 
 /* ------------------------------------------------------------------ 시작 */
 
+/* 이 화면이 조작할 수 있는가. 서버가 요청마다 답한다.
+ *
+ * 판단 단추를 감추는 것이지 잠그는 것이 아니다 — 실제 차단은 서버가 한다.
+ * 화면만 고쳐서 막으면 막은 것이 아니다. */
+function applyAccess(access) {
+  state.operator = access ? access.operator !== false : true;
+  $("viewer").hidden = state.operator;
+  if (state.operator) return;
+  for (const element of document.querySelectorAll(
+    "[data-primary-command], [data-decision-actions]",
+  )) {
+    element.hidden = true;
+  }
+}
+
 async function boot() {
   buildControls();
   fitView();
@@ -1580,6 +1597,9 @@ async function boot() {
     }
     state.session = await get(API);
     state.advisory = await get(ADVISORY).catch(() => null);
+    // 밖에서 연결한 화면은 읽기만 된다. 서버가 어차피 막지만, 막힌 단추를
+    // 남겨 두면 눌러 보고 403 을 받는다 — 없는 것보다 나쁘다.
+    applyAccess(await get(ACCESS).catch(() => null));
     setLink(true);
     follow();
   } catch (error) {
