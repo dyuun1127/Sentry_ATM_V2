@@ -308,3 +308,76 @@ def test_session_api_rejects_unsupported_source() -> None:
             "modified",  # type: ignore[arg-type]
             "modified application",  # type: ignore[arg-type]
         )
+
+
+def test_traffic_keeps_moving_after_the_controller_decision_is_applied() -> None:
+    """판단을 적용한 뒤에도 항적이 시계를 따라가는가.
+
+    스냅샷 고르기가 고정 우선순위였다 — 적용 결과가 있으면 무조건 그것. 적용
+    결과는 한 번 생기면 사라지지 않으므로 **영원히** 이겼고, 관제사가 승인을
+    적용한 순간 스코프의 항적이 그 시각에 얼어붙었다. 시계와 경과시각은 계속
+    갔으므로 화면은 「시간은 흐르는데 아무도 움직이지 않는」 상태가 됐다.
+
+    시각으로 고르면 그 일이 생기지 않는다. 적용한 순간에는 적용 결과가 가장
+    최근이라 그것이 뽑히고(적용된 기동이 보인다), 시계가 더 가면 새 단계 결과가
+    더 최근이 되어 자연히 넘어간다.
+    """
+    runtime, steps, resolution, decision, application, _, api = _session()
+    runtime.simulation.clock.play()
+
+    steps.step(0)
+    steps.step(75)
+    resolution.resolve()
+    steps.step(15)
+    decision.accept()
+    application.apply_and_revalidate()
+
+    applied = api.get_current()
+    assert applied.stage is GoldenDemoSessionStage.CONFLICT_RESOLVED
+
+    samples = [applied]
+    for _ in range(3):
+        steps.step(30)
+        samples.append(api.get_current())
+
+    # 항적이 관측된 시각이 경과시각을 따라 늘어야 한다. 이것이 얼어붙었던 값이다.
+    observed = [item.traffic[0].timestamp_utc for item in samples]
+    assert len(set(observed)) == len(observed), "적용 뒤 항적이 한 시각에 얼어붙었다"
+    assert observed == sorted(observed)
+    assert [item.elapsed_seconds for item in samples] == sorted(
+        item.elapsed_seconds for item in samples
+    )
+
+    # 그리고 실제로 자리를 옮긴다. CIV-A01 은 x 가 고정인 항로라 다른 기체로 본다.
+    def position_of(sample, aircraft_id):
+        entry = next(item for item in sample.traffic if item.aircraft_id == aircraft_id)
+        return (round(entry.x_nm, 6), round(entry.y_nm, 6))
+
+    places = {position_of(sample, "CIV-A02") for sample in samples}
+    assert len(places) == len(samples), "적용 뒤 항적이 한 자리에 얼어붙었다"
+
+
+def test_the_applied_manoeuvre_is_what_is_shown_at_the_moment_of_application() -> None:
+    """적용한 순간에는 적용된 상태가 보이는가.
+
+    시각이 같은 스냅샷이 둘 있을 때(적용 결과와 단계 결과) **적용된 기동이
+    반영된 쪽**을 보여야 한다. 그러지 않으면 승인한 것이 화면에 나타나지 않는다.
+    """
+    runtime, steps, resolution, decision, application, _, api = _session()
+    runtime.simulation.clock.play()
+
+    steps.step(0)
+    steps.step(75)
+    resolution.resolve()
+    steps.step(15)
+    decision.accept()
+    result = application.apply_and_revalidate()
+
+    current = api.get_current()
+
+    applied_ids = {state.aircraft_id for state in result.traffic_snapshot.states}
+    assert {item.aircraft_id for item in current.traffic} == applied_ids
+    for state in result.traffic_snapshot.states:
+        shown = next(item for item in current.traffic if item.aircraft_id == state.aircraft_id)
+        assert shown.altitude_ft == state.altitude_ft
+        assert shown.x_nm == state.x_nm

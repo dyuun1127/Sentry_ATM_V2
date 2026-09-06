@@ -548,14 +548,10 @@ class InProcessGoldenDemoSessionApi:
         runtime = steps.runtime
         clock = runtime.simulation.clock
 
-        traffic_snapshot = (
-            application_result.traffic_snapshot
-            if application_result is not None
-            else (
-                step_result.traffic_snapshot
-                if step_result is not None
-                else runtime.simulation.engine.snapshot()
-            )
+        traffic_snapshot = _newest_snapshot(
+            application_result.traffic_snapshot if application_result is not None else None,
+            step_result.traffic_snapshot if step_result is not None else None,
+            runtime.simulation.engine.snapshot(),
         )
         queue = runtime.exception_queue_api.get_current(include_resolved=True)
         recommendation = runtime.recommendation_api.get_current()
@@ -643,6 +639,28 @@ def _stage(
     ):
         return GoldenDemoSessionStage.DEVIATION_DETECTED
     return GoldenDemoSessionStage.MONITORING
+
+
+def _newest_snapshot(*candidates: TrafficSnapshot | None) -> TrafficSnapshot:
+    """가장 최근 시각의 항적을 고른다.
+
+    전에는 우선순위가 고정이었다 — 적용 결과가 있으면 무조건 그것, 없으면 단계
+    결과, 그것도 없으면 살아 있는 것. 그래서 **관제사가 판단을 적용한 뒤 항적이
+    그 순간에 얼어붙었다.** 시계는 계속 갔고 경과시각도 늘었는데 스코프의 항적만
+    멈춰 있었다. 적용 결과는 한 번 생기면 사라지지 않으므로 영원히 이겼다.
+
+    시각으로 고르면 그 일이 생기지 않는다. 적용한 순간에는 적용 결과가 가장
+    최근이므로 그것이 뽑히고(적용된 기동이 보인다), 시계가 더 가면 새 단계
+    결과가 더 최근이 되어 자연히 넘어간다.
+
+    같은 시각이면 인자 순서대로 앞선 것이 이긴다 — `max` 가 첫 최대값을
+    돌려준다. 적용 결과를 먼저 두는 이유는, 적용 직후 두 스냅샷의 시각이 같을 때
+    **적용된 기동이 반영된 쪽**을 보여야 하기 때문이다.
+    """
+    present = [item for item in candidates if item is not None]
+    if not present:
+        raise ValueError("at least one traffic snapshot is required")
+    return max(present, key=lambda item: item.timestamp_utc)
 
 
 def _map_traffic(
